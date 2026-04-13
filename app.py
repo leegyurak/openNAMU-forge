@@ -728,9 +728,8 @@ app.route('/random')(golang_view())
 app.route('/list/random')(golang_view())
 
 # Func-edit
-app.route('/edit/<everything:name>', methods = ['POST', 'GET'])(edit)
-app.route('/edit_from/<everything:name>', methods = ['POST', 'GET'], defaults = { 'do_type' : 'load' })(edit)
-app.route('/edit_section/<int:section>/<everything:name>', methods = ['POST', 'GET'])(edit)
+app.route('/edit/<everything:name>', methods = ['POST', 'GET'])(golang_view())
+app.route('/edit_from/<everything:name>', methods = ['POST', 'GET'])(golang_view())
 
 app.route('/edit_request/<everything:name>', methods = ['POST', 'GET'])(edit_request)
 app.route('/edit_request_from/<everything:name>', defaults = { 'do_type' : 'from' }, methods = ['POST', 'GET'])(edit_request)
@@ -789,8 +788,8 @@ app.route('/skin_set')(user_setting_skin_set)
 # 하위 호환용 E
 app.route('/change/skin_set/main', methods = ['POST', 'GET'])(user_setting_skin_set_main)
 
-app.route('/user')(user_info)
-app.route('/user/<name>')(user_info)
+app.route('/user')(golang_view())
+app.route('/user/<name>')(golang_view())
 
 app.route('/challenge', methods = ['GET', 'POST'])(user_challenge)
 
