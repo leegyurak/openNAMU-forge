@@ -24,7 +24,9 @@ def do_make_challenge_design(img, title, info, disable = 0):
 
 async def user_challenge():    
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        histories = get_history_repository()
+        topics = get_topic_repository()
+        user_settings = get_user_setting_repository()
         
         ip = ip_check()
         if ip_or_user(ip) == 1:
@@ -33,65 +35,46 @@ async def user_challenge():
         if flask.request.method == 'POST':
             user_exp = 0
 
-            curs.execute(db_change('select count(*) from history where ip = ?'), [ip])
-            db_data = curs.fetchall()
-            if not db_data:
-                db_data = [[0]]
+            history_count = histories.count_by_ip(ip)
+            user_exp += 5 * history_count
 
-            user_exp += 5 * db_data[0][0]
-
-            if db_data[0][0] >= 1:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_first_contribute'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_first_contribute', ?, '1')"), [ip])
+            if history_count >= 1:
+                user_settings.upsert(ip, 'challenge_first_contribute', '1')
                 user_exp += 500
 
-            if db_data[0][0] >= 10:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_tenth_contribute'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_tenth_contribute', ?, '1')"), [ip])
+            if history_count >= 10:
+                user_settings.upsert(ip, 'challenge_tenth_contribute', '1')
                 user_exp += 1000
 
-            if db_data[0][0] >= 100:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_hundredth_contribute'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_hundredth_contribute', ?, '1')"), [ip])
+            if history_count >= 100:
+                user_settings.upsert(ip, 'challenge_hundredth_contribute', '1')
                 user_exp += 3000        
 
-            if db_data[0][0] >= 1000:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_thousandth_contribute'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_thousandth_contribute', ?, '1')"), [ip])
+            if history_count >= 1000:
+                user_settings.upsert(ip, 'challenge_thousandth_contribute', '1')
                 user_exp += 10000
 
-            curs.execute(db_change("select count(*) from topic where ip = ?"), [ip])
-            db_data = curs.fetchall()
-            if not db_data:
-                db_data = [[0]]
+            topic_count = topics.count_by_ip(ip)
+            user_exp += 5 * topic_count
 
-            user_exp += 5 * db_data[0][0]
-
-            if db_data[0][0] >= 1:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_first_discussion'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_first_discussion', ?, '1')"), [ip])
+            if topic_count >= 1:
+                user_settings.upsert(ip, 'challenge_first_discussion', '1')
                 user_exp += 500    
 
-            if db_data[0][0] >= 10:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_tenth_discussion'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_tenth_discussion', ?, '1')"), [ip])
+            if topic_count >= 10:
+                user_settings.upsert(ip, 'challenge_tenth_discussion', '1')
                 user_exp += 1000
 
-            if db_data[0][0] >= 100:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_hundredth_discussion'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_hundredth_discussion', ?, '1')"), [ip])
+            if topic_count >= 100:
+                user_settings.upsert(ip, 'challenge_hundredth_discussion', '1')
                 user_exp += 3000
 
-            if db_data[0][0] >= 1000:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_thousandth_discussion'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_thousandth_discussion', ?, '1')"), [ip])
+            if topic_count >= 1000:
+                user_settings.upsert(ip, 'challenge_thousandth_discussion', '1')
                 user_exp += 10000        
 
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_admin', ip])
-            db_data = curs.fetchall()
-            if await acl_check(tool = 'all_admin_auth') != 1 or db_data:
-                curs.execute(db_change("delete from user_set where id = ? and name = 'challenge_admin'"), [ip])
-                curs.execute(db_change("insert into user_set (name, id, data) values ('challenge_admin', ?, '1')"), [ip])
+            if await acl_check(tool = 'all_admin_auth') != 1 or user_settings.exists(ip, 'challenge_admin'):
+                user_settings.upsert(ip, 'challenge_admin', '1')
                 user_exp += 10000
 
             exp = user_exp
@@ -103,11 +86,9 @@ async def user_challenge():
                 else:
                     break
 
-            curs.execute(db_change("delete from user_set where id = ? and name = 'level'"), [ip])
-            curs.execute(db_change("insert into user_set (name, id, data) values ('level', ?, ?)"), [ip, level])
+            user_settings.upsert(ip, 'level', str(level))
 
-            curs.execute(db_change("delete from user_set where id = ? and name = 'experience'"), [ip])
-            curs.execute(db_change("insert into user_set (name, id, data) values ('experience', ?, ?)"), [ip, exp])
+            user_settings.upsert(ip, 'experience', str(exp))
 
             return redirect(conn, '/challenge')
         else:
@@ -121,9 +102,7 @@ async def user_challenge():
                 1
             )
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_first_contribute', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_first_contribute') else 0
             data_html = do_make_challenge_design(
                 '🔰',
                 await get_lang('challenge_title_first_contribute'), 
@@ -135,9 +114,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_tenth_contribute', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_tenth_contribute') else 0
             data_html = do_make_challenge_design(
                 '📝',
                 await get_lang('challenge_title_tenth_contribute'), 
@@ -149,9 +126,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_hundredth_contribute', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_hundredth_contribute') else 0
             data_html = do_make_challenge_design(
                 '🖊️',
                 await get_lang('challenge_title_hundredth_contribute'), 
@@ -163,9 +138,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_thousandth_contribute', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_thousandth_contribute') else 0
             data_html = do_make_challenge_design(
                 '🏅',
                 await get_lang('challenge_title_thousandth_contribute'), 
@@ -177,9 +150,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_first_discussion', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_first_discussion') else 0
             data_html = do_make_challenge_design(
                 '💬',
                 await get_lang('challenge_title_first_discussion'), 
@@ -191,9 +162,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_tenth_discussion', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_tenth_discussion') else 0
             data_html = do_make_challenge_design(
                 '💡',
                 await get_lang('challenge_title_tenth_discussion'), 
@@ -205,9 +174,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_hundredth_discussion', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_hundredth_discussion') else 0
             data_html = do_make_challenge_design(
                 '📢',
                 await get_lang('challenge_title_hundredth_discussion'), 
@@ -219,9 +186,7 @@ async def user_challenge():
             else:
                 data_html_red += data_html
             
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_thousandth_discussion', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_thousandth_discussion') else 0
             data_html = do_make_challenge_design(
                 '📜',
                 await get_lang('challenge_title_thousandth_discussion'), 
@@ -235,9 +200,7 @@ async def user_challenge():
                 
             data_html = data_html_green + data_html_red
 
-            curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_admin', ip])
-            db_data = curs.fetchall()
-            disable = 1 if db_data else 0
+            disable = 1 if user_settings.exists(ip, 'challenge_admin') else 0
             data_html = do_make_challenge_design(
                 '☑️',
                 await get_lang('challenge_title_admin'), 

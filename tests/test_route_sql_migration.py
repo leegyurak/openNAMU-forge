@@ -23,6 +23,7 @@ ROUTE_FILES = tuple(Path("opennamu_forge/presentation/routes").glob("*.py"))
         "opennamu_forge/presentation/routes/list_no_link.py",
         "opennamu_forge/presentation/routes/list_title_index.py",
         "opennamu_forge/presentation/routes/api_version.py",
+        "opennamu_forge/presentation/routes/edit_move.py",
         "opennamu_forge/presentation/routes/login_register_submit.py",
         "opennamu_forge/presentation/routes/main_sys_update.py",
         "opennamu_forge/presentation/routes/recent_app_submit.py",
@@ -30,6 +31,7 @@ ROUTE_FILES = tuple(Path("opennamu_forge/presentation/routes").glob("*.py"))
         "opennamu_forge/presentation/routes/topic_comment_blind.py",
         "opennamu_forge/presentation/routes/topic_comment_delete.py",
         "opennamu_forge/presentation/routes/topic_comment_notice.py",
+        "opennamu_forge/presentation/routes/user_challenge.py",
         "opennamu_forge/presentation/routes/user_setting_skin_set.py",
     ],
 )

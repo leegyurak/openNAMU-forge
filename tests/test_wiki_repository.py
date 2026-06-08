@@ -6,7 +6,7 @@ import pytest
 @pytest.fixture()
 def seeded_wiki_db_set(tmp_path):
     from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
-    from opennamu_forge.infrastructure.db_model import WikiData, get_sqlmodel_session
+    from opennamu_forge.infrastructure.db_model import Backlink, WikiData, get_sqlmodel_session
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
     db_set = {"type": "sqlite", "name": str(Path(tmp_path) / "wiki")}
@@ -18,6 +18,7 @@ def seeded_wiki_db_set(tmp_path):
         session.add(WikiData(title="user:Alpha", data="user", type=""))
         session.add(WikiData(title="file:Logo.png", data="file", type=""))
         session.add(WikiData(title="category:Docs", data="category", type=""))
+        session.add(Backlink(title="FrontPage", link="LinkedPage", type="include", data=""))
         session.commit()
 
     yield db_set
@@ -92,3 +93,68 @@ def test_wiki_document_repository는_prefix_count를_조회한다(seeded_wiki_db
     repository = WikiDocumentRepository(seeded_wiki_db_set)
 
     assert repository.count_titles(prefix="file:") == 1
+
+
+def test_wiki_document_repository는_문서본문을_조회한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    assert repository.get_data("FrontPage") == "main"
+    assert repository.get_data("Missing", default="fallback") == "fallback"
+
+
+def test_wiki_document_repository는_문서제목을_변경한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    repository.rename_title("FrontPage", "MovedPage")
+
+    assert repository.exists_title("FrontPage") is False
+    assert repository.exists_title("MovedPage") is True
+
+
+def test_wiki_document_repository는_문서를_삭제한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    repository.delete_title("FrontPage")
+
+    assert repository.exists_title("FrontPage") is False
+
+
+def test_wiki_document_repository는_역링크를_이동한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.db_model import Backlink, get_sqlmodel_session
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    repository.rename_backlink_link("LinkedPage", "MovedPage")
+
+    with get_sqlmodel_session(seeded_wiki_db_set) as session:
+        backlink = session.get(Backlink, ("FrontPage", "MovedPage", "include"))
+
+    assert backlink is not None
+
+
+def test_wiki_document_repository는_no_역링크를_추가하고_삭제한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.db_model import Backlink, get_sqlmodel_session
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    repository.insert_no_backlinks_for_title("FrontPage")
+
+    with get_sqlmodel_session(seeded_wiki_db_set) as session:
+        backlink = session.get(Backlink, ("FrontPage", "LinkedPage", "no"))
+
+    assert backlink is not None
+
+    repository.delete_no_backlinks_for_title("FrontPage")
+
+    with get_sqlmodel_session(seeded_wiki_db_set) as session:
+        backlink = session.get(Backlink, ("FrontPage", "LinkedPage", "no"))
+
+    assert backlink is None

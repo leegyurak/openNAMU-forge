@@ -57,3 +57,14 @@ def test_user_setting_repository는_없는_setting에_기본값을_반환한다(
     repository = UserSettingRepository(user_setting_db_set)
 
     assert repository.get("tester", "missing", default="fallback") == "fallback"
+
+
+def test_user_setting_repository는_setting_존재를_확인한다(user_setting_db_set):
+    from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
+
+    repository = UserSettingRepository(user_setting_db_set)
+
+    repository.upsert("tester", "challenge_admin", "")
+
+    assert repository.exists("tester", "challenge_admin") is True
+    assert repository.exists("tester", "missing") is False

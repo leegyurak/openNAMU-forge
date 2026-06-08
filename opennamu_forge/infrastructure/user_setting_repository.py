@@ -28,6 +28,19 @@ class UserSettingRepository:
 
             return cast(list[str], rows)
 
+    def exists(self, user_id: str, name: str) -> bool:
+        with get_sqlmodel_session(self.db_set) as session:
+            return cast(
+                bool,
+                session.exec(
+                    select(func.count()).select_from(UserSet).where(
+                        UserSet.id == user_id,
+                        UserSet.name == name,
+                    )
+                ).one()
+                > 0,
+            )
+
     def upsert(self, user_id: str, name: str, data: str) -> None:
         with get_sqlmodel_session(self.db_set) as session:
             session.merge(UserSet(id=user_id, name=name, data=data))

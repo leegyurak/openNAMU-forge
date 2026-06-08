@@ -2,7 +2,10 @@ from .tool.func import *
 
 async def edit_move(name):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        wiki_documents = get_wiki_document_repository()
+        document_meta = get_document_meta_repository()
+        histories = get_history_repository()
+        topics = get_topic_repository()
 
         if await acl_check(name, 'document_move') == 1:
             return await re_error(conn, 0)
@@ -42,38 +45,30 @@ async def edit_move(name):
             # 역링크 관련 패치 해야할 듯
 
             # 문서 이동 파트 S
-            curs.execute(db_change("select title from history where title = ?"), [move_title])
-            if curs.fetchall():
+            if histories.exists_title(move_title):
                 if move_option == 'merge' and await acl_check(tool = 'owner_auth', memo = 'merge documents (' + name + ') (' + move_title + ')') != 1:
-                    curs.execute(db_change("select data from data where title = ?"), [move_title])
-                    data = curs.fetchall()
-                    if data:
-                        curs.execute(db_change("delete from data where title = ?"), [move_title])
-                        curs.execute(db_change("delete from back where link = ?"), [move_title])
+                    if wiki_documents.exists_title(move_title):
+                        wiki_documents.delete_title(move_title)
+                        wiki_documents.delete_backlinks_by_link(move_title)
 
-                    curs.execute(db_change("select data from data where title = ?"), [name])
-                    data = curs.fetchall()
-                    data_in = data[0][0] if data else ''
+                    data_in = wiki_documents.get_data(name)
 
-                    curs.execute(db_change("update data set title = ? where title = ?"), [move_title, name])
-                    curs.execute(db_change("update back set link = ? where link = ?"), [move_title, name])
+                    wiki_documents.rename_title(name, move_title)
+                    wiki_documents.rename_backlink_link(name, move_title)
 
                     # 역링크 S
                     # 문서 합치기이므로 기존 문서 쪽은 no 역링크 생성, 이동하는 곳에는 no 역링크 제거
-                    curs.execute(db_change("select distinct link from back where title = ?"), [name])
-                    backlink = [[for_a[0], name, 'no', ''] for for_a in curs.fetchall()]
-                    curs.executemany(db_change("insert into back (link, title, type, data) values (?, ?, ?, ?)"), backlink)
-                    curs.execute(db_change("delete from back where title = ? and type = 'no'"), [move_title])
+                    wiki_documents.insert_no_backlinks_for_title(name)
+                    wiki_documents.delete_no_backlinks_for_title(move_title)
                     # 역링크 E
 
-                    curs.execute(db_change("select id from history where title = ? order by id + 0 desc limit 1"), [move_title])
-                    num = curs.fetchall()[0][0]
+                    num = histories.latest_revision_id(move_title)
+                    num = num if num else '0'
 
-                    curs.execute(db_change("select id from history where title = ? order by id + 0 asc"), [name])
-                    data = curs.fetchall()
-                    for move in data:
-                        curs.execute(db_change("update rc set title = ?, id = ? where title = ? and id = ?"), [move_title, str(int(num) + int(move[0])), name, move[0]])
-                        curs.execute(db_change("update history set title = ?, id = ? where title = ? and id = ?"), [move_title, str(int(num) + int(move[0])), name, move[0]])
+                    for move in histories.list_revision_ids_ascending(name):
+                        new_revision_id = str(int(num) + int(move))
+                        histories.rename_recent_change_title_and_id(name, move, move_title, new_revision_id)
+                        histories.rename_revision_title_and_id(name, move, move_title, new_revision_id)
 
                     history_plus(conn, 
                         move_title, 
@@ -93,23 +88,20 @@ async def edit_move(name):
                     var_name = ''
                     while var_name == '':
                         temp_title = 'test ' + load_random_key() + ' ' + str(i)
-                        curs.execute(db_change("select title from history where title = ? limit 1"), [temp_title])
-                        if not curs.fetchall():
+                        if not histories.exists_title(temp_title):
                             var_name = temp_title
                         else:
                             i += 1
 
                     for title_name in [[name, var_name], [move_title, name], [var_name, move_title]]:
-                        curs.execute(db_change("update data set title = ? where title = ?"), [title_name[1], title_name[0]])
-                        curs.execute(db_change("update back set link = ? where link = ?"), [title_name[1], title_name[0]])
+                        wiki_documents.rename_title(title_name[0], title_name[1])
+                        wiki_documents.rename_backlink_link(title_name[0], title_name[1])
 
-                        curs.execute(db_change("update history set title = ? where title = ?"), [title_name[1], title_name[0]])
-                        curs.execute(db_change("update rc set title = ? where title = ?"), [title_name[1], title_name[0]])
+                        histories.rename_title(title_name[0], title_name[1])
+                        histories.rename_recent_change_title(title_name[0], title_name[1])
 
                     for title_name in [[name, move_title], [move_title, name]]:
-                        curs.execute(db_change("select data from data where title = ?"), [name])
-                        data = curs.fetchall()
-                        data_in = data[0][0] if data else ''
+                        data_in = wiki_documents.get_data(name)
 
                         history_plus(conn, 
                             title_name[0], 
@@ -124,24 +116,20 @@ async def edit_move(name):
                 elif move_option != 'none':
                     has_error = 1
             elif move_option != 'none':
-                curs.execute(db_change("select data from data where title = ?"), [name])
-                data = curs.fetchall()
-                data_in = data[0][0] if data else ''
+                data_in = wiki_documents.get_data(name)
 
-                curs.execute(db_change("update data set title = ? where title = ?"), [move_title, name])
-                curs.execute(db_change("update back set link = ? where link = ?"), [move_title, name])
+                wiki_documents.rename_title(name, move_title)
+                wiki_documents.rename_backlink_link(name, move_title)
 
                 # 역링크 S
                 # 문서 합치기 쪽 역링크와 동일하게
-                curs.execute(db_change("select distinct link from back where title = ?"), [name])
-                backlink = [[for_a[0], name, 'no', ''] for for_a in curs.fetchall()]
-                curs.executemany(db_change("insert into back (link, title, type, data) values (?, ?, ?, ?)"), backlink)
-                curs.execute(db_change("delete from back where title = ? and type = 'no'"), [move_title])
+                wiki_documents.insert_no_backlinks_for_title(name)
+                wiki_documents.delete_no_backlinks_for_title(move_title)
                 # 역링크 E
 
                 # 역사와 최근 변경 이동 S
-                curs.execute(db_change("update history set title = ? where title = ?"), [move_title, name])
-                curs.execute(db_change("update rc set title = ? where title = ?"), [move_title, name])
+                histories.rename_title(name, move_title)
+                histories.rename_recent_change_title(name, move_title)
                 # 역사와 최근 변경 이동 E
 
                 history_plus(conn, 
@@ -158,27 +146,25 @@ async def edit_move(name):
             # 문서 이동 파트 E
             
             # 토론 이동 파트 S
-            curs.execute(db_change("select title from rd where title = ?"), [move_title])
-            if curs.fetchall():
+            if topics.exists_recent_discuss_title(move_title):
                 if move_option_topic == 'merge' and await acl_check(tool = 'owner_auth', memo = 'merge document\'s topics (' + name + ') (' + move_title + ')') != 1:
-                    curs.execute(db_change("update rd set title = ? where title = ?"), [move_title, name])
+                    topics.rename_recent_discuss_title(name, move_title)
                 elif move_option_topic == 'reverse':
                     i = 0
                     var_name = ''
                     while var_name == '':
                         temp_title = 'test ' + load_random_key() + ' ' + str(i)
-                        curs.execute(db_change("select title from rd where title = ? limit 1"), [temp_title])
-                        if not curs.fetchall():
+                        if not topics.exists_recent_discuss_title(temp_title):
                             var_name = temp_title
                         else:
                             i += 1
                     
                     for title_name in [[name, var_name], [move_title, name], [var_name, move_title]]:
-                        curs.execute(db_change("update rd set title = ? where title = ?"), [title_name[1], title_name[0]])
+                        topics.rename_recent_discuss_title(title_name[0], title_name[1])
                 else:
                     has_error = 1
             elif move_option_topic != 'none':
-                curs.execute(db_change("update rd set title = ? where title = ?"), [move_title, name])
+                topics.rename_recent_discuss_title(name, move_title)
 
             # 토론 이동 파트 E
 
@@ -188,20 +174,19 @@ async def edit_move(name):
                 var_name = ''
                 while var_name == '':
                     temp_title = 'test ' + load_random_key() + ' ' + str(i)
-                    curs.execute(db_change("select title from history where title = ? limit 1"), [temp_title])
-                    if not curs.fetchall():
+                    if not histories.exists_title(temp_title):
                         var_name = temp_title
                     else:
                         i += 1
                 
                 for title_name in [[name, var_name], [move_title, name], [var_name, move_title]]:
-                    curs.execute(db_change("update data_set set doc_name = ? where doc_name = ?"), [title_name[1], title_name[0]])
+                    document_meta.rename_doc_name(title_name[0], title_name[1])
             elif document_set_option == 'normal':
-                curs.execute(db_change("delete from data_set where doc_name = ?"), [move_title])
-                curs.execute(db_change("delete from acl where title = ?"), [move_title])
+                document_meta.delete_doc_name(move_title)
+                document_meta.delete_acl_title(move_title)
 
-                curs.execute(db_change("update data_set set doc_name = ? where doc_name = ?"), [move_title, name])
-                curs.execute(db_change("update acl set title = ? where title = ?"), [move_title, name])
+                document_meta.rename_doc_name(name, move_title)
+                document_meta.rename_acl_title(name, move_title)
 
             # data_set 이동 파트 E
 
