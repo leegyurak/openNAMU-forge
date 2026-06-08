@@ -1,8 +1,8 @@
 "use strict";
 
 function do_insert_user_info() {
-    if(document.getElementById('opennamu_get_user_info')) {
-        let name = document.getElementById('opennamu_get_user_info').innerHTML;
+    if(document.getElementById('opennamu_forge_get_user_info')) {
+        let name = document.getElementById('opennamu_forge_get_user_info').innerHTML;
 
         let lang_data = new FormData();
         lang_data.append('data', ['normal', 'ban', 'ban', 'ban', 'type', 'user_name', 'authority', 'state', 'level', ].join(' '));
@@ -15,7 +15,7 @@ function do_insert_user_info() {
         }).then(function(lang) {
             lang_data = lang["data"];
 
-            fetch("/api/user_info/" + opennamu_do_url_encode(name)).then(function(res) {
+            fetch("/api/user_info/" + opennamu_forge_do_url_encode(name)).then(function(res) {
                 return res.json();
             }).then(function(data) {
                 let get_data_auth = data['data']['auth'];
@@ -40,7 +40,7 @@ function do_insert_user_info() {
                     } else if(get_ban_range_type === 'c') {
                         ban_state = data['data']['auth'];
                     } else {
-                        ban_state = '<a href="/recent_block/user/' + opennamu_do_url_encode(name) + '">' + lang_data['ban'] + '</a>';
+                        ban_state = '<a href="/recent_block/user/' + opennamu_forge_do_url_encode(name) + '">' + lang_data['ban'] + '</a>';
                     }
 
                     if(get_data_ban[1] !== '') {
@@ -70,7 +70,7 @@ function do_insert_user_info() {
                     '</table>' +
                 '';
                 
-                document.getElementById('opennamu_get_user_info').innerHTML = end_data;
+                document.getElementById('opennamu_forge_get_user_info').innerHTML = end_data;
             });
         });
     }

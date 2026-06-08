@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_edit_move_all() {
+function opennamu_forge_edit_move_all() {
     let lang_data = new FormData();
     lang_data.append('data', 'title_start_document title_end_document title_include_document move document_name');
 
@@ -12,7 +12,7 @@ function opennamu_edit_move_all() {
     }).then(function(lang) {
         lang = lang["data"];
     
-        document.getElementById('opennamu_edit_move_all').innerHTML = '' +
+        document.getElementById('opennamu_forge_edit_move_all').innerHTML = '' +
             '<input placeholder="' + lang['document_name'] + '"></input>' +
             '<hr class="main_hr"> ' +
             '<input placeholder="' + lang['document_name'] + '"></input>' +

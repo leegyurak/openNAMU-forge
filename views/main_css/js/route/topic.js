@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_thread_delete() {
+function opennamu_forge_thread_delete() {
     let lang_data = new FormData();
     lang_data.append('data', 'delete');
 
@@ -14,12 +14,12 @@ function opennamu_thread_delete() {
 
         let check_list = [];
         let check_list_str = '';
-        for(let for_a = 0; for_a < document.getElementsByClassName("opennamu_blind_button").length; for_a++) {
-            let id = document.getElementsByClassName("opennamu_blind_button")[for_a].id;
-            id = id.replace(/^opennamu_blind_/, '');
+        for(let for_a = 0; for_a < document.getElementsByClassName("opennamu_forge_blind_button").length; for_a++) {
+            let id = document.getElementsByClassName("opennamu_forge_blind_button")[for_a].id;
+            id = id.replace(/^opennamu_forge_blind_/, '');
             id = id.split('_');
     
-            let checked = document.getElementsByClassName("opennamu_blind_button")[for_a].checked;
+            let checked = document.getElementsByClassName("opennamu_forge_blind_button")[for_a].checked;
             if(checked) {
                 check_list.push([id[0], id[1]]);
                 check_list_str += '#' + id[1] + ' ';
@@ -39,14 +39,14 @@ function opennamu_thread_delete() {
     });
 }
 
-function opennamu_thread_blind() {
+function opennamu_forge_thread_blind() {
     let do_true = 0;
-    for(let for_a = 0; for_a < document.getElementsByClassName("opennamu_blind_button").length; for_a++) {
-        let id = document.getElementsByClassName("opennamu_blind_button")[for_a].id;
-        id = id.replace(/^opennamu_blind_/, '');
+    for(let for_a = 0; for_a < document.getElementsByClassName("opennamu_forge_blind_button").length; for_a++) {
+        let id = document.getElementsByClassName("opennamu_forge_blind_button")[for_a].id;
+        id = id.replace(/^opennamu_forge_blind_/, '');
         id = id.split('_');
 
-        let checked = document.getElementsByClassName("opennamu_blind_button")[for_a].checked;
+        let checked = document.getElementsByClassName("opennamu_forge_blind_button")[for_a].checked;
         if(checked) {
             fetch("/thread/" + id[0] + '/comment/' + id[1] + '/blind', { method : 'GET' });
             do_true = 1;
@@ -58,26 +58,26 @@ function opennamu_thread_blind() {
     }
 }
 
-function opennamu_get_thread_ui(user_id, date, data, code, color = '', blind = '', add_style = '', topic_num = '') {
+function opennamu_forge_get_thread_ui(user_id, date, data, code, color = '', blind = '', add_style = '', topic_num = '') {
     let color_b, class_b;
     if(blind === 'O') {
-        color_b = data === '' ? 'opennamu_comment_blind' : 'opennamu_comment_blind_admin';
-        class_b = 'opennamu_comment_blind_js opennamu_list_hidden';
+        color_b = data === '' ? 'opennamu_forge_comment_blind' : 'opennamu_forge_comment_blind_admin';
+        class_b = 'opennamu_forge_comment_blind_js opennamu_forge_list_hidden';
     } else {
-        color_b = 'opennamu_comment_blind_not';
+        color_b = 'opennamu_forge_comment_blind_not';
         class_b = '';
     }
 
     let admin_check_box = ''
     if(topic_num != '') {
-        admin_check_box = '<input type="checkbox" class="opennamu_blind_button" id="opennamu_blind_' + topic_num + '_' + code + '">';
+        admin_check_box = '<input type="checkbox" class="opennamu_forge_blind_button" id="opennamu_forge_blind_' + topic_num + '_' + code + '">';
     }
         
     return `
         <span class="` + class_b + `">
-            <table class="opennamu_comment" style="` + add_style + `">
+            <table class="opennamu_forge_comment" style="` + add_style + `">
                 <tr>
-                    <td class="opennamu_comment_color_` + color + `">
+                    <td class="opennamu_forge_comment_color_` + color + `">
                         ` + admin_check_box + `
                         <a href="#thread_shortcut" id="` + code + `">#` + code + `</a>
                         ` + user_id + `
@@ -85,7 +85,7 @@ function opennamu_get_thread_ui(user_id, date, data, code, color = '', blind = '
                     </td>
                 </tr>
                 <tr>
-                    <td class="` + color_b + ` opennamu_comment_data_main" id="thread_` + code + `">
+                    <td class="` + color_b + ` opennamu_forge_comment_data_main" id="thread_` + code + `">
                         ` + data + `
                     </td>
                 </tr>
@@ -95,22 +95,22 @@ function opennamu_get_thread_ui(user_id, date, data, code, color = '', blind = '
     `;
 }
 
-function opennamu_get_new_thread(topic_num = "", thread_num = "") {
+function opennamu_forge_get_new_thread(topic_num = "", thread_num = "") {
     let get_thread = setInterval(function() {
-        if(!document.getElementById('opennamu_default_thread_render_' + thread_num)) {
-            opennamu_get_thread(topic_num, "", thread_num);
+        if(!document.getElementById('opennamu_forge_default_thread_render_' + thread_num)) {
+            opennamu_forge_get_thread(topic_num, "", thread_num);
         } else {
-            opennamu_get_new_thread(topic_num, String(Number(thread_num) + 1));
+            opennamu_forge_get_new_thread(topic_num, String(Number(thread_num) + 1));
             clearInterval(get_thread);
         }
     }, 3000);
 }
 
-function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
+function opennamu_forge_get_thread(topic_num = "", do_type = "", thread_num = "") {
     let url, to_obj, color;    
     if(do_type === "top") {
         url = "/api/thread/" + topic_num + "/top";
-        to_obj = 'opennamu_top_thread';
+        to_obj = 'opennamu_forge_top_thread';
         color = 'red';
     } else {
         if(thread_num === "") {
@@ -119,7 +119,7 @@ function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
             url = "/api/thread/" + topic_num + "/" + thread_num + "/" + thread_num;
         }
 
-        to_obj = 'opennamu_main_thread';
+        to_obj = 'opennamu_forge_main_thread';
         color = 'default';
     }
 
@@ -163,10 +163,10 @@ function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
                     let date = '<a href="/thread/' + topic_num + '/comment/' + data[for_a]["id"] + '/tool">(' + lang["tool"] + ')</a> ' + data[for_a]["date"];
                     let render_data = data[for_a]["data"] !== "" ? data[for_a]["data"] : "[br]";
 
-                    end_data += opennamu_get_thread_ui(
+                    end_data += opennamu_forge_get_thread_ui(
                         data[for_a]["ip_render"], 
                         date, 
-                        '<div class="opennamu_comment_scroll" id="opennamu_' + color + '_thread_render_' + data[for_a]["id"] + '">' + opennamu_xss_filter(render_data) + '</div>',
+                        '<div class="opennamu_forge_comment_scroll" id="opennamu_forge_' + color + '_thread_render_' + data[for_a]["id"] + '">' + opennamu_forge_xss_filter(render_data) + '</div>',
                         data[for_a]["id"],
                         real_color,
                         data[for_a]["blind"],
@@ -181,7 +181,7 @@ function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
                 }
 
                 if(do_type === "" && thread_num === "") {
-                    opennamu_get_new_thread(topic_num, String(Number(data[data.length - 1]["id"]) + 1));
+                    opennamu_forge_get_new_thread(topic_num, String(Number(data[data.length - 1]["id"]) + 1));
                 }
 
                 document.getElementById(to_obj).innerHTML += end_data;
@@ -190,8 +190,8 @@ function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
                     let observer = new IntersectionObserver(entries => {
                         entries.forEach(entry => {
                             if(entry.isIntersecting) {
-                                opennamu_do_render(
-                                    'opennamu_' + color + '_thread_render_' + end_render[for_a][1],
+                                opennamu_forge_do_render(
+                                    'opennamu_forge_' + color + '_thread_render_' + end_render[for_a][1],
                                     end_render[for_a][0], 
                                     '',
                                     'thread'
@@ -202,7 +202,7 @@ function opennamu_get_thread(topic_num = "", do_type = "", thread_num = "") {
                         });
                     });
 
-                    observer.observe(document.getElementById('opennamu_' + color + '_thread_render_' + end_render[for_a][1]));
+                    observer.observe(document.getElementById('opennamu_forge_' + color + '_thread_render_' + end_render[for_a][1]));
                 }
             }
         });

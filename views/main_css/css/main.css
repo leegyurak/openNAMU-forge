@@ -1,49 +1,49 @@
 /* 기본 전체 옵션 */
-.opennamu_main video, 
-.opennamu_main table, 
-.opennamu_main iframe, 
-.opennamu_main input, 
-.opennamu_main textarea, 
-.opennamu_main img, 
-.opennamu_main hr, 
-.opennamu_main blockquote, 
-.opennamu_main pre, 
-.opennamu_main iframe, 
-.opennamu_main .table_safe {
+.opennamu_forge_main video, 
+.opennamu_forge_main table, 
+.opennamu_forge_main iframe, 
+.opennamu_forge_main input, 
+.opennamu_forge_main textarea, 
+.opennamu_forge_main img, 
+.opennamu_forge_main hr, 
+.opennamu_forge_main blockquote, 
+.opennamu_forge_main pre, 
+.opennamu_forge_main iframe, 
+.opennamu_forge_main .table_safe {
     max-width: 100%;
 }
 
-.opennamu_main {
+.opennamu_forge_main {
     word-break: break-all;
     overflow: auto;
     font-size: 14px;
 }
 
 /* 텍스트 필드 */
-.opennamu_main textarea,
-.opennamu_main input {
+.opennamu_forge_main textarea,
+.opennamu_forge_main input {
     width: 100%;
 
     font-family: Consolas, Monaco, "Courier New", Courier, "Lucida Console", monospace;
 }
 
-.opennamu_main input {
+.opennamu_forge_main input {
     box-sizing: border-box;
 }
 
-.opennamu_main input[type="checkbox"], 
-.opennamu_main input[type="radio"] {
+.opennamu_forge_main input[type="checkbox"], 
+.opennamu_forge_main input[type="radio"] {
     width: auto;
 }
 
 /* 테이블 */
-.opennamu_main table {
+.opennamu_forge_main table {
     overflow-x: scroll;
 
     border-collapse: collapse;
 }
 
-.opennamu_main td {
+.opennamu_forge_main td {
     border: 0.5px solid gainsboro;
     border-width: 0.5px;
 
@@ -51,14 +51,14 @@
 }
 
 @supports (-webkit-touch-callout: none) {
-    .opennamu_main td {
+    .opennamu_forge_main td {
         border: 1px solid gainsboro;
         border-width: 1px;
     }
 }
 
 /* 폴딩 */
-.opennamu_main details summary {
+.opennamu_forge_main details summary {
     cursor: pointer;
     user-select: none;
     
@@ -66,22 +66,22 @@
 }
 
 /* diff */
-.opennamu_main .opennamu_diff_green {
+.opennamu_forge_main .opennamu_forge_diff_green {
     background: #eaf2c2;
 }
 
-.opennamu_main .opennamu_diff_red {
+.opennamu_forge_main .opennamu_forge_diff_red {
     background: #fadad7;
 }
 
 /* list */
-.opennamu_main ul {
+.opennamu_forge_main ul {
     padding-left: 20px;
     
     margin-inline-start: 0;
 }
 
-.opennamu_main ul li {
+.opennamu_forge_main ul li {
     margin-left: 20px;
 
     margin-top: 5px;
@@ -89,40 +89,40 @@
 }
 
 /* thread */
-.opennamu_main .opennamu_comment {
+.opennamu_forge_main .opennamu_forge_comment {
     display: inline-table;
     width: 100%;
 }
 
-.opennamu_main .opennamu_comment_color_green {
+.opennamu_forge_main .opennamu_forge_comment_color_green {
     background: palegreen;
 }
 
-.opennamu_main .opennamu_comment_color_blue {
+.opennamu_forge_main .opennamu_forge_comment_color_blue {
     background: paleturquoise;
 }
 
-.opennamu_main .opennamu_comment_color_red {
+.opennamu_forge_main .opennamu_forge_comment_color_red {
     background: pink;
 }
 
-.opennamu_main .opennamu_comment_color_default {
+.opennamu_forge_main .opennamu_forge_comment_color_default {
     background: palegoldenrod;
 }
 
-.opennamu_main .opennamu_comment_color_gray {
+.opennamu_forge_main .opennamu_forge_comment_color_gray {
     background: gainsboro;
 }
 
-.opennamu_main .opennamu_comment_blind {
+.opennamu_forge_main .opennamu_forge_comment_blind {
     display: none;
 }
 
-.opennamu_main .opennamu_comment_blind_admin {
+.opennamu_forge_main .opennamu_forge_comment_blind_admin {
     background: gainsboro;
 }
 
-.opennamu_main .opennamu_comment_scroll {
+.opennamu_forge_main .opennamu_forge_comment_scroll {
     max-height: 500px;
 
     white-space: pre-wrap;
@@ -133,35 +133,35 @@
     scrollbar-width: none;
 }
 
-.opennamu_main .opennamu_comment_scroll::-webkit-scrollbar {
+.opennamu_forge_main .opennamu_forge_comment_scroll::-webkit-scrollbar {
     display: none;
 }
 
 /* render */
 /* - link */
-.opennamu_main .opennamu_not_exist_link {
+.opennamu_forge_main .opennamu_forge_not_exist_link {
     color: red;
 }
 
-.opennamu_main .opennamu_not_exist_link:hover {
+.opennamu_forge_main .opennamu_forge_not_exist_link:hover {
     color: darkred;
 }
 
-.opennamu_main .opennamu_same_link {
+.opennamu_forge_main .opennamu_forge_same_link {
     font-weight: bold;
 }
 
-.opennamu_main .opennamu_link_out,
-.opennamu_main .opennamu_link_inter {
+.opennamu_forge_main .opennamu_forge_link_out,
+.opennamu_forge_main .opennamu_forge_link_inter {
     color: green;
 }
 
-.opennamu_main .opennamu_link_out:hover,
-.opennamu_main .opennamu_link_inter:hover {
+.opennamu_forge_main .opennamu_forge_link_out:hover,
+.opennamu_forge_main .opennamu_forge_link_inter:hover {
     color: darkgreen;
 }
 
-.opennamu_main .opennamu_link_out::before {
+.opennamu_forge_main .opennamu_forge_link_out::before {
     content: '🅴';
     
     font-weight: lighter;
@@ -170,7 +170,7 @@
 }
 
 /* - toc */
-.opennamu_main .opennamu_TOC {
+.opennamu_forge_main .opennamu_forge_TOC {
     border: 1px solid gainsboro;
     padding: 20px;
     
@@ -184,13 +184,13 @@
     margin-top: 10px;
 }
 
-.opennamu_main .opennamu_TOC_title {
+.opennamu_forge_main .opennamu_forge_TOC_title {
     font-size: 18px;
 }
 
 /* - category */
-.opennamu_main .opennamu_category,
-.opennamu_main .opennamu_trace {
+.opennamu_forge_main .opennamu_forge_category,
+.opennamu_forge_main .opennamu_forge_trace {
     border: 1px solid gainsboro;
     
     padding: 10px;
@@ -200,23 +200,23 @@
     text-overflow: ellipsis;
 }
 
-.opennamu_main .opennamu_category_button,
-.opennamu_main .opennamu_trace_button {
+.opennamu_forge_main .opennamu_forge_category_button,
+.opennamu_forge_main .opennamu_forge_trace_button {
     float: right;
     z-index: 100;
     position: relative;
 }
 
-.opennamu_main .opennamu_category_blur {
+.opennamu_forge_main .opennamu_forge_category_blur {
     filter: blur(5px);
 }
 
-.opennamu_main .opennamu_category_blur:hover {
+.opennamu_forge_main .opennamu_forge_category_blur:hover {
     filter: none;
 }
 
 /* - footnote */
-.opennamu_main .opennamu_footnote {
+.opennamu_forge_main .opennamu_forge_footnote {
     border-top: 1px solid gainsboro;
 
     padding-top: 10px;
@@ -224,37 +224,37 @@
     margin-top: 10px;
 }
 
-.opennamu_main pre,
-.opennamu_main .opennamu_redirect {
+.opennamu_forge_main pre,
+.opennamu_forge_main .opennamu_forge_redirect {
     border: 1px solid gainsboro;
     
     padding: 10px;
 }
 
-.opennamu_main pre {    
+.opennamu_forge_main pre {    
     white-space: pre-wrap;
 
     margin: 0;
 }
 
-.opennamu_main code,
-.opennamu_main pre {
+.opennamu_forge_main code,
+.opennamu_forge_main pre {
     font-family: Consolas, Monaco, "Courier New", Courier, "Lucida Console", monospace;
 }
 
-.opennamu_main #syntax {
+.opennamu_forge_main #syntax {
     padding: 0;
 }
 
-.opennamu_main .opennamu_textarea_500 {
+.opennamu_forge_main .opennamu_forge_textarea_500 {
     height: 500px;
 }
 
-.opennamu_main .opennamu_textarea_100 {
+.opennamu_forge_main .opennamu_forge_textarea_100 {
     height: 100px;
 }
 
-.opennamu_main .opennamu_spead_footnote {
+.opennamu_forge_main .opennamu_forge_spead_footnote {
     color: #555;
     background-color: #efefef;
     
@@ -264,7 +264,7 @@
     font-weight: initial;
 }
 
-.opennamu_main .opennamu_popup_footnote {
+.opennamu_forge_main .opennamu_forge_popup_footnote {
     position: absolute;
 
     z-index: 10000;
@@ -284,18 +284,18 @@
 }
 
 @media(max-width: 768px) {
-    .opennamu_main .opennamu_popup_footnote {
+    .opennamu_forge_main .opennamu_forge_popup_footnote {
         max-width: 100%;
     }
 }
 
 @media(max-width: 420px) {
-    .opennamu_main .table_safe {
+    .opennamu_forge_main .table_safe {
         float: none !important;
     }
 }
 
-.opennamu_main hr {
+.opennamu_forge_main hr {
     margin-top: 10px;
     margin-bottom: 10px;
 
@@ -303,7 +303,7 @@
     border-top: 1px solid gainsboro;
 }
 
-.opennamu_main .opennamu_render_complete {
+.opennamu_forge_main .opennamu_forge_render_complete {
     white-space: pre-wrap;
     
     line-break: anywhere;
@@ -311,11 +311,11 @@
     display: inline;
 }
 
-.opennamu_main .opennamu_render_complete img {
+.opennamu_forge_main .opennamu_forge_render_complete img {
     vertical-align: middle;
 }
 
-.opennamu_main blockquote {
+.opennamu_forge_main blockquote {
     padding: 15px;
     
     margin: 0;
@@ -334,47 +334,47 @@
 }
 
 /* 취소선 */
-.opennamu_main s,
-.opennamu_main strike,
-.opennamu_main del {
+.opennamu_forge_main s,
+.opennamu_forge_main strike,
+.opennamu_forge_main del {
     color: gray;
 }
 
-.opennamu_main s:hover,
-.opennamu_main strike:hover,
-.opennamu_main del:hover {
+.opennamu_forge_main s:hover,
+.opennamu_forge_main strike:hover,
+.opennamu_forge_main del:hover {
     text-decoration: none;
 }
 
 /* 최근 변경 관련 테이블 */
-.opennamu_main #main_table_set {
+.opennamu_forge_main #main_table_set {
     width: 100%;
     
     text-align: center;
 }
 
-.opennamu_main #main_table_width {
+.opennamu_forge_main #main_table_width {
     width: 33.3%;
 }
 
-.opennamu_main #main_table_width_half {
+.opennamu_forge_main #main_table_width_half {
     width: 50%;
 }
 
-.opennamu_main #main_table_width_quarter {
+.opennamu_forge_main #main_table_width_quarter {
     width: 25%;
 }
 
-.opennamu_main #main_table_top_tr {
+.opennamu_forge_main #main_table_top_tr {
     background: gainsboro;
 }
 
-.opennamu_main .opennamu_history_blind {
+.opennamu_forge_main .opennamu_forge_history_blind {
     background: gainsboro;
 }
 
 /* 기타 */
-.opennamu_main .main_hr {
+.opennamu_forge_main .main_hr {
     border: none;
     
     padding-top: 6px;
@@ -385,7 +385,7 @@
     background-color: transparent;
 }
 
-.opennamu_main .mini_hr {
+.opennamu_forge_main .mini_hr {
     border: none;
     
     padding-top: 0px;
@@ -398,72 +398,72 @@
     white-space: pre-line;
 }
 
-.opennamu_main .katex .base {
+.opennamu_forge_main .katex .base {
     max-width: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
 }
 
-.opennamu_main .opennamu_width_200 {
+.opennamu_forge_main .opennamu_forge_width_200 {
     width: 200px;
 }
 
-.opennamu_main .opennamu_list_1 {
+.opennamu_forge_main .opennamu_forge_list_1 {
     list-style: disc;
 }
 
-.opennamu_main .opennamu_list_2 {
+.opennamu_forge_main .opennamu_forge_list_2 {
     list-style: circle;
 }
 
-.opennamu_main .opennamu_list_3 {
+.opennamu_forge_main .opennamu_forge_list_3 {
     list-style: square;
 }
 
-.opennamu_main .opennamu_list_4 {
+.opennamu_forge_main .opennamu_forge_list_4 {
     list-style: none;
 }
 
-.opennamu_main .opennamu_list_4::before {
+.opennamu_forge_main .opennamu_forge_list_4::before {
     display: inline-block;
     content: "⬦";
     width: 1.2em;
     margin-left: -1.2em;
 }
 
-.opennamu_main .opennamu_list_5 {
+.opennamu_forge_main .opennamu_forge_list_5 {
     list-style: none;
 }
 
-.opennamu_main .opennamu_list_5::before {
+.opennamu_forge_main .opennamu_forge_list_5::before {
     display: inline-block;
     content: "⬥";
     width: 1.2em;
     margin-left: -1.2em;
 }
 
-.opennamu_main .opennamu_list_none {
+.opennamu_forge_main .opennamu_forge_list_none {
     list-style: none;
 }
 
-.opennamu_main .opennamu_folding {
+.opennamu_forge_main .opennamu_forge_folding {
     margin-top: 10px;
 }
 
-.opennamu_main .opennamu_recent_change {
+.opennamu_forge_main .opennamu_forge_recent_change {
     padding-bottom: 10px;
 
     border-bottom: 2px solid gainsboro;
 }
 
 /* 이 부분 이하로는 레거시 */
-.opennamu_main #topic_color {
+.opennamu_forge_main #topic_color {
     background: #bbeabb;
 }
 
 /* 외부 확장 기능 연관 */
-.opennamu_main td.hljs-ln-line.hljs-ln-code,
-.opennamu_main td.hljs-ln-line.hljs-ln-numbers {
+.opennamu_forge_main td.hljs-ln-line.hljs-ln-code,
+.opennamu_forge_main td.hljs-ln-line.hljs-ln-numbers {
     padding: 0px !important;
     padding-right: 10px !important;
     
@@ -472,12 +472,12 @@
     vertical-align: baseline;
 }
 
-.opennamu_main .hljs-ln-n:before {
+.opennamu_forge_main .hljs-ln-n:before {
     white-space: nowrap;
 }
 
 /* SVG */
-.opennamu_main .opennamu_svg {
+.opennamu_forge_main .opennamu_forge_svg {
     width: 14px;
     display: inline-block;
 
@@ -486,18 +486,18 @@
     background-size: contain;
 }
 
-.opennamu_main .opennamu_svg_tool {
+.opennamu_forge_main .opennamu_forge_svg_tool {
     background-image: url(/views/main_css/file/icon/tool.svg);
 }
 
-.opennamu_main .opennamu_svg_tabom {
+.opennamu_forge_main .opennamu_forge_svg_tabom {
     width: 50px;
     height: 50px;
 
     background-image: url(/views/main_css/file/icon/thumbs-up.svg);
 }
 
-.opennamu_main #opennamu_bbs_w_post_tabom {
+.opennamu_forge_main #opennamu_forge_bbs_w_post_tabom {
     text-align: center;
 
     margin: auto;
@@ -514,12 +514,12 @@
     box-sizing: content-box;
 }
 
-.opennamu_main .opennamu_bbs_w_post_tab {
+.opennamu_forge_main .opennamu_forge_bbs_w_post_tab {
     padding: 20px;
 
     border: 1px solid gainsboro;
 }
 
-.opennamu_main .opennamu_clearfix {
+.opennamu_forge_main .opennamu_forge_clearfix {
     clear: both;
 }

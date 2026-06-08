@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_xss_filter(str) {
+function opennamu_forge_xss_filter(str) {
     return str.replace(/[&<>"']/g, function(match) {
         switch(match) {
             case '&':
@@ -17,7 +17,7 @@ function opennamu_xss_filter(str) {
     });
 }
 
-function opennamu_xss_filter_decode(str) {
+function opennamu_forge_xss_filter_decode(str) {
     return str.replace(/&amp;|&lt;|&gt;|&#x27;|&quot;/g, function(match) {
         switch(match) {
             case '&amp;':
@@ -43,8 +43,8 @@ function renderSimpleSet(data) {
 
     if (tocSearchData.length > 0) {
         tocData += `
-            <div class="opennamu_TOC" id="toc">
-                <span class="opennamu_TOC_title">TOC</span>
+            <div class="opennamu_forge_TOC" id="toc">
+                <span class="opennamu_forge_TOC_title">TOC</span>
                 <br>
         `;
     }
@@ -65,7 +65,7 @@ function renderSimpleSet(data) {
 
         tocData += `
             <br>
-            <span class="opennamu_TOC_list">
+            <span class="opennamu_forge_TOC_list">
                 ${'<span style="margin-left: 10px;"></span>'.repeat(headingStackStr.split('.').length - 1)}
                 <a href="#s-${headingStackStr}">${headingStackStr}.</a>
                 ${tocSearchIn[2]}
@@ -88,7 +88,7 @@ function renderSimpleSet(data) {
     let footnoteCount = 1;
 
     if (footnoteSearchData.length > 0) {
-        footnoteData += '<div class="opennamu_footnote">';
+        footnoteData += '<div class="opennamu_forge_footnote">';
     }
 
     footnoteSearchData.forEach((footnoteSearch) => {
@@ -116,7 +116,7 @@ function renderSimpleSet(data) {
     return data;
 }
 
-function opennamu_do_id_check(data) {
+function opennamu_forge_do_id_check(data) {
     if(data.match(/\.|\:/)) {
         return 0;
     } else {
@@ -124,7 +124,7 @@ function opennamu_do_id_check(data) {
     }
 }
 
-function opennamu_do_ip_click(obj) {
+function opennamu_forge_do_ip_click(obj) {
     if (obj.id === "") {
         let user_name = obj.name;
 
@@ -148,22 +148,22 @@ function opennamu_do_ip_click(obj) {
                 data_html = data_html.replace(/ \| $/g, '');
 
                 let for_a;
-                for (for_a = 0; document.getElementById("opennamu_ip_render_" + String(for_a) + "_load"); for_a++) {}
+                for (for_a = 0; document.getElementById("opennamu_forge_ip_render_" + String(for_a) + "_load"); for_a++) {}
 
-                let popup_html = '<span class="opennamu_popup_footnote" id="opennamu_ip_render_' + String(for_a) + '_load" style="display: none;"></span>';
-                popup_html += '<span style="display: none;" id="opennamu_ip_tool_' + String(for_a) + '">';
+                let popup_html = '<span class="opennamu_forge_popup_footnote" id="opennamu_forge_ip_render_' + String(for_a) + '_load" style="display: none;"></span>';
+                popup_html += '<span style="display: none;" id="opennamu_forge_ip_tool_' + String(for_a) + '">';
                 popup_html += data_html;
                 popup_html += '</span>';
 
                 obj.innerHTML += popup_html;
-                obj.id = 'opennamu_ip_render_' + String(for_a);
+                obj.id = 'opennamu_forge_ip_render_' + String(for_a);
                 obj.onclick = '';
 
-                document.getElementById('opennamu_ip_render_' + String(for_a)).addEventListener("click", function () {
-                    opennamu_do_footnote_popover('opennamu_ip_render_' + String(for_a), '', 'opennamu_ip_tool_' + String(for_a), 'open');
+                document.getElementById('opennamu_forge_ip_render_' + String(for_a)).addEventListener("click", function () {
+                    opennamu_forge_do_footnote_popover('opennamu_forge_ip_render_' + String(for_a), '', 'opennamu_forge_ip_tool_' + String(for_a), 'open');
                 });
                 document.addEventListener("click", function () {
-                    opennamu_do_footnote_popover('opennamu_ip_render_' + String(for_a), '', 'opennamu_ip_tool_' + String(for_a), 'close');
+                    opennamu_forge_do_footnote_popover('opennamu_forge_ip_render_' + String(for_a), '', 'opennamu_forge_ip_tool_' + String(for_a), 'close');
                 });
 
                 obj.click();
@@ -175,11 +175,11 @@ function opennamu_do_ip_click(obj) {
     }
 }
 
-function opennamu_do_ip_render() {
-    for (let for_a = 0; for_a < document.getElementsByClassName('opennamu_render_ip').length; for_a++) {
-        let ip = document.getElementsByClassName('opennamu_render_ip')[for_a].innerHTML.replace(/&amp;/g, '&');
+function opennamu_forge_do_ip_render() {
+    for (let for_a = 0; for_a < document.getElementsByClassName('opennamu_forge_render_ip').length; for_a++) {
+        let ip = document.getElementsByClassName('opennamu_forge_render_ip')[for_a].innerHTML.replace(/&amp;/g, '&');
 
-        fetch('/api/v2/ip/' + opennamu_do_url_encode(ip))
+        fetch('/api/v2/ip/' + opennamu_forge_do_url_encode(ip))
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`API 호출 실패: ${response.status}`);
@@ -187,28 +187,28 @@ function opennamu_do_ip_render() {
                 return response.json();
             })
             .then(data => {
-                if (document.getElementsByClassName('opennamu_render_ip')[for_a].id !== "opennamu_render_end") {
-                    document.getElementsByClassName('opennamu_render_ip')[for_a].innerHTML = data["data"];
-                    document.getElementsByClassName('opennamu_render_ip')[for_a].id = "opennamu_render_end";
+                if (document.getElementsByClassName('opennamu_forge_render_ip')[for_a].id !== "opennamu_forge_render_end") {
+                    document.getElementsByClassName('opennamu_forge_render_ip')[for_a].innerHTML = data["data"];
+                    document.getElementsByClassName('opennamu_forge_render_ip')[for_a].id = "opennamu_forge_render_end";
                 }
             })
             .catch(err => {
                 console.error('IP 렌더링 호출 중 오류 발생:', err);
-                document.getElementsByClassName('opennamu_render_ip')[for_a].innerHTML = 'IP 정보를 불러오는 데 실패했습니다.';
+                document.getElementsByClassName('opennamu_forge_render_ip')[for_a].innerHTML = 'IP 정보를 불러오는 데 실패했습니다.';
             });
     }
 }
 
 
-function opennamu_do_url_encode(data) {
+function opennamu_forge_do_url_encode(data) {
     return encodeURIComponent(data);
 }
 
-function opennamu_cookie_split_regex(data) {
+function opennamu_forge_cookie_split_regex(data) {
     return new RegExp('(?:^|; )' + data + '=([^;]*)');
 }
 
-function opennamu_send_render(data) {
+function opennamu_forge_send_render(data) {
     if(data === '&lt;br&gt;' || data === '' || data.match(/^ +$/)) {
         data = '<br>';
     } else {
@@ -219,28 +219,28 @@ function opennamu_send_render(data) {
             return m1 + '<a href="' + link_main + '">' + link_main + '</a>';
         });
         data = data.replace(/&lt;a(?:(?:(?!&gt;).)*)&gt;((?:(?!&lt;\/a&gt;).)+)&lt;\/a&gt;/g, function(m0, m1) {
-            let data_unescape = opennamu_xss_filter_decode(m1)
+            let data_unescape = opennamu_forge_xss_filter_decode(m1)
 
-            return '<a href="/w/' + opennamu_do_url_encode(data_unescape) + '">' + m1 + '</a>'
+            return '<a href="/w/' + opennamu_forge_do_url_encode(data_unescape) + '">' + m1 + '</a>'
         })
     }
 
     return data;
 }
 
-function opennamu_insert_v(name, data) {
+function opennamu_forge_insert_v(name, data) {
     document.getElementById(name).value = data;
 }
 
-function opennamu_do_trace_spread() {
-    if(document.getElementsByClassName('opennamu_trace')) {
-        document.getElementsByClassName('opennamu_trace')[0].innerHTML = '' +
-            '<style>.opennamu_trace_button { display: none; } .opennamu_trace { white-space: pre-wrap; overflow-x: unset; text-overflow: unset; }</style>' +
-        '' + document.getElementsByClassName('opennamu_trace')[0].innerHTML
+function opennamu_forge_do_trace_spread() {
+    if(document.getElementsByClassName('opennamu_forge_trace')) {
+        document.getElementsByClassName('opennamu_forge_trace')[0].innerHTML = '' +
+            '<style>.opennamu_forge_trace_button { display: none; } .opennamu_forge_trace { white-space: pre-wrap; overflow-x: unset; text-overflow: unset; }</style>' +
+        '' + document.getElementsByClassName('opennamu_forge_trace')[0].innerHTML
     }
 }
 
-function opennamu_page_control(url, page, data_length, data_length_max = 50) {
+function opennamu_forge_page_control(url, page, data_length, data_length_max = 50) {
     let next = function() {
         if(data_length_max === data_length) {
             return '<a href="' + url.replace('{}', String(page + 1)) + '">(+)</a>';
@@ -260,20 +260,20 @@ function opennamu_page_control(url, page, data_length, data_length_max = 50) {
     return (back() + ' ' + next()).replace(/^ /, '');
 }
 
-function opennamu_list_hidden_remove() {
-    const style = document.querySelector('#opennamu_list_hidden_style');
+function opennamu_forge_list_hidden_remove() {
+    const style = document.querySelector('#opennamu_forge_list_hidden_style');
     if(style !== null) {
         if(style.innerHTML !== "") {
             style.innerHTML = '';
         } else {
-            style.innerHTML = '.opennamu_list_hidden { display: none; }';
+            style.innerHTML = '.opennamu_forge_list_hidden { display: none; }';
         }
     }
 }
 
-function opennamu_make_list(left = '', right = '', bottom = '', class_name = '') {
+function opennamu_forge_make_list(left = '', right = '', bottom = '', class_name = '') {
     let data_html = '<span class="' + class_name + '">';
-    data_html += '<div class="opennamu_recent_change">';
+    data_html += '<div class="opennamu_forge_recent_change">';
     data_html += left;
     
     data_html += '<div style="float: right;">';

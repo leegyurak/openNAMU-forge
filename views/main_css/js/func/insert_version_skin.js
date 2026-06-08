@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_do_insert_version_skin(
+function opennamu_forge_do_insert_version_skin(
     dom_name_version
 ) {
     let url = "/api/skin_info?all=true";
@@ -21,10 +21,10 @@ function opennamu_do_insert_version_skin(
     }
 }
 
-let opennamu_do_insert_version_skin_url = [
+let opennamu_forge_do_insert_version_skin_url = [
     '/manager/1',
     '/manager'
 ];
-if(opennamu_do_insert_version_skin_url.includes(window.location.pathname)) {
-    opennamu_do_insert_version_skin('ver_send_3');
+if(opennamu_forge_do_insert_version_skin_url.includes(window.location.pathname)) {
+    opennamu_forge_do_insert_version_skin('ver_send_3');
 }

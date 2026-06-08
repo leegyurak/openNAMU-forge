@@ -1,7 +1,7 @@
 "use strict";
 
-function opennamu_setting_404_page_post() {
-    let select = document.getElementById("opennamu_setting_404_page_select").value;
+function opennamu_forge_setting_404_page_post() {
+    let select = document.getElementById("opennamu_forge_setting_404_page_select").value;
 
     let put_data_select = new FormData();
     put_data_select.append('data', select);
@@ -10,7 +10,7 @@ function opennamu_setting_404_page_post() {
         method : 'PUT',
         body : put_data_select,
     }).then(function(data) {
-        let content = document.getElementById('opennamu_setting_404_page_textarea').value;
+        let content = document.getElementById('opennamu_forge_setting_404_page_textarea').value;
 
         let put_data_content = new FormData();
         put_data_content.append('data', content);
@@ -24,12 +24,12 @@ function opennamu_setting_404_page_post() {
     });
 }
 
-function opennamu_setting_404_page_preview() {
-    let content = document.getElementById('opennamu_setting_404_page_textarea').value;
-    document.getElementById('opennamu_setting_404_page_preview').innerHTML = content;
+function opennamu_forge_setting_404_page_preview() {
+    let content = document.getElementById('opennamu_forge_setting_404_page_textarea').value;
+    document.getElementById('opennamu_forge_setting_404_page_preview').innerHTML = content;
 }
 
-function opennamu_setting_404_page() {
+function opennamu_forge_setting_404_page() {
     let data = [];
 
     let lang_data = new FormData();
@@ -59,7 +59,7 @@ function opennamu_setting_404_page() {
             ['404_file', data[0]['data']['404_page']],
         ];
 
-        data_html += '<select id="opennamu_setting_404_page_select">';
+        data_html += '<select id="opennamu_forge_setting_404_page_select">';
         for(let for_a = 0; for_a < select_list.length; for_a++) {
             let selected = '';
             if(data[1]['data'][0] === select_list[for_a][0]) {
@@ -76,17 +76,17 @@ function opennamu_setting_404_page() {
             set_data = data[2]['data'][0][0];
         }
 
-        data_html += '<textarea class="opennamu_textarea_500" id="opennamu_setting_404_page_textarea">' + set_data + '</textarea>';
+        data_html += '<textarea class="opennamu_forge_textarea_500" id="opennamu_forge_setting_404_page_textarea">' + set_data + '</textarea>';
         data_html += '<hr class="main_hr">';
 
-        data_html += '<button id="opennamu_save_button" onclick="opennamu_setting_404_page_post();">' + data[0]['data']['save'] + '</button> ';
-        data_html += '<button onclick="opennamu_setting_404_page_preview();">' + data[0]['data']['preview'] + '</button>';
+        data_html += '<button id="opennamu_forge_save_button" onclick="opennamu_forge_setting_404_page_post();">' + data[0]['data']['save'] + '</button> ';
+        data_html += '<button onclick="opennamu_forge_setting_404_page_preview();">' + data[0]['data']['preview'] + '</button>';
         data_html += '<hr class="main_hr">';
 
-        data_html += '<div id="opennamu_setting_404_page_preview"></div>';
+        data_html += '<div id="opennamu_forge_setting_404_page_preview"></div>';
 
         return data_html;
     }).then(function(end_data) {
-        document.getElementById('opennamu_setting_404_page').innerHTML = end_data;
+        document.getElementById('opennamu_forge_setting_404_page').innerHTML = end_data;
     });
 }

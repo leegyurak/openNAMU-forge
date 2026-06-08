@@ -1,0 +1,1 @@
+"""OpenNamu Forge application package."""

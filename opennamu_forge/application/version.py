@@ -1,0 +1,8 @@
+from __future__ import annotations
+
+VERSION_INFO = {
+    "r_ver": "v3.6.0-Beta-v58",
+    "c_ver": "20250529",
+    "s_ver": "20240426",
+    "bin_link": "https://github.com/openNAMU/GopenNAMU/releases/download/v2025-12-07-Beta-v13/",
+}

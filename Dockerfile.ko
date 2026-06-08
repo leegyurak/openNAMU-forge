@@ -1,7 +1,9 @@
 FROM python:3.11
 
-MAINTAINER 2du <min08101@naver.com>
-MAINTAINER hoparkgo9ma <me@ho9.me>
+COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /uvx /bin/
+
+LABEL org.opencontainers.image.title="OpenNamu Forge"
+LABEL org.opencontainers.image.description="Modernized Python/Flask wiki engine based on openNAMU"
 
 
 ENV NAMU_DB_TYPE=sqlite
@@ -12,15 +14,16 @@ ENV NAMU_GOLANGPORT=3001
 ENV NAMU_LANG=ko-KR
 ENV NAMU_MARKUP=namumark
 ENV NAMU_ENCRYPT=sha3
+ENV NAMU_THEME_COLOR="#00a495"
 ENV NAMU_DOCKER=O
+ENV PATH="/app/.venv/bin:${PATH}"
 
-ADD . /app
+COPY . /app
 WORKDIR /app
 
 # RUN echo "nameserver 1.1.1.1" >> /etc/resolv.conf
-RUN pip install -r requirements.txt
-RUN pip install -r requirements-optional.txt
+RUN uv sync --frozen --no-dev --extra performance
 
 EXPOSE 3000
 
-CMD [ "python", "./app.py" ]
+CMD ["python", "-m", "opennamu_forge.cli", "serve"]

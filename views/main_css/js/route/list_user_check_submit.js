@@ -1,10 +1,10 @@
 "use strict";
 
-function opennamu_list_user_check_submit_post() {
+function opennamu_forge_list_user_check_submit_post() {
     window.location.pathname = window.location.pathname.replace('/check_submit/', '/check/');
 }
 
-function opennamu_list_user_check_submit() {
+function opennamu_forge_list_user_check_submit() {
     let lang_data = new FormData();
     lang_data.append('data', 'check');
     
@@ -16,6 +16,6 @@ function opennamu_list_user_check_submit() {
     }).then(function(lang) {
         lang = lang["data"];
 
-        document.getElementById('opennamu_list_user_check_submit').innerHTML = '<button onclick="opennamu_list_user_check_submit_post();">' + lang['check'] + '</button>';
+        document.getElementById('opennamu_forge_list_user_check_submit').innerHTML = '<button onclick="opennamu_forge_list_user_check_submit_post();">' + lang['check'] + '</button>';
     });
 }

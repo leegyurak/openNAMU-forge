@@ -1,75 +1,53 @@
-html {
-    background: #393636;
-    color: white;
+:root {
+    --forge-bg: #171a1d;
+    --forge-surface: #202429;
+    --forge-surface-raised: #262b31;
+    --forge-text: #eef2f4;
+    --forge-text-muted: #aab4bd;
+    --forge-line: #343b43;
+    --forge-line-strong: #46505a;
+    --forge-hover: #2c333a;
+    --forge-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    --forge-theme-color-surface: color-mix(in srgb, var(--forge-theme-color) 20%, #202429);
+    --forge-theme-color-muted: color-mix(in srgb, var(--forge-theme-color) 26%, transparent);
 }
 
+html,
 section {
-    background: black;
-    color: white;
+    background: var(--forge-bg);
+    color: var(--forge-text);
 }
 
-aside {
-    background: #2a2526;
-}
-
-header#main {
-    background: #26373f;
-}
-
-header#main a, header#main a:hover {
-    background: #26373f;
-    color: white;
-}
-
-.top_cel_in {
-    background: #3e3741;
+header#main,
+aside,
+article.main#main_data,
+.top_cel_in,
+footer,
+#nav_bar {
+    background: var(--forge-surface);
+    color: var(--forge-text);
 }
 
 header#section {
-    background: #2c3439;
+    background: linear-gradient(180deg, var(--forge-theme-color-surface), var(--forge-surface));
 }
 
-input, textarea, button, select, aside .side_button, .menu_item_link, input:hover, aside .side_button:hover, .menu_item_link:hover, #opennamu_save_button, #main_data button:hover {
-    background: black;
-    color: white;
+input,
+textarea,
+button,
+select,
+aside .side_button,
+.menu_item_link {
+    background: var(--forge-surface-raised);
+    color: var(--forge-text);
 }
 
-button.search_button#goto, button.search_button#goto:hover {
-    background: #374433;
+input.search {
+    background: var(--forge-bg);
 }
 
-button.search_button#search, button.search_button#search:hover {
-    background: #39352e;
-}
-
-footer {
-    background: #393636;
-}
-
-#nav_bar {
-    background: #322c33;
-}
-
-#nav_bar a {
-    color: white;
-}
-
-header#main a:hover {
-    background: #405d6a;
-}
-
-button:hover, aside .side_button:hover, .menu_item_link:hover, #main_data button:hover, #topic_color:hover {
-    background: #444;
-}
-
-button.search_button#goto:hover {
-    background: #53664d;
-}
-
-button.search_button#search:hover {
-    background: #665f52;
-}
-
-#opennamu_save_button {
-    background: #325a56;
+.top_cel > a:hover,
+#nav_bar div:hover,
+#main_data button:hover {
+    background: var(--forge-hover);
 }

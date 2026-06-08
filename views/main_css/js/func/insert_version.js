@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_do_insert_version(dom_name_version_now, dom_name_version_new) {
+function opennamu_forge_do_insert_version(dom_name_version_now, dom_name_version_new) {
     fetch("/api/version").then(response => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -10,7 +10,8 @@ function opennamu_do_insert_version(dom_name_version_now, dom_name_version_new) 
     }).then(get_data => {
         document.getElementById(dom_name_version_now).innerHTML += get_data['version'];
 
-        return fetch(`https://raw.githubusercontent.com/openNAMU/openNAMU/${get_data['build']}/version.json`);
+        const repository = window.OPENNAMU_FORGE_UPDATE_REPOSITORY || 'opennamu-forge/opennamu-forge';
+        return fetch(`https://raw.githubusercontent.com/${repository}/${get_data['build']}/version.json`);
     }).then(response => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -28,11 +29,11 @@ function opennamu_do_insert_version(dom_name_version_now, dom_name_version_new) 
     
 }
 
-let opennamu_do_insert_version_url = [
+let opennamu_forge_do_insert_version_url = [
     '/manager/1',
     '/manager',
     '/update'
 ];
-if(opennamu_do_insert_version_url.includes(window.location.pathname)) {
-    opennamu_do_insert_version('ver_send_2', 'ver_send');
+if(opennamu_forge_do_insert_version_url.includes(window.location.pathname)) {
+    opennamu_forge_do_insert_version('ver_send_2', 'ver_send');
 }

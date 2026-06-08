@@ -1,52 +1,120 @@
 [(en-US)](./readme-en.md) | [(ko-KR)](./readme.md)
 
-# 오픈나무
-[![Python 3.8 이상](https://img.shields.io/badge/python->=%203.8-blue.svg)](https://python.org)
+# OpenNamu Forge
+
+[![Python 3.10 이상](https://img.shields.io/badge/python->=%203.10-blue.svg)](https://python.org)
 [![라이선스](https://img.shields.io/badge/license-BSD%203--Clause-lightgrey.svg)](./LICENSE)
 
-![](https://raw.githubusercontent.com/openNAMU/openNAMU/beta/.github/logo.png)
+OpenNamu Forge는 openNAMU를 기반으로 아키텍처, 런타임, 테스트, 관측 가능성, agent-friendly 기여 규칙을 현대화한 Python/Flask 위키 엔진입니다.
 
-오픈나무는 파이썬 기반의 위키 엔진입니다.
+## 주요 기능
 
-## 시작하기
-오픈나무는 파이썬 환경에서 동작하는 파이썬 애플리케이션으로, 파이썬 환경을 필요로 합니다.
+- openNAMU의 기존 위키 엔진 동작과 나무마크/마크다운 지원을 유지합니다.
+- PostgreSQL, MySQL, SQLite를 선택할 수 있습니다.
+- SQLModel 기반 ORM 레이어를 새 DB 작업의 기준으로 사용합니다.
+- Gunicorn 기반 WSGI 실행을 기본 운영 방식으로 둡니다.
+- Prometheus `/metrics`를 제공하며 `.env`로 path와 활성화 여부를 조정할 수 있습니다.
+- agent가 일관되게 기여할 수 있도록 `AGENTS.md`와 `agent-rules/`에 작업 규칙을 분리했습니다.
+- 신규/리팩터링 코드는 3-layer architecture를 따릅니다.
 
-[여기](https://2du.pythonanywhere.com/w/설치법)를 눌러 설치 가이드를 볼 수 있습니다.
+## 기술 스택
 
-### 클론
-아래 명령을 터미널(명령 프롬프트)에 입력하여 본 리포지토리를 클론할 수 있습니다.
- * 일반: `git clone -b stable https://github.com/openNAMU/openNAMU.git`
- * 베타: `git clone -b beta https://github.com/openNAMU/openNAMU.git`
- * 개발: `git clone -b dev https://github.com/openNAMU/openNAMU.git`
+- Python 3.10+
+- Flask 3.1+
+- SQLModel / SQLAlchemy
+- PostgreSQL, MySQL, SQLite
+- Gunicorn
+- Prometheus Flask Exporter
+- uv
+- pytest, coverage
+- Ruff, ty
 
-## 기여
-오픈나무에는 확인되지 않은 버그가 존재할 수 있습니다. 이를 보고해주시면 오픈나무의 발전을 도울 수 있습니다. [여기](https://github.com/openNAMU/openNAMU/issues/new)를 눌러 버그를 보고해주세요.
+## 빠른 시작
 
-오픈나무는 오픈소스 프로젝트입니다. 원한다면 직접 코드를 수정하고 [Pull Request](https://github.com/openNAMU/openNAMU/compare)를 보낼 수 있습니다.
+```bash
+cp .env.example .env
+uv sync --extra performance --extra dev
+uv run python -m opennamu_forge.cli migrate
+uv run python -m opennamu_forge.cli dev
+```
+
+운영 방식에 가까운 로컬 실행:
+
+```bash
+uv run python -m opennamu_forge.cli serve --host 0.0.0.0 --port 3000 --workers 1 --threads 1
+```
+
+Docker Compose 실행:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+## 환경 변수
+
+`.env`로 DB와 Prometheus 설정을 커스텀할 수 있습니다.
+
+```env
+NAMU_DB_TYPE=postgresql
+NAMU_DB=data
+NAMU_DB_HOST=opennamu-forge-db
+NAMU_DB_PORT=5432
+NAMU_DB_USER=opennamu_forge
+NAMU_DB_PASSWORD=opennamu_forge_password
+
+NAMU_THEME_COLOR=#00a495
+
+NAMU_PROMETHEUS_ENABLED=true
+NAMU_PROMETHEUS_PATH=/metrics
+NAMU_PROMETHEUS_GROUP_BY=endpoint
+```
+
+지원 DB 타입:
+
+- `sqlite`
+- `mysql`
+- `postgresql`
+
+## 테스트와 품질 기준
+
+```bash
+uv run --extra dev pytest
+uv run --extra dev python -m coverage run -m pytest
+uv run --extra dev python -m coverage report --fail-under=90
+uv run --extra dev ruff check app.py opennamu_forge migrations tests route/tool/func_tool.py
+uv run --extra dev ty check app.py opennamu_forge/application opennamu_forge/infrastructure opennamu_forge/presentation/flask_factory.py opennamu_forge/presentation/theme.py opennamu_forge/presentation/__init__.py migrations tests
+```
+
+테스트는 pytest 기반으로 작성합니다. 테스트 함수명은 `test_` prefix를 유지하면서 한국어로 작성합니다.
+반복 케이스는 `pytest.mark.parametrize`로 작성하며 테스트 파일의 `for`/`while` 반복문은 금지합니다.
+
+## 아키텍처
+
+신규 코드는 `opennamu_forge/` 아래의 3-layer 구조를 따릅니다.
+
+- `opennamu_forge/presentation/`: Flask app factory와 HTTP adapter
+- `opennamu_forge/application/`: use-case orchestration과 application service
+- `opennamu_forge/infrastructure/`: DB, logging, monitoring, external process adapter
+
+기존 route 기반 코드는 점진적으로 이동합니다. 기존 SQL은 주변 기능이 SQLModel로 완전히 이전되기 전까지 `db_change()`를 통해 DB별 dialect 차이를 흡수합니다.
+
+## 문서
+
+- [AGENTS.md](./AGENTS.md): agent 작업 규칙의 진입점
+- [docs/docker.md](./docs/docker.md): Docker와 Docker Compose 실행 가이드
+- [agent-rules/runtime-and-packaging.md](./agent-rules/runtime-and-packaging.md): uv, Python, Gunicorn, Ruff, ty 규칙
+- [agent-rules/database-and-migrations.md](./agent-rules/database-and-migrations.md): DB와 SQLModel 규칙
+- [agent-rules/testing-and-coverage.md](./agent-rules/testing-and-coverage.md): pytest와 coverage 규칙
+- [agent-rules/observability.md](./agent-rules/observability.md): Prometheus 규칙
+
+## Upstream
+
+OpenNamu Forge는 upstream openNAMU를 기반으로 합니다.
+
+- [openNAMU](https://github.com/openNAMU/openNAMU)
+- [GopenNAMU](https://github.com/openNAMU/GopenNAMU)
 
 ## 라이선스
-오픈나무 프로젝트는 [BSD 3-Clause License](./LICENSE) [(ko-KR)](https://www.olis.or.kr/license/Detailselect.do?lId=1092)이며, 오픈나무 프로젝트를 사용하고자 한다면 라이선스를 준수해야 합니다. 자세한 내용은 문서를 참고하세요.
 
-### 포함된 외부 프로젝트
- * [Quotes icon - Dave Gandy](http://www.flaticon.com/free-icon/quote-left_25672)
- * [highlight.js](https://highlightjs.org/)
- * [KaTeX](https://katex.org/)
- * [Feather](https://feathericons.com/)
- * [GopenNAMU](https://github.com/openNAMU/GopenNAMU)
-
-### 도움을 주신 분들
- * [Team Croatia](https://github.com/TeamCroatia)
- * Basix
- * Efrit
- * 기타 여러 사람들
-
-## 지원 문법
- * 나무마크 (NamuMark)
- * 마크다운 (Markdown) (Beta)
-
-## 기타
- * 첫 가입자에게 소유자 권한이 부여됩니다.
- * [테스트 서버](http://2du.pythonanywhere.com)
- * [기여자 목록](https://github.com/openNAMU/openNAMU/graphs/contributors)
- * [예전 히스토리 1](https://github.com/openNAMU/openNAMU-Backup)
- * [예전 히스토리 2](https://github.com/openNAMU/Discard-openNAMU-Legacy)
+OpenNamu Forge는 upstream openNAMU의 [BSD 3-Clause License](./LICENSE)를 따릅니다.

@@ -1,6 +1,6 @@
 "use strict";
 
-function opennamu_bbs_w_set_post() {
+function opennamu_forge_bbs_w_set_post() {
     let acl_set_list = [
         "bbs_view_acl",
         "bbs_acl",
@@ -17,7 +17,7 @@ function opennamu_bbs_w_set_post() {
 
     for(let for_a = 0; for_a < acl_set_list.length; for_a++) {
         let post_data = new FormData();
-        post_data.append('data', document.getElementById('opennamu_' + acl_set_list[for_a]).value);
+        post_data.append('data', document.getElementById('opennamu_forge_' + acl_set_list[for_a]).value);
         
         fetch('/api/v2/bbs/set/' + set_id + '/' + acl_set_list[for_a], {
             method : 'PUT',
@@ -28,7 +28,7 @@ function opennamu_bbs_w_set_post() {
     }
 }
 
-function opennamu_bbs_w_set_lang(lang, set_name) {
+function opennamu_forge_bbs_w_set_lang(lang, set_name) {
     if(set_name === "bbs_markup") {
         return lang["markup"];
     } else {
@@ -36,12 +36,12 @@ function opennamu_bbs_w_set_lang(lang, set_name) {
     }
 }
 
-function opennamu_bbs_w_set_select(acl_set_list, acl_set_list_h, acl_list, lang) {
+function opennamu_forge_bbs_w_set_select(acl_set_list, acl_set_list_h, acl_list, lang) {
     let acl_set_html = '';
 
     for(let for_b = 0; for_b < acl_set_list.length; for_b++) {
-        acl_set_html += '<h' + acl_set_list_h[for_b] + '>' + opennamu_bbs_w_set_lang(lang, acl_set_list[for_b]) + '</h' + acl_set_list_h[for_b] + '>';
-        acl_set_html += '<select id="opennamu_' + acl_set_list[for_b] + '">';
+        acl_set_html += '<h' + acl_set_list_h[for_b] + '>' + opennamu_forge_bbs_w_set_lang(lang, acl_set_list[for_b]) + '</h' + acl_set_list_h[for_b] + '>';
+        acl_set_html += '<select id="opennamu_forge_' + acl_set_list[for_b] + '">';
         
         let select = '';
         for(let for_a = 0; for_a < acl_list.length; for_a++) {
@@ -58,7 +58,7 @@ function opennamu_bbs_w_set_select(acl_set_list, acl_set_list_h, acl_list, lang)
     return acl_set_html;
 }
 
-function opennamu_bbs_w_set() {
+function opennamu_forge_bbs_w_set() {
     const url = window.location.pathname;
     const url_split = url.split('/');
 
@@ -94,7 +94,7 @@ function opennamu_bbs_w_set() {
             acl_list = acl_list["data"];
 
             let acl_set_html = '<a href="/acl/TEST#exp">(' + lang['reference'] + ')</a>';
-            acl_set_html += opennamu_bbs_w_set_select(acl_set_list, acl_set_list_h, acl_list, lang);
+            acl_set_html += opennamu_forge_bbs_w_set_select(acl_set_list, acl_set_list_h, acl_list, lang);
 
             make_html += acl_set_html;
 
@@ -104,16 +104,16 @@ function opennamu_bbs_w_set() {
         }).then(function(markup_list) {
             markup_list = markup_list["data"];
 
-            make_html += opennamu_bbs_w_set_select(markup_set_list, markup_set_list_h, markup_list, lang);
+            make_html += opennamu_forge_bbs_w_set_select(markup_set_list, markup_set_list_h, markup_list, lang);
 
             return;
         }).then(function() {
-            document.getElementById('opennamu_bbs_w_set').innerHTML = renderSimpleSet('' +
+            document.getElementById('opennamu_forge_bbs_w_set').innerHTML = renderSimpleSet('' +
                 make_html +
                 '<hr class="main_hr">' + 
-                '<input id="opennamu_bbs_name">' +
+                '<input id="opennamu_forge_bbs_name">' +
                 '<hr class="main_hr">' + 
-                '<button onclick="opennamu_bbs_w_set_post();">' + lang['save'] + '</button>' +
+                '<button onclick="opennamu_forge_bbs_w_set_post();">' + lang['save'] + '</button>' +
             '');
 
             let total_set_list = [];
@@ -126,7 +126,7 @@ function opennamu_bbs_w_set() {
                 }).then(function(data) {
                     data = data["data"][0][0];
 
-                    let select_element = document.getElementById('opennamu_' + total_set_list[for_a]);
+                    let select_element = document.getElementById('opennamu_forge_' + total_set_list[for_a]);
                     select_element.querySelector('option[value="' + data + '"]').selected = true;
                 });
             }
@@ -136,7 +136,7 @@ function opennamu_bbs_w_set() {
             }).then(function(data) {
                 data = data["data"][0][0];
 
-                document.getElementById('opennamu_bbs_name').value = data;
+                document.getElementById('opennamu_forge_bbs_name').value = data;
             });
         });
     });

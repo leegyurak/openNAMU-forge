@@ -1,10 +1,9 @@
-__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
 /app_session
 
-data/set.json
-data/mysql.json
-data/oauthsettings.json
-data/version.json
+data/
 
 route/tool/set_mark/custom.py
 
@@ -28,8 +27,7 @@ views/*
 !views/ringo
 !views/main_css
 
-bin/*
-!bin/test
+bin/
 
 sitemap.xml
 sitemap_0.xml
@@ -37,4 +35,12 @@ sitemap_0.xml
 *_data
 
 venv
+.venv
 .env
+
+.coverage
+.coverage.*
+htmlcov
+.pytest_cache/
+.ruff_cache/
+.ty/

@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra performance --extra dev
+
+      - name: Ruff
+        if: matrix.python-version == '3.10'
+        run: uv run --extra dev ruff check app.py opennamu_forge migrations tests opennamu_forge/presentation/routes/tool/func_tool.py
+
+      - name: ty
+        if: matrix.python-version == '3.10'
+        run: uv run --extra dev ty check app.py opennamu_forge/application opennamu_forge/infrastructure opennamu_forge/presentation/flask_factory.py opennamu_forge/presentation/theme.py opennamu_forge/presentation/__init__.py migrations tests
+
+      - name: Pytest
+        run: uv run --extra dev pytest
+
+      - name: Coverage
+        if: matrix.python-version == '3.10'
+        run: |
+          uv run --extra dev python -m coverage run -m pytest
+          uv run --extra dev python -m coverage report --fail-under=90
+
+  postgres-integration:
+    name: PostgreSQL Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: data
+          POSTGRES_USER: opennamu_forge
+          POSTGRES_PASSWORD: opennamu_forge_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U opennamu_forge -d data"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra performance --extra dev
+
+      - name: PostgreSQL schema bootstrap
+        env:
+          OPENNAMU_FORGE_POSTGRES_IT: "1"
+          NAMU_DB_TYPE: postgresql
+          NAMU_DB: data
+          NAMU_DB_HOST: 127.0.0.1
+          NAMU_DB_PORT: "5432"
+          NAMU_DB_USER: opennamu_forge
+          NAMU_DB_PASSWORD: opennamu_forge_password
+        run: uv run --extra dev pytest tests/integration/test_postgresql_integration.py
+
+  sqlite-integration:
+    name: SQLite Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra performance --extra dev
+
+      - name: SQLite schema bootstrap
+        run: uv run --extra dev pytest tests/integration/test_database_integration.py
+
+  mysql-integration:
+    name: MySQL Integration
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: data
+          MYSQL_USER: opennamu_forge
+          MYSQL_PASSWORD: opennamu_forge_password
+          MYSQL_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uopennamu_forge -popennamu_forge_password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra performance --extra dev
+
+      - name: MySQL schema bootstrap
+        env:
+          OPENNAMU_FORGE_MYSQL_IT: "1"
+          NAMU_DB_TYPE: mysql
+          NAMU_DB: data
+          NAMU_DB_HOST: 127.0.0.1
+          NAMU_DB_PORT: "3306"
+          NAMU_DB_USER: opennamu_forge
+          NAMU_DB_PASSWORD: opennamu_forge_password
+        run: uv run --extra dev pytest tests/integration/test_mysql_integration.py

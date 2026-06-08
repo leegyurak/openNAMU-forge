@@ -1,7 +1,7 @@
 services:
-    opennamu-web:
-        container_name: opennamu-web
-        # image: opennamu:latest
+    opennamu-forge-web:
+        container_name: opennamu-forge-web
+        # image: opennamu-forge:latest
         build:
             context: .
             dockerfile: Dockerfile.ko
@@ -10,32 +10,37 @@ services:
         volumes:
             - ./docker_data:/app/data
         environment:
-            NAMU_DB_TYPE: mysql
-            NAMU_DB: data
-            NAMU_DB_HOST: opennamu-db
-            NAMU_DB_PORT: 3306
-            NAMU_DB_USER: opennamu
-            NAMU_DB_PASSWORD: opennamu_password
-            NAMU_LANG: ko-KR
-            NAMU_MARKUP: namumark
+            NAMU_DB_TYPE: ${NAMU_DB_TYPE:-postgresql}
+            NAMU_DB: ${NAMU_DB:-data}
+            NAMU_DB_HOST: ${NAMU_DB_HOST:-opennamu-forge-db}
+            NAMU_DB_PORT: ${NAMU_DB_PORT:-5432}
+            NAMU_DB_USER: ${NAMU_DB_USER:-opennamu_forge}
+            NAMU_DB_PASSWORD: ${NAMU_DB_PASSWORD:-opennamu_forge_password}
+            NAMU_LANG: ${NAMU_LANG:-ko-KR}
+            NAMU_MARKUP: ${NAMU_MARKUP:-namumark}
+            NAMU_THEME_COLOR: "${NAMU_THEME_COLOR:-#00a495}"
+            NAMU_GUNICORN_WORKERS: ${NAMU_GUNICORN_WORKERS:-1}
+            NAMU_GUNICORN_THREADS: ${NAMU_GUNICORN_THREADS:-1}
+            NAMU_PROMETHEUS_ENABLED: ${NAMU_PROMETHEUS_ENABLED:-true}
+            NAMU_PROMETHEUS_PATH: ${NAMU_PROMETHEUS_PATH:-/metrics}
+            NAMU_PROMETHEUS_GROUP_BY: ${NAMU_PROMETHEUS_GROUP_BY:-endpoint}
         networks:
-            - opennamu
+            - opennamu-forge
         depends_on:
-            - opennamu-db
+            - opennamu-forge-db
 
-    opennamu-db:
-        container_name: opennamu-db
-        image: mysql:latest
+    opennamu-forge-db:
+        container_name: opennamu-forge-db
+        image: postgres:16
         restart: always
         environment:
-            MYSQL_ROOT_PASSWORD: root_password
-            MYSQL_DATABASE: data
-            MYSQL_USER: opennamu
-            MYSQL_PASSWORD: opennamu_password
+            POSTGRES_DB: ${NAMU_DB:-data}
+            POSTGRES_USER: ${NAMU_DB_USER:-opennamu_forge}
+            POSTGRES_PASSWORD: ${NAMU_DB_PASSWORD:-opennamu_forge_password}
         volumes:
-            - ./db_data:/var/lib/mysql
+            - ./db_data:/var/lib/postgresql/data
         networks:
-            - opennamu
+            - opennamu-forge
 
 networks:
-    opennamu:
+    opennamu-forge:

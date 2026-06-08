@@ -5,7 +5,7 @@ class Accordion {
     constructor(el) {
         this.el = el;
         this.summary = el.querySelector('summary');
-        this.content = el.querySelector('.opennamu_folding');
+        this.content = el.querySelector('.opennamu_forge_folding');
     
         this.animation = null;
         this.isClosing = false;
@@ -78,7 +78,7 @@ class Accordion {
     }
 }
 
-function opennamu_heading_folding(data, element = '') {
+function opennamu_forge_heading_folding(data, element = '') {
     let fol = document.getElementById(data);
     if(fol.style.display === '' || fol.style.display === 'inline-block' || fol.style.display === 'block') {
         document.getElementById(data).style.display = 'none';
@@ -97,7 +97,7 @@ function opennamu_heading_folding(data, element = '') {
     }
 }
 
-function opennamu_do_render_html(name = '') {
+function opennamu_forge_do_render_html(name = '') {
     if(document.getElementById(name)) {
         let data = document.getElementById(name).innerHTML;
 
@@ -147,7 +147,7 @@ function opennamu_do_render_html(name = '') {
                         link_data = '';
                     }
 
-                    return '<' + t_data[key] + ' class="opennamu_link_out" href="' + link_data + '">' + in_data_2 + '</' + t_data[key] + '>';
+                    return '<' + t_data[key] + ' class="opennamu_forge_link_out" href="' + link_data + '">' + in_data_2 + '</' + t_data[key] + '>';
                 } else if(t_data[key] === 'iframe') {
                     let src_data = in_data?.match(/ src=['"]([^'"]*)['"]/);
                     if(src_data) {
@@ -211,7 +211,7 @@ function opennamu_do_render_html(name = '') {
     }
 }
 
-function opennamu_do_footnote_spread(set_name, load_name) {
+function opennamu_forge_do_footnote_spread(set_name, load_name) {
     if(document.getElementById(set_name + '_load').style.display === 'none') {
         document.getElementById(set_name).title = '';
         document.getElementById(set_name + '_load').innerHTML = '<a href="#' + load_name + '">(Go)</a> ' + document.getElementById(load_name + '_title').innerHTML;
@@ -221,7 +221,7 @@ function opennamu_do_footnote_spread(set_name, load_name) {
     }
 }
 
-function opennamu_do_footnote_popover(set_name, load_name, sub_obj = undefined, do_type = 'open') {
+function opennamu_forge_do_footnote_popover(set_name, load_name, sub_obj = undefined, do_type = 'open') {
     if(document.getElementById(set_name + '_load')) {
         if(do_type === 'open') {
             if(sub_obj !== undefined) {
@@ -265,16 +265,16 @@ function opennamu_do_footnote_popover(set_name, load_name, sub_obj = undefined, 
     }
 }
 
-function opennamu_do_category_spread() {
-    if(document.getElementsByClassName('opennamu_render_complete')) {
-        document.getElementsByClassName('opennamu_render_complete')[0].innerHTML = '' +
-            '<style>.opennamu_main .opennamu_category_button { display: none; } .opennamu_main .opennamu_category { white-space: pre-wrap; overflow-x: unset; text-overflow: unset; }</style>' +
-        '' + document.getElementsByClassName('opennamu_render_complete')[0].innerHTML;
+function opennamu_forge_do_category_spread() {
+    if(document.getElementsByClassName('opennamu_forge_render_complete')) {
+        document.getElementsByClassName('opennamu_forge_render_complete')[0].innerHTML = '' +
+            '<style>.opennamu_forge_main .opennamu_forge_category_button { display: none; } .opennamu_forge_main .opennamu_forge_category { white-space: pre-wrap; overflow-x: unset; text-overflow: unset; }</style>' +
+        '' + document.getElementsByClassName('opennamu_forge_render_complete')[0].innerHTML;
     }
 }
 
-function opennamu_do_toc() {
-    let data = document.getElementById('opennamu_render_complete');
+function opennamu_forge_do_toc() {
+    let data = document.getElementById('opennamu_forge_render_complete');
     let h_tag = data.querySelectorAll("h1, h2, h3, h4, h5, h6");
     let toc_count = [0, 0, 0, 0, 0, 0];
     let toc_html = '';
@@ -311,13 +311,13 @@ function opennamu_do_toc() {
         h_tag[for_a].innerHTML = '<a id="s-' + toc_string_sub + '" href="#toc">' + toc_string + '</a> ' + h_tag[for_a].innerHTML;
     }
 
-    data.innerHTML = data.innerHTML.replace(/(<h[1-6]>)/, '<div class="opennamu_toc"></div>$1');
-    data.innerHTML = data.innerHTML.replace(/<div class="opennamu_toc"><\/div>/g, function(match) {
-        return '<div class="opennamu_TOC" id="toc"><div class="opennamu_TOC_title">TOC</div><br>' + toc_html + '</div>';
+    data.innerHTML = data.innerHTML.replace(/(<h[1-6]>)/, '<div class="opennamu_forge_toc"></div>$1');
+    data.innerHTML = data.innerHTML.replace(/<div class="opennamu_forge_toc"><\/div>/g, function(match) {
+        return '<div class="opennamu_forge_TOC" id="toc"><div class="opennamu_forge_TOC_title">TOC</div><br>' + toc_html + '</div>';
     });
 }
 
-function opennamu_do_render(to_obj, data, name = '', do_type = '', option = '', callback = undefined) {
+function opennamu_forge_do_render(to_obj, data, name = '', do_type = '', option = '', callback = undefined) {
     let url;
     if (do_type === '') {
         url = "/api/render";
@@ -360,7 +360,7 @@ function opennamu_do_render(to_obj, data, name = '', do_type = '', option = '', 
     });
 }
 
-function opennamu_do_render_with_dom(to_obj, from_obj, name = '', do_type = '', option = '', callback = undefined) {
+function opennamu_forge_do_render_with_dom(to_obj, from_obj, name = '', do_type = '', option = '', callback = undefined) {
     let url;
     if (do_type === '') {
         url = "/api/render";
@@ -373,7 +373,7 @@ function opennamu_do_render_with_dom(to_obj, from_obj, name = '', do_type = '', 
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             'name': name,
-            'data': opennamu_xss_filter_decode(document.getElementById(from_obj).innerHTML),
+            'data': opennamu_forge_xss_filter_decode(document.getElementById(from_obj).innerHTML),
             'option': option
         })
     }).then(response => {

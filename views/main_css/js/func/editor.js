@@ -1,7 +1,7 @@
 "use strict";
 
 function do_insert_data(data) {
-    const name = 'opennamu_edit_textarea';
+    const name = 'opennamu_forge_edit_textarea';
 
     if(get_select_editor() === 'textarea') {
         // https://stackoverflow.com/questions/11076975/insert-text-into-textarea-at-cursor-position-javascript
@@ -39,7 +39,7 @@ function do_insert_data(data) {
 
 // 아직 개편이 더 필요함
 function do_paste_image() {
-    document.getElementById('opennamu_edit_textarea').addEventListener("paste", pasteListener);
+    document.getElementById('opennamu_forge_edit_textarea').addEventListener("paste", pasteListener);
 }
 
 function pasteListener(e) {
@@ -121,8 +121,8 @@ function do_stop_exit() {
     window.onbeforeunload = function() {
         do_sync_monaco_and_textarea();
 
-        let data = document.getElementById('opennamu_edit_textarea').value;
-        let origin = document.getElementById('opennamu_edit_origin').value;
+        let data = document.getElementById('opennamu_forge_edit_textarea').value;
+        let origin = document.getElementById('opennamu_forge_edit_origin').value;
         if(data !== origin) {
             return '';
         }
@@ -135,11 +135,11 @@ function do_stop_exit_release() {
     window.onbeforeunload = function () {}
 }
 
-function opennamu_edit_turn_off_monaco() {
+function opennamu_forge_edit_turn_off_monaco() {
     let now_selected = get_select_editor();
     let editor_list = [
-        ['opennamu_edit_textarea', 'none'], 
-        ['opennamu_monaco_editor', 'none']
+        ['opennamu_forge_edit_textarea', 'none'], 
+        ['opennamu_forge_monaco_editor', 'none']
     ];
 
     if(now_selected === 'textarea') {
@@ -155,7 +155,7 @@ function opennamu_edit_turn_off_monaco() {
 }
 
 function do_monaco_to_textarea(set_value) {
-    document.getElementById('opennamu_edit_textarea').value = set_value;
+    document.getElementById('opennamu_forge_edit_textarea').value = set_value;
 }
 
 function do_textarea_to_monaco(set_value) {
@@ -163,7 +163,7 @@ function do_textarea_to_monaco(set_value) {
 }
 
 function get_select_editor() {
-    let now_selected = document.getElementById("opennamu_select_editor").value;
+    let now_selected = document.getElementById("opennamu_forge_select_editor").value;
     if(now_selected === 'default') {
         return 'textarea';
     } else if(now_selected === 'monaco') {
@@ -174,7 +174,7 @@ function get_select_editor() {
 }
 
 function get_select_editor_markup() {
-    let now_selected = document.getElementById("opennamu_editor_markup").value;
+    let now_selected = document.getElementById("opennamu_forge_editor_markup").value;
     if(now_selected === 'namumark' || now_selected === 'namumark_beta') {
         return 'namumark';
     } else if(now_selected === 'markdown') {
@@ -187,7 +187,7 @@ function get_select_editor_markup() {
 function do_sync_monaco_and_textarea(select = '') {
     let now_selected = get_select_editor();
     if(select === 'textarea_to' || now_selected === 'textarea') {
-        let set_value = document.getElementById('opennamu_edit_textarea').value;
+        let set_value = document.getElementById('opennamu_forge_edit_textarea').value;
         do_textarea_to_monaco(set_value);
     } else if(now_selected === 'monaco') {
         let set_value = window.editor.getValue();
@@ -284,56 +284,56 @@ function do_monaco_init(monaco_thema) {
             });
         }
 
-        window.editor = monaco.editor.create(document.getElementById('opennamu_monaco_editor'), {
-            value : document.getElementById('opennamu_edit_textarea').value,
+        window.editor = monaco.editor.create(document.getElementById('opennamu_forge_monaco_editor'), {
+            value : document.getElementById('opennamu_forge_edit_textarea').value,
             language : 'namumark',
             automaticLayout : true,
             wordWrap : true,
             theme : "namumark" + (monaco_thema === "" ? "" : "-" + monaco_thema)
         });
 
-        if(typeof opennamu_monaco_custom === 'function') {
-            opennamu_monaco_custom();
+        if(typeof opennamu_forge_monaco_custom === 'function') {
+            opennamu_forge_monaco_custom();
         }
 
-        new PlaceholderContentWidget(document.getElementById('opennamu_edit_textarea').placeholder, window.editor);
+        new PlaceholderContentWidget(document.getElementById('opennamu_forge_edit_textarea').placeholder, window.editor);
 
-        opennamu_do_sync_monaco_markup();
+        opennamu_forge_do_sync_monaco_markup();
     });
 }
 
-function opennamu_do_editor_preview() {
+function opennamu_forge_do_editor_preview() {
     do_sync_monaco_and_textarea();
 
-    const input = document.querySelector('#opennamu_edit_textarea');
+    const input = document.querySelector('#opennamu_forge_edit_textarea');
     if(input !== null) {
         let name = "test";
-        if(document.getElementById('opennamu_editor_doc_name')) {
-            name = opennamu_xss_filter_decode(document.getElementById('opennamu_editor_doc_name').value);
+        if(document.getElementById('opennamu_forge_editor_doc_name')) {
+            name = opennamu_forge_xss_filter_decode(document.getElementById('opennamu_forge_editor_doc_name').value);
         }
 
-        opennamu_do_render('opennamu_preview_area', input.value, name);
+        opennamu_forge_do_render('opennamu_forge_preview_area', input.value, name);
     }
 }
 
-function opennamu_do_sync_monaco_markup() {
+function opennamu_forge_do_sync_monaco_markup() {
     let now_selected = get_select_editor_markup();
     monaco.editor.setModelLanguage(window.editor.getModel(), now_selected);
 }
 
-function opennamu_do_editor_temp_save() {
+function opennamu_forge_do_editor_temp_save() {
     do_sync_monaco_and_textarea();
 
-    const input = document.querySelector('#opennamu_edit_textarea');
+    const input = document.querySelector('#opennamu_forge_edit_textarea');
     if(input !== null) {
         localStorage.setItem("key", input.value);
     }
 }
 
-function opennamu_do_editor_temp_save_load() {
+function opennamu_forge_do_editor_temp_save_load() {
     const data = localStorage.getItem("key");
     if(data !== null) {
-        const input = document.querySelector('#opennamu_edit_textarea');
+        const input = document.querySelector('#opennamu_forge_edit_textarea');
         if(input !== null) {
             input.value = data;
         }
@@ -342,7 +342,7 @@ function opennamu_do_editor_temp_save_load() {
     }
 }
 
-function opennamu_do_user_editor_insert() {
+function opennamu_forge_do_user_editor_insert() {
     let data = prompt();
     if(data !== null && data !== "") {
         let form_data = new FormData();
@@ -357,7 +357,7 @@ function opennamu_do_user_editor_insert() {
     }
 }
 
-function opennamu_do_user_editor_delete() {
+function opennamu_forge_do_user_editor_delete() {
     let data = prompt();
     if(data !== null && data !== "") {
         let form_data = new FormData();
@@ -380,14 +380,14 @@ function opennnamu_do_user_editor() {
             let data_html = '';
 
             for(let for_a = 0; for_a < data["data"].length; for_a++) {
-                data_html += '<a href="javascript:do_insert_data(\'' + opennamu_xss_filter(data["data"][for_a]) + '\');">(' + opennamu_xss_filter(data["data"][for_a]) + ')</a> ';
+                data_html += '<a href="javascript:do_insert_data(\'' + opennamu_forge_xss_filter(data["data"][for_a]) + '\');">(' + opennamu_forge_xss_filter(data["data"][for_a]) + ')</a> ';
             }
 
-            data_html += '<a href="javascript:opennamu_do_user_editor_insert();">(+)</a> ';
-            data_html += '<a href="javascript:opennamu_do_user_editor_delete();">(-)</a>';
+            data_html += '<a href="javascript:opennamu_forge_do_user_editor_insert();">(+)</a> ';
+            data_html += '<a href="javascript:opennamu_forge_do_user_editor_delete();">(-)</a>';
             data_html += '<hr class="main_hr">';
 
-            document.getElementById("opennamu_editor_user_button").innerHTML = data_html;
+            document.getElementById("opennamu_forge_editor_user_button").innerHTML = data_html;
         }
     });
 }

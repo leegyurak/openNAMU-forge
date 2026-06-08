@@ -1,4 +1,4 @@
-function opennamu_file_preview() {
+function opennamu_forge_file_preview() {
     const input = document.getElementById('file_input');
     const preview = document.getElementById('preview');
     if (!input || !preview) return;
