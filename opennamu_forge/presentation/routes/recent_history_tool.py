@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def recent_history_tool(name = 'Test', rev = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
 
         num = str(rev)
 
@@ -25,9 +25,8 @@ async def recent_history_tool(name = 'Test', rev = 1):
         if await acl_check(tool = 'hidel_auth') != 1:
             data += '<h3>' + await get_lang('admin') + '</h3>'
             data += '<ul>'
-            curs.execute(db_change('select title from history where title = ? and id = ? and hide = "O"'), [name, num])
             data += '<li><a href="/history_hidden/' + num + '/' + url_pas(name) + '">'
-            if curs.fetchall():
+            if history.is_hidden(name, num):
                 data += await get_lang('hide_release') 
             else:
                 data += await get_lang('hide')

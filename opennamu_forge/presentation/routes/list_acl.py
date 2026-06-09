@@ -2,29 +2,25 @@ from .tool.func import *
 
 async def list_acl(arg_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        admin = get_admin_repository()
+        document_meta = get_document_meta_repository()
 
         sql_num = (arg_num * 50 - 50) if arg_num * 50 > 0 else 0
 
         div = '<ul>'
 
-        curs.execute(db_change(
-            "select distinct title, data, type from acl where data != '' and not title like 'user:%' order by title desc limit ?, 50"
-        ), [sql_num])
-        list_data = curs.fetchall()
+        list_data = document_meta.list_acl_entries(offset=sql_num, limit=50)
         for data in list_data:
-            curs.execute(db_change("select time from re_admin where what like ? order by time desc limit 1"), ['acl (' + data[0] + ')%'])
-            time_data = curs.fetchall()
-            time_data = (time_data[0][0] + ' | ') if time_data else ''
+            latest_time = admin.latest_record_time(action_prefix='acl (' + data.title + ')')
+            time_data = (latest_time + ' | ') if latest_time != '' else ''
 
-            curs.execute(db_change("select data from acl where title = ? and type = 'why'"), [data[0]])
-            why_data = curs.fetchall()
-            why_data = (' | ' + why_data[0][0]) if why_data and why_data[0][0] != '' else ''
+            why = document_meta.get_acl(data.title, 'why')
+            why_data = (' | ' + why) if why != '' else ''
 
             div += '' + \
-                '<li>' + \
+                    '<li>' + \
                     time_data + \
-                    '<a href="/acl/' + url_pas(data[0]) + '">' + html.escape(data[0]) + '</a>' + \
+                    '<a href="/acl/' + url_pas(data.title) + '">' + html.escape(data.title) + '</a>' + \
                     why_data + \
                 '</li>' + \
             ''

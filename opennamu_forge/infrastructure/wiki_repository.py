@@ -48,19 +48,40 @@ class WikiDocumentRepository:
         with get_sqlmodel_session(self.db_set) as session:
             return int(session.exec(query).one())
 
+    def count_all_titles(self) -> int:
+        with get_sqlmodel_session(self.db_set) as session:
+            return int(session.exec(select(func.count()).select_from(WikiData)).one())
+
     def get_data(self, title: str, *, default: str = "") -> str:
         with get_sqlmodel_session(self.db_set) as session:
             value = select(WikiData.data).where(WikiData.title == title)
 
             return cast(str, session.exec(select(func.coalesce(value.scalar_subquery(), default))).one())
 
+    def find_title(self, title: str) -> str | None:
+        with get_sqlmodel_session(self.db_set) as session:
+            return session.exec(select(WikiData.title).where(WikiData.title == title).limit(1)).first()
+
+    def find_title_case_insensitive(self, title: str) -> str | None:
+        with get_sqlmodel_session(self.db_set) as session:
+            return session.exec(select(WikiData.title).where(func.lower(WikiData.title) == title.lower()).limit(1)).first()
+
     def exists_title(self, title: str) -> bool:
         with get_sqlmodel_session(self.db_set) as session:
             return cast(bool, session.exec(select(func.count()).select_from(WikiData).where(WikiData.title == title)).one() > 0)
 
+    def exists_title_prefix(self, prefix: str) -> bool:
+        with get_sqlmodel_session(self.db_set) as session:
+            return cast(bool, session.exec(select(func.count()).select_from(WikiData).where(col(WikiData.title).like(prefix + "%"))).one() > 0)
+
     def delete_title(self, title: str) -> None:
         with get_sqlmodel_session(self.db_set) as session:
             session.exec(delete(WikiData).where(col(WikiData.title) == title))
+            session.commit()
+
+    def upsert_title(self, title: str, data: str) -> None:
+        with get_sqlmodel_session(self.db_set) as session:
+            session.merge(WikiData(title=title, data=data))
             session.commit()
 
     def rename_title(self, old_title: str, new_title: str) -> None:
@@ -94,3 +115,15 @@ class WikiDocumentRepository:
         with get_sqlmodel_session(self.db_set) as session:
             session.exec(delete(Backlink).where(col(Backlink.title) == title, col(Backlink.type) == "no"))
             session.commit()
+
+    def list_needed_titles(self, *, offset: int = 0, limit: int = 50) -> list[str]:
+        with get_sqlmodel_session(self.db_set) as session:
+            rows = session.exec(
+                select(col(Backlink.title))
+                .where(Backlink.type == "no")
+                .distinct()
+                .offset(offset)
+                .limit(limit)
+            ).all()
+
+            return cast(list[str], rows)

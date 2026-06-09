@@ -5,7 +5,9 @@ from .go_api_bbs_w_comment_one import api_bbs_w_comment_one
 
 async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '', post_num = '', comment_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
+        topics = get_topic_repository()
+        wiki_documents = get_wiki_document_repository()
         
         bbs_num_str = str(bbs_num)
         post_num_str = str(post_num)
@@ -38,20 +40,22 @@ async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '
             if comment_num != '':
                 sub += ' (' + comment_num + ')'
         elif topic_num == '' and num != '':
-            curs.execute(db_change("select title from history where title = ? and id = ? and hide = 'O'"), [name, num])
-            if curs.fetchall() and await acl_check(tool = 'hidel_auth') == 1:
+            if history.is_hidden(name, num) and await acl_check(tool = 'hidel_auth') == 1:
                 return await re_error(conn, 3)
 
-            curs.execute(db_change("select data from history where title = ? and id = ?"), [name, num])
+            history_data = history.find_data(name, num)
+            data = [[history_data]] if history_data is not None else None
 
             sub += ' (r' + num + ')'
 
             menu = [['history_tool/' + url_pas(num) + '/' + url_pas(name), await get_lang('return')]]
         elif topic_num != '':
-            if await acl_check(tool = 'hidel_auth') == 1:
-                curs.execute(db_change("select data from topic where id = ? and code = ? and block = ''"), [num, topic_num])
-            else:
-                curs.execute(db_change("select data from topic where id = ? and code = ?"), [num, topic_num])
+            comment = topics.get(topic_num, num)
+            data = (
+                [[comment.data]]
+                if comment is not None and (comment.block == '' or await acl_check(tool = 'hidel_auth') != 1)
+                else None
+            )
 
             v_name = await get_lang('discussion_raw')
             sub = ' (#' + num + ')'
@@ -61,7 +65,7 @@ async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '
                 ['thread/' + topic_num + '/comment/' + num + '/tool', await get_lang('return')]
             ]
         else:
-            curs.execute(db_change("select data from data where title = ?"), [name])
+            data = [[wiki_documents.get_data(name)]] if wiki_documents.exists_title(name) else None
 
             menu = [['w/' + url_pas(name), await get_lang('return')]]
 
@@ -81,7 +85,7 @@ async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '
             else:
                 data = None
         else:
-            data = curs.fetchall()
+            data = data
             
         if data:
             doc_preview = ''

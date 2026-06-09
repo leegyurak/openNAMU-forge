@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def vote_add():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        votes = get_vote_repository()
 
         if await acl_check('', 'vote') == 1:
             return await re_error(conn, 0)
@@ -12,36 +12,29 @@ async def vote_add():
             if vote_data.count('\n') < 1:
                 return await re_error(conn, 0)
 
-            curs.execute(db_change('select id from vote where not type = "option" order by id + 0 desc limit 1'))
-            id_data = curs.fetchall()
-            id_data = str((int(id_data[0][0]) + 1) if id_data else 1)
+            latest_vote_id = votes.latest_vote_id()
+            id_data = str((int(latest_vote_id) + 1) if latest_vote_id is not None else 1)
 
             if flask.request.form.get('open_select', 'N') == 'Y':
                 open_data = 'open'
             else:
                 open_data = 'n_open'
 
-            curs.execute(db_change("insert into vote (name, id, subject, data, user, type, acl) values (?, ?, ?, ?, '', ?, ?)"), [
+            votes.add_main(
                 flask.request.form.get('name', 'test'),
                 id_data,
                 flask.request.form.get('subject', 'test'),
                 flask.request.form.get('data', 'test'),
                 open_data,
                 flask.request.form.get('acl_select', '')
-            ])
-            curs.execute(db_change("insert into vote (name, id, subject, data, user, type, acl) values ('open_user', ?, '', ?, '', 'option', '')"), [
-                id_data,
-                ip_check()
-            ])
+            )
+            votes.add_option('open_user', id_data, ip_check())
             
             time_limitless = flask.request.form.get('limitless', '')
             if time_limitless == '':
                 time_limit = flask.request.form.get('date', '')
                 if re.search(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$', time_limit):
-                    curs.execute(db_change("insert into vote (name, id, subject, data, user, type, acl) values ('end_date', ?, '', ?, '', 'option', '')"), [
-                        id_data,
-                        time_limit
-                    ])
+                    votes.add_option('end_date', id_data, time_limit)
 
             return redirect(conn, '/vote')
         else:

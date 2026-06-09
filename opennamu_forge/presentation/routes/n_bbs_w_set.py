@@ -2,14 +2,11 @@ from .tool.func import *
 
 async def bbs_w_set(bbs_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
-        curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num])
-        db_data = curs.fetchall()
-        if not db_data:
+        bbs_name = bbs.get_setting(str(bbs_num), "bbs_name")
+        if bbs_name == "":
             return redirect(conn, '/bbs/main')
-        else:
-            bbs_name = db_data[0][0]
 
         bbs_num_str = str(bbs_num)
 

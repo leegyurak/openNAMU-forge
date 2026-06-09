@@ -16,19 +16,36 @@ from opennamu_forge.infrastructure.logging import get_logger
 from opennamu_forge.application.version import VERSION_INFO
 from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.application.ports.repositories import (
+    AdminPort,
+    BacklinkPort,
+    BbsPort,
     DocumentMetaPort,
+    HtmlFilterPort,
     HistoryPort,
     OtherSettingPort,
+    RecentBlockPort,
     TopicPort,
+    UserAgentDataPort,
+    UserNoticePort,
     UserSettingPort,
+    VotePort,
     WikiDocumentPort,
 )
 from opennamu_forge.application.services.settings_service import WikiSettingsService
+from opennamu_forge.infrastructure.admin_repository import AdminRepository
+from opennamu_forge.infrastructure.backlink_repository import BacklinkRepository
+from opennamu_forge.infrastructure.bbs_repository import BbsRepository
 from opennamu_forge.infrastructure.document_meta_repository import DocumentMetaRepository
 from opennamu_forge.infrastructure.history_repository import HistoryRepository
+from opennamu_forge.infrastructure.html_filter_repository import HtmlFilterRepository
+from opennamu_forge.infrastructure.legacy_bootstrap import LegacyBootstrapAdapter
+from opennamu_forge.infrastructure.recent_block_repository import RecentBlockRepository
 from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 from opennamu_forge.infrastructure.topic_repository import TopicRepository
+from opennamu_forge.infrastructure.user_agent_repository import UserAgentDataRepository
+from opennamu_forge.infrastructure.user_notice_repository import UserNoticeRepository
 from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
+from opennamu_forge.infrastructure.vote_repository import VoteRepository
 from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
 
 logger = get_logger(__name__)
@@ -135,6 +152,30 @@ def get_other_setting_repository() -> OtherSettingPort:
     return OtherSettingRepository(get_current_db_set())
 
 
+def get_admin_repository() -> AdminPort:
+    return AdminRepository(get_current_db_set())
+
+
+def get_html_filter_repository() -> HtmlFilterPort:
+    return HtmlFilterRepository(get_current_db_set())
+
+
+def get_bbs_repository() -> BbsPort:
+    return BbsRepository(get_current_db_set())
+
+
+def get_backlink_repository() -> BacklinkPort:
+    return BacklinkRepository(get_current_db_set())
+
+
+def get_recent_block_repository() -> RecentBlockPort:
+    return RecentBlockRepository(get_current_db_set())
+
+
+def get_legacy_bootstrap_repository() -> LegacyBootstrapAdapter:
+    return LegacyBootstrapAdapter(get_current_db_set())
+
+
 def get_wiki_settings_service() -> WikiSettingsService:
     return WikiSettingsService(get_other_setting_repository())
 
@@ -149,6 +190,18 @@ def get_document_meta_repository() -> DocumentMetaPort:
 
 def get_user_setting_repository() -> UserSettingPort:
     return UserSettingRepository(get_current_db_set())
+
+
+def get_user_agent_repository() -> UserAgentDataPort:
+    return UserAgentDataRepository(get_current_db_set())
+
+
+def get_user_notice_repository() -> UserNoticePort:
+    return UserNoticeRepository(get_current_db_set())
+
+
+def get_vote_repository() -> VotePort:
+    return VoteRepository(get_current_db_set())
 
 
 def get_topic_repository() -> TopicPort:
@@ -697,7 +750,13 @@ def get_db_table_list():
     return create_data
 
 async def update(conn, ver_num, set_data):
-    curs = conn.cursor()
+    legacy_bootstrap = get_legacy_bootstrap_repository()
+    html_filters = get_html_filter_repository()
+    settings = get_other_setting_repository()
+    user_settings = get_user_setting_repository()
+    document_meta = get_document_meta_repository()
+    wiki_documents = get_wiki_document_repository()
+    history = get_history_repository()
 
     # 업데이트 하위 호환 유지 함수
     if ver_num < 3160027:
@@ -707,31 +766,27 @@ async def update(conn, ver_num, set_data):
         ver_num = 3160027
 
     if ver_num < 3170002:
-        curs.execute(db_change("select html from html_filter where kind = 'extension'"))
-        if not curs.fetchall():
+        if not html_filters.list_by_kind('extension'):
             for i in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
-                curs.execute(db_change("insert into html_filter (html, kind) values (?, 'extension')"), [i])
+                html_filters.upsert(i, 'extension')
         
         ver_num = 3170002
 
     if ver_num < 3170400:
-        curs.execute(db_change("select title, sub, code from topic where id = '1'"))
-        for i in curs.fetchall():
-            curs.execute(db_change("update topic set code = ? where title = ? and sub = ?"), [i[2], i[0], i[1]])
-            curs.execute(db_change("update rd set code = ? where title = ? and sub = ?"), [i[2], i[0], i[1]])
+        for i in legacy_bootstrap.list_old_topic_first_rows():
+            legacy_bootstrap.update_old_topic_code(i[0], i[1], i[2])
 
         ver_num = 3170400
 
     if ver_num < 3171800:
-        curs.execute(db_change("select data from other where name = 'recaptcha'"))
-        change_rec = curs.fetchall()
-        if change_rec and change_rec[0][0] != '':
-            new_rec = re.search(r'data-sitekey="([^"]+)"', change_rec[0][0])
+        change_rec = settings.get('recaptcha')
+        if change_rec != '':
+            new_rec = re.search(r'data-sitekey="([^"]+)"', change_rec)
             if new_rec:
-                curs.execute(db_change("update other set data = ? where name = 'recaptcha'"), [new_rec.group(1)])
+                settings.upsert('recaptcha', new_rec.group(1))
             else:
-                curs.execute(db_change("update other set data = '' where name = 'recaptcha'"))
-                curs.execute(db_change("update other set data = '' where name = 'sec_re'"))
+                settings.upsert('recaptcha', '')
+                settings.upsert('sec_re', '')
 
         ver_num = 3171800
     
@@ -744,96 +799,85 @@ async def update(conn, ver_num, set_data):
         ver_num = 3172800
 
     if ver_num < 3183603:
-        curs.execute(db_change("select block from ban where band = 'O'"))
-        for i in curs.fetchall():
-            curs.execute(db_change("update ban set block = ?, band = 'regex' where block = ? and band = 'O'"), ['^' + i[0].replace('.', '\\.'), i[0]])
+        for i in legacy_bootstrap.list_legacy_ban_regex_blocks():
+            legacy_bootstrap.convert_legacy_ban_regex_block(i, '^' + i.replace('.', '\\.'))
 
-        curs.execute(db_change("select block from rb where band = 'O'"))
-        for i in curs.fetchall():
-            curs.execute(db_change("update rb set block = ?, band = 'regex' where block = ? and band = 'O'"), ['^' + i[0].replace('.', '\\.'), i[0]])
+        for i in legacy_bootstrap.list_recent_block_regex_blocks():
+            legacy_bootstrap.convert_recent_block_regex_block(i, '^' + i.replace('.', '\\.'))
         
         ver_num = 3183603
 
     if ver_num < 3190201:
         today_time = get_time()
 
-        curs.execute(db_change("select block, end, why, band, login from ban"))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into rb (block, end, today, why, band, login, ongoing) values (?, ?, ?, ?, ?, ?, ?)"), [i[0], i[1], today_time, i[2], i[3], i[4], '1'])
+        for i in legacy_bootstrap.list_legacy_bans():
+            get_recent_block_repository().add_record(i[0], i[1], today_time, '', i[2], i[3], '1', i[4])
         
         ver_num = 3190201
 
     if ver_num < 3191301:
-        curs.execute(db_change('select id, title, date from history where not title like "user:%" order by date desc limit 50'))
-        data_list = curs.fetchall()
+        data_list = legacy_bootstrap.list_recent_history_rows_excluding_user()
         for get_data in data_list:
-            curs.execute(db_change("insert into rc (id, title, date, type) values (?, ?, ?, 'normal')"), [get_data[0], get_data[1], get_data[2]])
+            history.add_recent_change(get_data[1], get_data[0], get_data[2], 'normal')
         
         ver_num = 3191301
 
     if ver_num < 3202400:
-        curs.execute(db_change("select data from other where name = 'update'"))
-        get_data = curs.fetchall()
-        if get_data and get_data[0][0] == 'master':
-            curs.execute(db_change("update other set data = 'beta' where name = 'update'"), [])
+        get_data = settings.get('update')
+        if get_data == 'master':
+            settings.upsert('update', 'beta')
         
         ver_num = 3202400
 
     if ver_num < 3202600:
-        curs.execute(db_change("select name, regex, sub from filter"))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into html_filter (html, kind, plus, plus_t) values (?, 'regex_filter', ?, ?)"), [i[0], i[1], i[2]])
+        for i in legacy_bootstrap.list_legacy_filters():
+            html_filters.upsert(i[0], 'regex_filter', plus=i[1], plus_t=i[2])
 
-        curs.execute(db_change("select title, link, icon from inter"))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into html_filter (html, kind, plus, plus_t) values (?, 'inter_wiki', ?, ?)"), [i[0], i[1], i[2]])
+        for i in legacy_bootstrap.list_legacy_interwiki():
+            html_filters.upsert(i[0], 'inter_wiki', plus=i[1], plus_t=i[2])
         
         ver_num = 3202600
 
     if ver_num < 3203400:
-        curs.execute(db_change("select user, css from custom"))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into user_set (name, id, data) values ('custom_css', ?, ?)"), [re.sub(r' \(head\)$', '', i[0]), i[1]])
+        for i in legacy_bootstrap.list_legacy_custom_css():
+            user_settings.add(re.sub(r' \(head\)$', '', i[0]), 'custom_css', i[1])
         
         ver_num = 3203400
 
     if ver_num < 3205500:
-        curs.execute(db_change("select title, decu, dis, view, why from acl"))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into acl (title, data, type) values (?, ?, ?)"), [i[0], i[1], 'decu'])
-            curs.execute(db_change("insert into acl (title, data, type) values (?, ?, ?)"), [i[0], i[2], 'dis'])
-            curs.execute(db_change("insert into acl (title, data, type) values (?, ?, ?)"), [i[0], i[3], 'view'])
-            curs.execute(db_change("insert into acl (title, data, type) values (?, ?, ?)"), [i[0], i[4], 'why'])
+        for i in legacy_bootstrap.list_legacy_acl_rows():
+            document_meta.upsert_acl(i[0], 'decu', i[1])
+            document_meta.upsert_acl(i[0], 'dis', i[2])
+            document_meta.upsert_acl(i[0], 'view', i[3])
+            document_meta.upsert_acl(i[0], 'why', i[4])
         
         ver_num = 3205500
 
     if ver_num < 3300101:
         # 캐시 초기화
-        curs.execute(db_change('delete from cache_data'))
+        legacy_bootstrap.clear_legacy_cache()
         
         ver_num = 3300101
     
     if ver_num < 3300301:
         # regex_filter 오류 해결
-        curs.execute(db_change('delete from html_filter where kind = "regex_filter" and html is null'))
+        legacy_bootstrap.delete_null_regex_filters()
         
         ver_num = 3300301
         
     if ver_num < 3302302:
         # user이랑 user_set 테이블의 통합
-        curs.execute(db_change('select id, pw, acl, date, encode from user'))
-        for i in curs.fetchall():
-            curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), ['pw', i[0], i[1]])
-            curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), ['acl', i[0], i[2]])
-            curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), ['date', i[0], i[3]])
-            curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), ['encode', i[0], i[4]])
+        for i in legacy_bootstrap.list_legacy_users():
+            user_settings.add(i[0], 'pw', i[1])
+            user_settings.add(i[0], 'acl', i[2])
+            user_settings.add(i[0], 'date', i[3])
+            user_settings.add(i[0], 'encode', i[4])
         
         ver_num = 3302302
             
     if ver_num < 3400101:
         # user_set이랑 user_application 테이블의 통합
-        curs.execute(db_change('select id, pw, date, encode, question, answer, ip, ua, email from user_application'))
-        for i in curs.fetchall():
+        for i in legacy_bootstrap.list_legacy_user_applications():
             sql_data = {}
             sql_data['id'] = i[0]
             sql_data['pw'] = i[1]
@@ -845,54 +889,45 @@ async def update(conn, ver_num, set_data):
             sql_data['ua'] = i[7]
             sql_data['email'] = i[8]
             
-            curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), ['application', i[0], json_dumps(sql_data)])
+            user_settings.add(i[0], 'application', json_dumps(sql_data))
         
         ver_num = 3400101
     
     if ver_num < 3500105:
-        curs.execute(db_change('delete from acl where title like "file:%" and data = "admin" and type like "decu%"'))
+        legacy_bootstrap.delete_file_admin_decu_acl()
         
         ver_num = 3500105
         
     if ver_num < 3500106:
-        curs.execute(db_change("select data from other where name = 'domain'"))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            db_data = db_data[0][0]
+        db_data = settings.get('domain')
+        if db_data != '':
             db_data = re.match(r'[^/]+\/\/([^/]+)', db_data)
             if db_data:
                 db_data = db_data.group(1)
-                curs.execute(db_change("update other set data = ? where name = 'domain'"), [db_data])
+                settings.upsert('domain', db_data)
             else:
-                curs.execute(db_change("update other set data = '' where name = 'domain'"))
+                settings.upsert('domain', '')
         
         ver_num = 3500106
 
     if ver_num < 3500107:
-        db_table_list = get_db_table_list()
-        for for_a in db_table_list:
-            for for_b in db_table_list[for_a]:
-                curs.execute(db_change("update " + for_a + " set " + for_b + " = '' where " + for_b + " is null"))
+        legacy_bootstrap.normalize_nulls(get_db_table_list())
         
         ver_num = 3500107
                 
     if ver_num < 3500113:
-        db_table_list = get_db_table_list()
-        for for_a in db_table_list:
-            for for_b in db_table_list[for_a]:
-                curs.execute(db_change("update " + for_a + " set " + for_b + " = '' where " + for_b + " is null"))
+        legacy_bootstrap.normalize_nulls(get_db_table_list())
         
         ver_num = 3500113
 
     if ver_num < 3500114:
-        curs.execute(db_change('delete from alarm'))
+        legacy_bootstrap.clear_legacy_alarm()
         
         ver_num = 3500114
 
     if ver_num < 3500354:
-        curs.execute(db_change("select data from other where name = 'robot'"))
-        db_data = curs.fetchall()
-        if db_data:
+        db_data = settings.get('robot')
+        if db_data != '':
             robot_default = '' + \
                 'User-agent: *\n' + \
                 'Disallow: /\n' + \
@@ -901,20 +936,19 @@ async def update(conn, ver_num, set_data):
                 'Allow: /views/\n' + \
                 'Allow: /w/' + \
             ''
-            if db_data[0][0] == robot_default:
-                curs.execute(db_change("insert into other (name, data, coverage) values ('robot_default', 'on', '')"))
+            if db_data == robot_default:
+                settings.upsert('robot_default', 'on')
         
         ver_num = 3500354
 
     if ver_num < 3500355:
         # other coverage 오류 해결
-        curs.execute(db_change("update other set coverage = '' where coverage is null"))
+        legacy_bootstrap.normalize_other_coverage()
         
         ver_num = 3500355
 
     if ver_num < 3500358:
-        curs.execute(db_change("drop index history_index"))
-        curs.execute(db_change("create index history_index on history (title, ip)"))
+        legacy_bootstrap.rebuild_history_index()
         
         ver_num = 3500358
 
@@ -923,145 +957,127 @@ async def update(conn, ver_num, set_data):
         # create_data['data_set'] = ['doc_name', 'doc_rev', 'set_name', 'set_data']
         logger.info("Update 3500360...")
 
-        curs.execute(db_change('delete from data_set where set_name = "last_edit"'))
+        legacy_bootstrap.clear_last_edit_meta()
 
-        curs.execute(db_change("select title from data"))
-        db_data = curs.fetchall()
-        for for_a in db_data:
-            curs.execute(db_change("select date from history where title = ? order by date desc limit 1"), [for_a[0]])
-            db_data_2 = curs.fetchall()
+        for for_a in wiki_documents.list_titles():
+            db_data_2 = legacy_bootstrap.latest_history_date_by_title(for_a)
             if db_data_2:
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'last_edit', ?)"), [for_a[0], db_data_2[0][0]])
+                document_meta.upsert(for_a, 'last_edit', db_data_2)
 
-        curs.execute(db_change('delete from acl where title like "file:%" and data = "admin" and type like "decu%"'))
+        legacy_bootstrap.delete_file_admin_decu_acl()
 
         logger.info("Update 3500360 complete")
         ver_num = 3500360
 
     if ver_num < 3500361:
-        # curs.execute(db_change('select id from user_set where name = "email" and data = ?'), [user_email])
-        curs.execute(db_change('select id from user_set where name = "email"'))
-        for db_data in curs.fetchall():
-            if ip_or_user(db_data[0]) == 1:
-                curs.execute(db_change('delete from user_set where id = ? and name = "email"'), [db_data[0]])
+        for db_data in legacy_bootstrap.list_email_user_ids():
+            if ip_or_user(db_data) == 1:
+                user_settings.delete(db_data, 'email')
         
         ver_num = 3500361
 
     # create_data['history'] = ['id', 'title', 'data', 'date', 'ip', 'send', 'leng', 'hide', 'type']
     # create_data['rc'] = ['id', 'title', 'date', 'type']
     if ver_num == 3500362:
-        curs.execute(db_change("drop index history_index"))
-        curs.execute(db_change("create index history_index on history (title, ip)"))
+        legacy_bootstrap.rebuild_history_index()
 
     if ver_num < 3500365:
-        curs.execute(db_change("update back set data = '' where data is null"))
+        legacy_bootstrap.normalize_backlink_data()
         
         ver_num = 3500365
 
     if ver_num < 3500371:
-        curs.execute(db_change("delete from user_notice"))
+        legacy_bootstrap.clear_user_notices()
         user_alarm_count = {}
 
-        curs.execute(db_change("select name, data, date from alarm"))
-        for db_data in curs.fetchall():
+        for db_data in legacy_bootstrap.list_legacy_alarms():
             if db_data[0] in user_alarm_count:
                 user_alarm_count[db_data[0]] += 1
             else:
                 user_alarm_count[db_data[0]] = 1
 
-            curs.execute(db_change('insert into user_notice (id, name, data, date, readme) values (?, ?, ?, ?, "")'), [str(user_alarm_count[db_data[0]]), db_data[0], db_data[1], db_data[2]])
+            legacy_bootstrap.add_user_notice(str(user_alarm_count[db_data[0]]), db_data[0], db_data[1], db_data[2])
         
         ver_num = 3500371
 
     if ver_num < 3500372:
         # ID 글자 확인 호환용
-        curs.execute(db_change('insert into html_filter (html, kind, plus, plus_t) values (?, ?, ?, ?)'), [r'(?:[^A-Za-zㄱ-ㅣ가-힣0-9])', 'name', '', ''])
+        html_filters.upsert(r'(?:[^A-Za-zㄱ-ㅣ가-힣0-9])', 'name')
         
         ver_num = 3500372
 
     if ver_num < 3500373:
         select_data = {}
 
-        curs.execute(db_change("select name, id, data from user_set where name = 'application'"))
-        for db_data in curs.fetchall():
+        for db_data in legacy_bootstrap.list_application_settings():
             select_data[db_data[1]] = db_data
 
-        curs.execute(db_change("delete from user_set where name = 'application'"))
+        legacy_bootstrap.delete_application_settings()
         
         for db_data in select_data:
-            curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [select_data[db_data][1], select_data[db_data][0], select_data[db_data][2]])
+            user_settings.add(select_data[db_data][1], select_data[db_data][0], select_data[db_data][2])
         
         ver_num = 3500373
 
     if ver_num < 3500374:
         # ban 오류 해결
-        curs.execute(db_change("update rb set ongoing = '' where ongoing is null"))
-        curs.execute(db_change("update rb set login = '' where login is null"))
+        legacy_bootstrap.normalize_recent_block_nullable_columns()
         
         ver_num = 3500374
 
     if ver_num < 3500375:
-        curs.execute(db_change("select title, type, user from scan"))
-        for for_a in curs.fetchall():
+        for for_a in legacy_bootstrap.list_legacy_scan_rows():
             type_data = 'watchlist' if for_a[1] == '' else 'star_doc'
-            curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [for_a[2], type_data, for_a[0]])
+            user_settings.add(for_a[2], type_data, for_a[0])
         
         ver_num = 3500375
 
     if ver_num < 3500376:
-        curs.execute(db_change("select doc_name, doc_rev from data_set where set_name = 'edit_request_data'"))
-        for for_a in curs.fetchall():
-            curs.execute(db_change("select id from history where title = ? order by id + 0 desc limit 1"), [for_a[0]])
-            get_data = curs.fetchall()
-            if get_data and (int(get_data[0][0]) + 1) == int(for_a[1]):
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_doing', '1')"), [for_a[0], for_a[1]])
+        for for_a in legacy_bootstrap.list_edit_request_meta():
+            get_data = history.latest_revision_id(for_a[0])
+            if get_data and (int(get_data) + 1) == int(for_a[1]):
+                document_meta.upsert(for_a[0], 'edit_request_doing', '1', doc_rev=for_a[1])
         
         ver_num = 3500376
 
     if ver_num < 3500377 and set_data['type'] == 'sqlite':
-        conn.execute('pragma journal_mode = delete')
+        legacy_bootstrap.set_sqlite_delete_journal(conn)
         
         ver_num = 3500377
 
     if ver_num < 3500378:
-        curs.execute(db_change("select title from data where title like 'category:%' or title like 'user:%' or title like 'file:%'"))
-        for for_a in curs.fetchall():
+        for for_a in legacy_bootstrap.list_special_titles():
             mode = ''
-            if re.search('^user:', for_a[0]):
+            if re.search('^user:', for_a):
                 mode = 'user'
-            elif re.search('^file:', for_a[0]):
+            elif re.search('^file:', for_a):
                 mode = 'file'
-            elif re.search('^category:', for_a[0]):
+            elif re.search('^category:', for_a):
                 mode = 'category'
             
-            curs.execute(db_change('delete from data_set where doc_name = ? and set_name = "doc_type"'), [for_a[0]])
-            curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'doc_type', ?)"), [for_a[0], mode])
+            document_meta.upsert(for_a, 'doc_type', mode)
         
         ver_num = 3500378
 
     if ver_num < 3500379:
-        curs.execute(db_change("select distinct doc_name from data_set where doc_rev = 'not_exist' or doc_rev = ''"))
-        for for_a in curs.fetchall():
+        for for_a in legacy_bootstrap.list_document_meta_names_with_revision_marker():
             data_set_exist = ''
             
-            curs.execute(db_change("select title from data where title = ?"), [for_a[0]])
-            if not curs.fetchall():
+            if not wiki_documents.exists_title(for_a):
                 data_set_exist = 'not_exist'
 
-            curs.execute(db_change("update data_set set doc_rev = ? where doc_name = ? and (doc_rev = '' or doc_rev = 'not_exist')"), [data_set_exist, for_a[0]])
+            document_meta.update_revision_marker(for_a, data_set_exist)
         
         ver_num = 3500379
 
     if ver_num < 20240513:
-        curs.execute(db_change("update user_set set data = '☑️' where name = 'user_title' and data = '✅'"))
+        legacy_bootstrap.normalize_user_title_checkmark()
         
         ver_num = 20240513
 
     if ver_num < 20240732:
-        curs.execute(db_change("select distinct name from alist where acl = 'owner'"))
-        for for_a in curs.fetchall():
-            curs.execute(db_change("select distinct id from user_set where name = 'acl' and data = ?"), [for_a[0]])
-            for for_b in curs.fetchall():
+        for for_a in legacy_bootstrap.list_owner_acl_group_names():
+            for for_b in legacy_bootstrap.list_user_ids_by_acl(for_a):
                 lang_name = 'en-US'
                 if lang_name == 'ko-KR':
                     logger.warning('메인 ACL이 권한으로 개편되면서 기존 설정 값이 날라갔으니 권한으로 재설정 해주세요.')
@@ -1073,68 +1089,62 @@ async def update(conn, ver_num, set_data):
     logger.info('Update completed')
 
 def set_init_always(conn, ver_num, run_mode):
-    curs = conn.cursor()
+    settings = get_other_setting_repository()
+    admins = get_admin_repository()
 
     # 버전 기입
-    curs.execute(db_change('delete from other where name = "ver"'))
-    curs.execute(db_change('insert into other (name, data, coverage) values ("ver", ?, "")'), [ver_num])
+    settings.upsert('ver', ver_num)
     
     # 기본 권한 그룹 설정
-    curs.execute(db_change('delete from alist where name = "owner"'))
-    curs.execute(db_change('insert into alist (name, acl) values ("owner", "owner")'))
+    admins.set_group_acls('owner', ('owner',))
 
-    curs.execute(db_change("select name from alist where name = 'user' limit 1"))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into alist (name, acl) values ("user", "user")'))
+    if 'user' not in admins.list_group_names():
+        admins.set_group_acls('user', ('user',))
 
-    curs.execute(db_change("select name from alist where name = 'ip' limit 1"))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into alist (name, acl) values ("ip", "ip")'))
+    if 'ip' not in admins.list_group_names():
+        admins.set_group_acls('ip', ('ip',))
 
-    curs.execute(db_change("select name from alist where name = 'ban' limit 1"))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into alist (name, acl) values ("ban", "view")'))
+    if 'ban' not in admins.list_group_names():
+        admins.set_group_acls('ban', ('view',))
 
     # 문서 댓글용 게시판 생성
     bbs_num = '0'
     bbs_name = 'document_comment'
     bbs_type = 'comment'
+    bbs = get_bbs_repository()
 
-    curs.execute(db_change("insert into bbs_set (set_name, set_code, set_id, set_data) values ('bbs_name', '', ?, ?)"), [bbs_num, bbs_name])
-    curs.execute(db_change("insert into bbs_set (set_name, set_code, set_id, set_data) values ('bbs_type', '', ?, ?)"), [bbs_num, bbs_type])
+    if bbs.get_setting(bbs_num, 'bbs_name') == '':
+        bbs.add_setting(bbs_num, 'bbs_name', bbs_name)
+
+    if bbs.get_setting(bbs_num, 'bbs_type') == '':
+        bbs.add_setting(bbs_num, 'bbs_type', bbs_type)
 
     # 이미지 폴더 없으면 생성
     if not os.path.exists(load_image_url(conn)):
         os.makedirs(load_image_url(conn))
 
     # 비밀키 없으면 생성
-    curs.execute(db_change('select data from other where name = "key"'))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into other (name, data, coverage) values ("key", ?, "")'), [load_random_key()])
+    if not settings.exists('key'):
+        settings.upsert('key', load_random_key())
 
     # 솔트키 없으면 생성
-    curs.execute(db_change('select data from other where name = "salt_key"'))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into other (name, data, coverage) values ("salt_key", ?, "")'), [load_random_key(4)])
+    if not settings.exists('salt_key'):
+        settings.upsert('salt_key', load_random_key(4))
 
     # 문서 전체 갯수 없으면 생성
-    curs.execute(db_change('select data from other where name = "count_all_title"'))
-    if not curs.fetchall():
-        curs.execute(db_change('insert into other (name, data, coverage) values ("count_all_title", "0", "")'))
+    if not settings.exists('count_all_title'):
+        settings.upsert('count_all_title', '0')
         
     # 위키 접근 비밀번호 있으면 temp DB로 넘겨줌
-    curs.execute(db_change('select data from other where name = "wiki_access_password_need"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
-        curs.execute(db_change('select data from other where name = "wiki_access_password"'))
-        db_data = curs.fetchall()
-        if db_data:
-            global_some_set_do("wiki_access_password", db_data[0][0])
+    db_data = settings.get('wiki_access_password_need')
+    if db_data != '':
+        wiki_access_password = settings.get('wiki_access_password')
+        if wiki_access_password != '':
+            global_some_set_do("wiki_access_password", wiki_access_password)
 
-    curs.execute(db_change('select data from other where name = "load_ip_select"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
-        global_func_some_set_do("load_ip_select", db_data[0][0])
+    db_data = settings.get('load_ip_select')
+    if db_data != '':
+        global_func_some_set_do("load_ip_select", db_data)
 
     # OS마다 실행 파일 설정
     exe_type = linux_exe_chmod()
@@ -1159,25 +1169,23 @@ def linux_exe_chmod():
     return exe_type
 
 def set_init(conn):
-    curs = conn.cursor()
+    html_filters = get_html_filter_repository()
+    settings = get_other_setting_repository()
 
     # 초기값 설정 함수    
-    curs.execute(db_change("select html from html_filter where kind = 'email'"))
-    if not curs.fetchall():
+    if not html_filters.list_by_kind('email'):
         for i in ['naver.com', 'gmail.com', 'daum.net', 'kakao.com']:
-            curs.execute(db_change("insert into html_filter (html, kind, plus, plus_t) values (?, 'email', '', '')"), [i])
+            html_filters.upsert(i, 'email')
 
-    curs.execute(db_change("select html from html_filter where kind = 'extension'"))
-    if not curs.fetchall():
+    if not html_filters.list_by_kind('extension'):
         for i in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
-            curs.execute(db_change("insert into html_filter (html, kind, plus, plus_t) values (?, 'extension', '', '')"), [i])
+            html_filters.upsert(i, 'extension')
 
-    curs.execute(db_change('select data from other where name = "smtp_server" or name = "smtp_port" or name = "smtp_security"'))
-    if not curs.fetchall():
+    if not settings.list_name_data_by_names(('smtp_server', 'smtp_port', 'smtp_security')):
         for i in [['smtp_server', 'smtp.gmail.com'], ['smtp_port', '587'], ['smtp_security', 'starttls']]:
-            curs.execute(db_change("insert into other (name, data, coverage) values (?, ?, '')"), [i[0], i[1]])
+            settings.upsert(i[0], i[1])
 
-    curs.execute(db_change('insert into html_filter (html, kind, plus, plus_t) values (?, ?, ?, ?)'), [r'(?:[^A-Za-zㄱ-ㅣ가-힣0-9])', 'name', '', ''])
+    html_filters.upsert(r'(?:[^A-Za-zㄱ-ㅣ가-힣0-9])', 'name')
 
 # Func-simple
 ## Func-simple-without_DB
@@ -1264,8 +1272,6 @@ async def get_acl_list(type_data = 'normal'):
 
 ## Func-simple-with_DB
 async def get_user_title_list(conn, ip = ''):
-    curs = conn.cursor()
-
     ip = ip_check() if ip == '' else ip
 
     # default
@@ -1274,44 +1280,36 @@ async def get_user_title_list(conn, ip = ''):
         '🌳' : '🌳 newbie',
     }
 
-    curs.execute(db_change('select name from user_set where id = ? and name = ?'), [ip, 'get_🥚'])
-    if curs.fetchall():
+    user_settings = get_user_setting_repository()
+
+    if user_settings.exists(ip, 'get_🥚'):
         user_title['🥚'] = '🥚 easter_egg'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_first_contribute', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_first_contribute'):
         user_title['🔰'] = '🔰 first_contribute'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_tenth_contribute', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_tenth_contribute'):
         user_title['📝'] = '📝 tenth_contribute'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_hundredth_contribute', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_hundredth_contribute'):
         user_title['🖊️'] = '🖊️ hundredth_contribute'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_thousandth_contribute', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_thousandth_contribute'):
         user_title['🏅'] = '🏅 thousandth_contribute'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_first_discussion', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_first_discussion'):
         user_title['💬'] = '💬 first_discussion'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_tenth_discussion', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_tenth_discussion'):
         user_title['💡'] = '💡 tenth_discussion'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_hundredth_discussion', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_hundredth_discussion'):
         user_title['📢'] = '📢 hundredth_discussion'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_thousandth_discussion', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_thousandth_discussion'):
         user_title['📜'] = '📜 thousandth_discussion'
 
-    curs.execute(db_change('select data from user_set where name = ? and id = ?'), ['challenge_admin', ip])
-    if curs.fetchall():
+    if user_settings.exists(ip, 'challenge_admin'):
         user_title['☑️'] = '☑️ before_admin'
 
     if await acl_check(tool = 'all_admin_auth') != 1:
@@ -1320,17 +1318,11 @@ async def get_user_title_list(conn, ip = ''):
     return user_title
     
 def load_image_url(conn):
-    curs = conn.cursor()
-
-    curs.execute(db_change('select data from other where name = "image_where"'))
-    image_where = curs.fetchall()
-    image_where = image_where[0][0] if image_where else os.path.join('data', 'images')
+    image_where = get_other_setting_repository().get('image_where', default=os.path.join('data', 'images'))
     
     return image_where
 
 def load_domain(conn, data_type = 'normal'):
-    curs = conn.cursor()
-    
     domain = ''
     try:
         sys_host = flask.request.host
@@ -1338,18 +1330,13 @@ def load_domain(conn, data_type = 'normal'):
         sys_host = ''
     
     if data_type == 'full':
-        curs.execute(db_change("select data from other where name = 'http_select'"))
-        db_data = curs.fetchall()
-        domain += db_data[0][0] if db_data and db_data[0][0] != '' else 'http'
+        settings = get_other_setting_repository()
+        domain += settings.get('http_select') or 'http'
         domain += '://'
 
-        curs.execute(db_change("select data from other where name = 'domain'"))
-        db_data = curs.fetchall()
-        domain += db_data[0][0] if db_data and db_data[0][0] != '' else sys_host
+        domain += settings.get('domain') or sys_host
     else:
-        curs.execute(db_change("select data from other where name = 'domain'"))
-        db_data = curs.fetchall()
-        domain += db_data[0][0] if db_data and db_data[0][0] != '' else sys_host
+        domain += get_other_setting_repository().get('domain') or sys_host
 
     return domain
 
@@ -1362,14 +1349,11 @@ def get_tool_js_safe(data):
     return data
 
 async def edit_button(conn):
-    curs = conn.cursor()
-
     insert_list = []
 
-    curs.execute(db_change("select html, plus from html_filter where kind = 'edit_top'"))
-    db_data = curs.fetchall()
+    db_data = get_html_filter_repository().list_by_kind('edit_top')
     for get_data in db_data:
-        insert_list += [[get_data[1], get_data[0]]]
+        insert_list += [[get_data.plus, get_data.html]]
 
     data = ''
     for insert_data in insert_list:
@@ -1381,14 +1365,11 @@ async def edit_button(conn):
     return data
 
 async def ip_warning(conn):
-    curs = conn.cursor()
-
     if ip_or_user() != 0:
-        curs.execute(db_change('select data from other where name = "no_login_warning"'))
-        data = curs.fetchall()
-        if data and data[0][0] != '':
+        data = get_other_setting_repository().get('no_login_warning')
+        if data != '':
             text_data = '' + \
-                '<span>' + data[0][0] + '</span>' + \
+                '<span>' + data + '</span>' + \
                 '<hr class="main_hr">' + \
             ''
         else:
@@ -1403,12 +1384,8 @@ async def ip_warning(conn):
     
 # Func-login    
 def pw_encode(conn, data, db_data_encode = ''):
-    curs = conn.cursor()
-
     if db_data_encode == '':
-        curs.execute(db_change('select data from other where name = "encode"'))
-        db_data = curs.fetchall()
-        db_data_encode = db_data[0][0] if db_data else 'sha3'
+        db_data_encode = get_other_setting_repository().get('encode', default='sha3')
 
     if db_data_encode == 'sha256':
         return hashlib.sha256(bytes(data, 'utf-8')).hexdigest()
@@ -1417,9 +1394,7 @@ def pw_encode(conn, data, db_data_encode = ''):
     elif db_data_encode == 'sha3-512':
         return hashlib.sha3_512(bytes(data, 'utf-8')).hexdigest()
     else:
-        curs.execute(db_change('select data from other where name = "salt_key"'))
-        db_data = curs.fetchall()
-        db_data_salt = db_data[0][0] if db_data else ''
+        db_data_salt = get_other_setting_repository().get('salt_key')
         
         if db_data_encode == 'sha3-salt':
             return hashlib.sha3_256(bytes(data + db_data_salt, 'utf-8')).hexdigest()
@@ -1427,11 +1402,7 @@ def pw_encode(conn, data, db_data_encode = ''):
             return hashlib.sha3_512(bytes(data + db_data_salt, 'utf-8')).hexdigest()
 
 def pw_check(conn, data, data2, type_d = 'no', id_d = ''):
-    curs = conn.cursor()
-
-    curs.execute(db_change('select data from other where name = "encode"'))
-    db_data = curs.fetchall()
-    load_set_data = db_data[0][0] if db_data and db_data[0][0] != '' else 'sha3'
+    load_set_data = get_other_setting_repository().get('encode') or 'sha3'
     
     set_data = load_set_data
     if type_d != 'no':
@@ -1439,8 +1410,9 @@ def pw_check(conn, data, data2, type_d = 'no', id_d = ''):
 
     re_data = 1 if pw_encode(conn, data, set_data) == data2 else 0
     if load_set_data != set_data and re_data == 1 and id_d != '':
-        curs.execute(db_change("update user_set set data = ? where id = ? and name = 'pw'"), [pw_encode(conn, data), id_d])
-        curs.execute(db_change("update user_set set data = ? where id = ? and name = 'encode'"), [load_set_data, id_d])
+        user_settings = get_user_setting_repository()
+        user_settings.upsert(id_d, 'pw', pw_encode(conn, data))
+        user_settings.upsert(id_d, 'encode', load_set_data)
 
     return re_data
         
@@ -1570,8 +1542,6 @@ async def load_skin(data = '', set_n = 0, default = 0):
 
 # Func-markup
 async def render_set(conn, doc_name = '', doc_data = '', data_type = 'view', markup = '', parameter = {}):
-    curs = conn.cursor()
-
     # data_type in ['view', 'from', 'thread', 'api_view', 'api_thread', 'api_include', 'backlink']
     # data_type을 list 형식으로 개편 필요할 듯
 
@@ -1604,10 +1574,9 @@ async def render_set(conn, doc_name = '', doc_data = '', data_type = 'view', mar
         'category' : await get_lang('category')
     }
 
-    curs.execute(db_change('select data from other where name = "category_text"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
-        render_lang_data['category'] = db_data[0][0]
+    db_data = get_other_setting_repository().get('category_text')
+    if db_data != '':
+        render_lang_data['category'] = db_data
 
     get_class_render = await class_do_render(
         conn,
@@ -1637,9 +1606,8 @@ async def render_set(conn, doc_name = '', doc_data = '', data_type = 'view', mar
             </style>''' + \
         '' + get_class_render[0]
 
-    curs.execute(db_change("select data from other where name = 'namumark_compatible'"))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
+    db_data = get_other_setting_repository().get('namumark_compatible')
+    if db_data != '':
         get_class_render[0] = '' + \
             '''<style>
                 .opennamu_forge_render_complete {
@@ -1766,32 +1734,20 @@ async def render_simple_set(data):
 
 # Func-request
 async def send_email(conn, who, title, data):
-    curs = conn.cursor()
+    rep_data = dict(get_other_setting_repository().list_name_data_by_names((
+        'smtp_email',
+        'smtp_pass',
+        'smtp_server',
+        'smtp_port',
+        'smtp_security',
+    )))
 
-    curs.execute(db_change('' + \
-        'select name, data from other ' + \
-        'where name = "smtp_email" or name = "smtp_pass" or name = "smtp_server" or name = "smtp_port" or name = "smtp_security"' + \
-    ''))
-    rep_data = curs.fetchall()
-
-    smtp_email = ''
-    smtp_pass = ''
-    smtp_server = ''
-    smtp_security = ''
-    smtp_port = ''
+    smtp_email = rep_data.get('smtp_email', '')
+    smtp_pass = rep_data.get('smtp_pass', '')
+    smtp_server = rep_data.get('smtp_server', '')
+    smtp_security = rep_data.get('smtp_security', '')
+    smtp_port = rep_data.get('smtp_port', '')
     smtp = ''
-
-    for i in rep_data:
-        if i[0] == 'smtp_email':
-            smtp_email = i[1]
-        elif i[0] == 'smtp_pass':
-            smtp_pass = i[1]
-        elif i[0] == 'smtp_server':
-            smtp_server = i[1]
-        elif i[0] == 'smtp_security':
-            smtp_security = i[1]
-        elif i[0] == 'smtp_port':
-            smtp_port = i[1]
     
     smtp_port = int(number_check(smtp_port))
     if smtp_security == 'plain':
@@ -1825,82 +1781,72 @@ async def send_email(conn, who, title, data):
         return 0
 
 async def captcha_get(conn):
-    curs = conn.cursor()
-
     data = ''
     
     if await acl_check('', 'recaptcha_five_pass') == 0 and 'recapcha_pass' in flask.session and flask.session['recapcha_pass'] > 0:
         pass
     elif await acl_check('', 'recaptcha') == 1:
-        curs.execute(db_change('select data from other where name = "recaptcha"'))
-        recaptcha = curs.fetchall()
-        
-        curs.execute(db_change('select data from other where name = "sec_re"'))
-        sec_re = curs.fetchall()
-        
-        curs.execute(db_change('select data from other where name = "recaptcha_ver"'))
-        rec_ver = curs.fetchall()
-        if recaptcha and recaptcha[0][0] != '' and sec_re and sec_re[0][0] != '':
-            if not rec_ver or rec_ver[0][0] == '':
+        settings = get_other_setting_repository()
+        recaptcha = settings.get('recaptcha')
+        sec_re = settings.get('sec_re')
+        rec_ver = settings.get('recaptcha_ver')
+        if recaptcha != '' and sec_re != '':
+            if rec_ver == '':
                 data += '' + \
                     '<script defer src="https://www.google.com/recaptcha/api.js"></script>' + \
-                    '<div class="g-recaptcha" data-sitekey="' + recaptcha[0][0] + '"></div>' + \
+                    '<div class="g-recaptcha" data-sitekey="' + recaptcha + '"></div>' + \
                     '<hr class="main_hr">' + \
                 ''
-            elif rec_ver[0][0] == 'v3':
+            elif rec_ver == 'v3':
                 data += '' + \
-                    '<script defer src="https://www.google.com/recaptcha/api.js?render=' + recaptcha[0][0] + '"></script>' + \
+                    '<script defer src="https://www.google.com/recaptcha/api.js?render=' + recaptcha + '"></script>' + \
                     '<input class="__ON_INPUT__" type="hidden" id="g-recaptcha" name="g-recaptcha">' + \
                     '<script type="text/javascript">' + \
                         'document.addEventListener(\'DOMContentLoaded\', function () {' + \
                             'grecaptcha.ready(function() {' + \
-                                'grecaptcha.execute(\'' + recaptcha[0][0] + '\', {action: \'homepage\'}).then(function(token) {' + \
+                                'grecaptcha.execute(\'' + recaptcha + '\', {action: \'homepage\'}).then(function(token) {' + \
                                     'document.getElementById(\'g-recaptcha\').value = token;' + \
                                 '});' + \
                             '});' + \
                         '});' + \
                     '</script>' + \
                 ''
-            elif rec_ver[0][0] == 'cf':
+            elif rec_ver == 'cf':
                 data += '' + \
                     '<script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js?compat=recaptcha"></script>' + \
-                    '<div class="g-recaptcha" data-sitekey="' + recaptcha[0][0] + '"></div>' + \
+                    '<div class="g-recaptcha" data-sitekey="' + recaptcha + '"></div>' + \
                     '<hr class="main_hr">' + \
                 ''
             else:
-                # rec_ver[0][0] == 'h'
+                # rec_ver == 'h'
                 data += '''
                     <script defer src="https://js.hcaptcha.com/1/api.js"></script>
-                    <div class="h-captcha" data-sitekey="''' + recaptcha[0][0] + '''"></div>
+                    <div class="h-captcha" data-sitekey="''' + recaptcha + '''"></div>
                     <hr class="main_hr">
                 '''
 
     return data
 
 async def captcha_post(conn, re_data):
-    curs = conn.cursor()
-
     if await acl_check('', 'recaptcha_five_pass') == 0 and 'recapcha_pass' in flask.session and flask.session['recapcha_pass'] > 0:
         pass
     elif await acl_check('', 'recaptcha') == 1:
-        curs.execute(db_change('select data from other where name = "sec_re"'))
-        sec_re = curs.fetchall()
-        
-        curs.execute(db_change('select data from other where name = "recaptcha_ver"'))
-        rec_ver = curs.fetchall()
+        settings = get_other_setting_repository()
+        sec_re = settings.get('sec_re')
+        rec_ver = settings.get('recaptcha_ver')
         if await captcha_get(conn) != '':
             url = ''
-            if not rec_ver or rec_ver[0][0] in ('', 'v3'):
+            if rec_ver in ('', 'v3'):
                 url = 'https://www.google.com/recaptcha/api/siteverify'
-            elif rec_ver[0][0] == 'cf':
+            elif rec_ver == 'cf':
                 url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
             else:
-                # rec_ver[0][0] == 'h'
+                # rec_ver == 'h'
                 url = 'https://hcaptcha.com/siteverify'
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, data = {
-                    "secret": sec_re[0][0],
+                    "secret": sec_re,
                     "response": re_data
                 }) as res:
                     if res.status == 200:
@@ -1920,7 +1866,8 @@ async def captcha_post(conn, re_data):
 
 # Func-user
 def do_user_name_check(conn, user_name):
-    curs = conn.cursor()
+    html_filters = get_html_filter_repository()
+    user_settings = get_user_setting_repository()
 
     # XSS 필터
     if html.escape(user_name) != user_name:
@@ -1935,10 +1882,9 @@ def do_user_name_check(conn, user_name):
         return 1
 
     # ID 필터
-    curs.execute(db_change('select html from html_filter where kind = "name"'))
-    set_d = curs.fetchall()
+    set_d = html_filters.list_by_kind('name')
     for i in set_d:
-        check_r = re.compile(i[0], re.I)
+        check_r = re.compile(i.html, re.I)
         if check_r.search(user_name):
             return 1
 
@@ -1947,12 +1893,10 @@ def do_user_name_check(conn, user_name):
         return 1
     
     # 중복 확인
-    curs.execute(db_change("select id from user_set where name = 'user_name' and data = ?"), [user_name])
-    if curs.fetchall():
+    if user_settings.data_exists('user_name', user_name):
         return 1
     
-    curs.execute(db_change("select id from user_set where id = ?"), [user_name])
-    if curs.fetchall():
+    if user_settings.id_exists(user_name):
         return 1
     
     return 0
@@ -2020,56 +1964,47 @@ async def ip_pas(raw_ip):
         
 # Func-edit
 def get_edit_text_bottom(conn, tool = '') :
-    curs = conn.cursor()
-    
+    settings = get_other_setting_repository()
     b_text = ''
     
-    curs.execute(db_change('select data from other where name = "edit_bottom_text"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
-        b_text = db_data[0][0] + '<hr class="main_hr">'
+    db_data = settings.get('edit_bottom_text')
+    if db_data != '':
+        b_text = db_data + '<hr class="main_hr">'
 
     if tool != '':
         if tool == 'edit':
-            curs.execute(db_change('select data from other where name = "edit_only_bottom_text"'))
+            db_data = settings.get('edit_only_bottom_text')
         elif tool == 'move':
-            curs.execute(db_change('select data from other where name = "move_bottom_text"'))
+            db_data = settings.get('move_bottom_text')
         elif tool == 'delete':
-            curs.execute(db_change('select data from other where name = "delete_bottom_text"'))
+            db_data = settings.get('delete_bottom_text')
         else:
-            curs.execute(db_change('select data from other where name = "revert_bottom_text"'))
+            db_data = settings.get('revert_bottom_text')
 
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            b_text = db_data[0][0] + '<hr class="main_hr">'
+        if db_data != '':
+            b_text = db_data + '<hr class="main_hr">'
 
     return b_text
 
 def get_edit_text_bottom_check_box(conn):
-    curs = conn.cursor()
-    
     cccb_text = ''
 
-    curs.execute(db_change('select data from other where name = "copyright_checkbox_text"'))
-    sql_d = curs.fetchall()
-    if sql_d and sql_d[0][0] != '':
+    sql_d = get_other_setting_repository().get('copyright_checkbox_text')
+    if sql_d != '':
         checked = ''
         if flask.session and 'bottom_check_box_pass' in flask.session:
             checked = 'checked'
 
         cccb_text = '' + \
-            '<label class="__ON_CHECKLABEL__"><input class="__ON_CHECKBOX__" type="checkbox" name="copyright_agreement" value="yes" ' + checked + '> ' + sql_d[0][0] + '</label>' + \
+            '<label class="__ON_CHECKLABEL__"><input class="__ON_CHECKBOX__" type="checkbox" name="copyright_agreement" value="yes" ' + checked + '> ' + sql_d + '</label>' + \
             '<hr class="main_hr">' + \
         ''
         
     return cccb_text
 
 def do_edit_text_bottom_check_box_check(conn, data):
-    curs = conn.cursor()
-    
-    curs.execute(db_change('select data from other where name = "copyright_checkbox_text"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
+    db_data = get_other_setting_repository().get('copyright_checkbox_text')
+    if db_data != '':
         if 'bottom_check_box_pass' in flask.session and flask.session['bottom_check_box_pass'] > 0:
             pass
         elif data != 'yes':
@@ -2081,11 +2016,8 @@ def do_edit_text_bottom_check_box_check(conn, data):
     return 0
 
 async def do_edit_send_check(conn, data):
-    curs = conn.cursor()
-    
-    curs.execute(db_change('select data from other where name = "edit_bottom_compulsion"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
+    db_data = get_other_setting_repository().get('edit_bottom_compulsion')
+    if db_data != '':
         if await acl_check('', 'edit_bottom_compulsion') == 1:
             if data == '':
                 return 1
@@ -2093,27 +2025,25 @@ async def do_edit_send_check(conn, data):
     return 0
 
 async def do_edit_slow_check(conn, do_type = 'edit'):
-    curs = conn.cursor()
+    settings = get_other_setting_repository()
 
     if do_type == 'edit':
-        curs.execute(db_change("select data from other where name = 'slow_edit'"))
+        slow_edit = settings.get('slow_edit')
     else:
         # do_type == 'thread'
-        curs.execute(db_change("select data from other where name = 'slow_thread'"))
+        slow_edit = settings.get('slow_thread')
     
-    slow_edit = curs.fetchall()
-    if slow_edit and slow_edit[0][0] != '':
+    if slow_edit != '':
         if await acl_check('', 'slow_edit') == 1:
-            slow_edit = int(number_check(slow_edit[0][0]))
+            slow_edit = int(number_check(slow_edit))
 
             if do_type == 'edit':
-                curs.execute(db_change("select date from history where ip = ? order by date desc limit 1"), [ip_check()])
+                last_edit_data = get_history_repository().latest_date_by_ip(ip_check())
             else:
-                curs.execute(db_change("select date from topic where ip = ? order by date desc limit 1"), [ip_check()])
+                last_edit_data = get_topic_repository().latest_date_by_ip(ip_check())
             
-            last_edit_data = curs.fetchall()
             if last_edit_data:
-                last_edit_data = int(re.sub(' |:|-', '', last_edit_data[0][0]))
+                last_edit_data = int(re.sub(' |:|-', '', last_edit_data))
                 now_edit_data = int((
                     datetime.datetime.now() - datetime.timedelta(seconds = slow_edit)
                 ).strftime("%Y%m%d%H%M%S"))
@@ -2124,15 +2054,12 @@ async def do_edit_slow_check(conn, do_type = 'edit'):
     return 0
 
 async def do_edit_filter(conn, data):
-    curs = conn.cursor()
-
     ip = ip_check()
     if await acl_check(tool = 'edit_filter_pass') == 1:
-        curs.execute(db_change("select plus, plus_t from html_filter where kind = 'regex_filter' and plus != ''"))
-        for data_list in curs.fetchall():
-            match = re.compile(data_list[0], re.I)
+        for data_list in get_html_filter_repository().list_regex_filters_with_plus():
+            match = re.compile(data_list.plus, re.I)
             if match.search(data):
-                end = '0' if data_list[1] == 'X' else data_list[1]
+                end = '0' if data_list.plus_t == 'X' else data_list.plus_t
 
                 if end != '0':
                     end = int(number_check(end))
@@ -2142,8 +2069,7 @@ async def do_edit_filter(conn, data):
                 else:
                     r_time = '0'
 
-                curs.execute(db_change('delete from user_set where name = "edit_filter" and id = ?'), [ip])
-                curs.execute(db_change('insert into user_set (name, id, data) values ("edit_filter", ?, ?)'), [ip, data])
+                get_user_setting_repository().upsert(ip, 'edit_filter', data)
 
                 ban_insert(conn, 
                     ip,
@@ -2158,20 +2084,18 @@ async def do_edit_filter(conn, data):
     return 0
 
 def do_title_length_check(conn, name, check_type = 'document'):
-    curs = conn.cursor()
+    settings = get_other_setting_repository()
     
     if check_type == 'topic':
-        curs.execute(db_change('select data from other where name = "title_topic_max_length"'))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            db_data = int(number_check(db_data[0][0]))
+        db_data = settings.get('title_topic_max_length')
+        if db_data != '':
+            db_data = int(number_check(db_data))
             if len(name) > db_data:        
                 return 1
     else:
-        curs.execute(db_change('select data from other where name = "title_max_length"'))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            db_data = int(number_check(db_data[0][0]))
+        db_data = settings.get('title_max_length')
+        if db_data != '':
+            db_data = int(number_check(db_data))
             if len(name) > db_data:        
                 return 1
     
@@ -2179,33 +2103,31 @@ def do_title_length_check(conn, name, check_type = 'document'):
 
 # Func-insert
 def do_add_thread(conn, thread_code, thread_data, thread_top = '', thread_id = ''):
-    curs = conn.cursor()
+    topics = get_topic_repository()
     
     if thread_id == '':
-        curs.execute(db_change("select id from topic where code = ? order by id + 0 desc limit 1"), [thread_code])
-        db_data = curs.fetchall()
-        if db_data:
-            thread_id = str(int(db_data[0][0]) + 1)
+        db_data = topics.latest_comment_id(thread_code)
+        if db_data is not None:
+            thread_id = str(db_data + 1)
         else:
             thread_id = '1'
         
-    curs.execute(db_change("insert into topic (id, data, date, ip, block, top, code) values (?, ?, ?, ?, ?, '', ?)"), [
+    topics.add_comment(
+        thread_code,
         thread_id,
         thread_data,
         get_time(),
         ip_check(),
         thread_top,
-        thread_code
-    ])
+    )
     
 def do_reload_recent_thread(conn, topic_num, date, name = None, sub = None):
-    curs = conn.cursor()
+    topics = get_topic_repository()
 
-    curs.execute(db_change("select code from rd where code = ?"), [topic_num])
-    if curs.fetchall():
-        curs.execute(db_change("update rd set date = ? where code = ?"), [date, topic_num])
+    if topics.update_recent_discuss_date(topic_num, date):
+        pass
     else:
-        curs.execute(db_change("insert into rd (title, sub, code, date, band, stop, agree, acl) values (?, ?, ?, ?, '', '', '', '')"), [name, sub, topic_num, date])
+        topics.add_recent_discuss(topic_num, name, sub, date)
 
 async def add_alarm(to_user, from_user, context):
     other_set = {}
@@ -2216,103 +2138,89 @@ async def add_alarm(to_user, from_user, context):
     await python_to_golang('api_func_alarm_post', other_set)
 
 def add_user(conn, user_name, user_pw, user_email = '', user_encode = ''):
-    curs = conn.cursor()
+    user_settings = get_user_setting_repository()
 
     if user_encode == '':
         user_pw_hash = pw_encode(conn, user_pw)
-
-        curs.execute(db_change('select data from other where name = "encode"'))
-        data_encode = curs.fetchall()
-        data_encode = data_encode[0][0]
+        data_encode = get_other_setting_repository().get('encode', default='sha3')
     else:
         user_pw_hash = user_pw
         data_encode = user_encode
 
-    curs.execute(db_change("select id from user_set limit 1"))
-    if not curs.fetchall():
+    if not user_settings.has_any():
         user_auth = 'owner'
     else:
         user_auth = 'user'
 
-    curs.execute(db_change("insert into user_set (id, name, data) values (?, 'pw', ?)"), [user_name, user_pw_hash])
-    curs.execute(db_change("insert into user_set (id, name, data) values (?, 'acl', ?)"), [user_name, user_auth])
-    curs.execute(db_change("insert into user_set (id, name, data) values (?, 'date', ?)"), [user_name, get_time()])
-    curs.execute(db_change("insert into user_set (id, name, data) values (?, 'encode', ?)"), [user_name, data_encode])
+    user_settings.add(user_name, 'pw', user_pw_hash)
+    user_settings.add(user_name, 'acl', user_auth)
+    user_settings.add(user_name, 'date', get_time())
+    user_settings.add(user_name, 'encode', data_encode)
     
     if user_email != '':
-        curs.execute(db_change("insert into user_set (name, id, data) values ('email', ?, ?)"), [user_name, user_email])
+        user_settings.add(user_name, 'email', user_email)
     
 def ua_plus(conn, u_id, u_ip, u_agent, time):
-    curs = conn.cursor()
-
-    curs.execute(db_change("select data from other where name = 'ua_get'"))
-    rep_data = curs.fetchall()
-    if rep_data and rep_data[0][0] != '':
+    rep_data = get_other_setting_repository().get('ua_get')
+    if rep_data != '':
         pass
     else:
-        curs.execute(db_change("insert into ua_d (name, ip, ua, today, sub) values (?, ?, ?, ?, '')"), [
-            u_id, 
-            u_ip, 
-            u_agent, 
-            time
-        ])
+        get_user_agent_repository().add(u_id, u_ip, u_agent, time)
 
 def ban_insert(conn, name, end, why, login, blocker, type_d = None, release = 0):
-    curs = conn.cursor()
-
     now_time = get_time()
     band = type_d if type_d else ''
+    recent_blocks = get_recent_block_repository()
 
-    curs.execute(db_change("update rb set ongoing = '' where block = ? and band = ? and ongoing = '1'"), [name, band])
+    recent_blocks.close_ongoing(name, band)
     if release == 1:
-        curs.execute(db_change("insert into rb (block, end, today, blocker, why, band, ongoing, login) values (?, ?, ?, ?, ?, ?, '', '')"), [
+        recent_blocks.add_record(
             name,
             'release',
             now_time,
             blocker,
             why,
-            band
-        ])
+            band,
+            '',
+            '',
+        )
     else:
         login = login if login != '' else ''
         r_time = end if end != '0' else ''
 
-        curs.execute(db_change("insert into rb (block, end, today, blocker, why, band, ongoing, login) values (?, ?, ?, ?, ?, ?, '1', ?)"), [
+        recent_blocks.add_record(
             name, 
             r_time, 
             now_time, 
             blocker, 
             why, 
             band,
-            login
-        ])
+            '1',
+            login,
+        )
 
 def history_plus_rc_max(conn, mode):
-    curs = conn.cursor()
+    history = get_history_repository()
 
-    curs.execute(db_change("select count(*) from rc where type = ?"), [mode])
-    if curs.fetchall()[0][0] >= 200:
-        curs.execute(db_change("select id, title from rc where type = ? order by date asc limit 1"), [mode])
-        rc_data = curs.fetchall()
+    if history.count_recent_changes_by_type(mode) >= 200:
+        rc_data = history.oldest_recent_change_ref_by_type(mode)
         if rc_data:
-            curs.execute(db_change('delete from rc where id = ? and title = ? and type = ?'), [rc_data[0][0], rc_data[0][1], mode])
+            history.delete_recent_change(rc_data[1], rc_data[0], mode)
 
 def history_plus(conn, title, data, date, ip, send, leng, t_check = '', mode = ''):
-    curs = conn.cursor()
+    history = get_history_repository()
+    document_meta = get_document_meta_repository()
     
-    curs.execute(db_change('select data from other where name = "history_recording_off"'))
-    db_data = curs.fetchall()
-    if db_data and db_data[0][0] != '':
+    db_data = get_other_setting_repository().get('history_recording_off')
+    if db_data != '':
         return 0
 
     if mode == 'add' or mode == 'setting':
-        curs.execute(db_change("select id from history where title = ? order by id + 0 asc limit 1"), [title])
-        id_data = curs.fetchall()
-        id_data = str(int(id_data[0][0]) - 1) if id_data else '0'
+        id_data = history.earliest_revision_id(title)
+        id_data = str(int(id_data) - 1) if id_data else '0'
     else:
-        curs.execute(db_change("select id from history where title = ? order by id + 0 desc limit 1"), [title])
-        id_data = curs.fetchall()
-        id_data = str(int(id_data[0][0]) + 1) if id_data else '1'
+        id_data = history.latest_revision_id(title)
+        id_data = str(int(id_data) + 1) if id_data else '1'
         
         mode = 'r1' if id_data == '1' else mode
         if re.search('^user:', title):
@@ -2329,40 +2237,32 @@ def history_plus(conn, title, data, date, ip, send, leng, t_check = '', mode = '
     if mode != 'add' and mode != 'setting' and mode != 'user':
         history_plus_rc_max(conn, 'normal')
 
-        curs.execute(db_change("insert into rc (id, title, date, type) values (?, ?, ?, 'normal')"), [id_data, title, date])
+        history.add_recent_change(title, id_data, date, 'normal')
     
     if mode != 'add' and mode != 'setting':
         history_plus_rc_max(conn, mode)
 
-        curs.execute(db_change("select count(*) from data"))
-        count_data = curs.fetchall()
-        count_data = count_data[0][0] if count_data else 0
+        count_data = get_wiki_document_repository().count_all_titles()
+        get_other_setting_repository().upsert('count_all_title', str(count_data))
 
-        curs.execute(db_change('delete from other where name = "count_all_title"'))
-        curs.execute(db_change('insert into other (name, data, coverage) values ("count_all_title", ?, "")'), [str(count_data)])
-
-        curs.execute(db_change("insert into rc (id, title, date, type) values (?, ?, ?, ?)"), [id_data, title, date, mode])
+        history.add_recent_change(title, id_data, date, mode)
 
         data_set_exist = ''
         if mode == 'delete':
             data_set_exist = 'not_exist'
 
-        curs.execute(db_change('delete from data_set where doc_name = ? and set_name = "edit_request_doing"'), [title])
+        document_meta.delete(title, 'edit_request_doing')
 
-        curs.execute(db_change('delete from data_set where doc_name = ? and set_name = "last_edit"'), [title])
-        curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'last_edit', ?)"), [title, date])
+        document_meta.upsert(title, 'last_edit', date)
 
-        curs.execute(db_change('delete from data_set where doc_name = ? and set_name = "length"'), [title])
-        curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'length', ?)"), [title, len(data)])
+        document_meta.upsert(title, 'length', str(len(data)))
 
-        curs.execute(db_change("update data_set set doc_rev = ? where doc_name = ? and (doc_rev = '' or doc_rev = 'not_exist')"), [data_set_exist, title])
+        document_meta.update_revision_marker(title, data_set_exist)
 
-    curs.execute(db_change("insert into history (id, title, data, date, ip, send, leng, hide, type) values (?, ?, ?, ?, ?, ?, ?, '', ?)"), [id_data, title, data, date, ip, send, leng, mode])
+    history.add_history(title, id_data, data, date, ip, send, leng, mode)
 
 # Func-error
 async def re_error(conn, data):
-    curs = conn.cursor()
-
     if data == 0:
         if (await ban_check())[0] == 1:
             end = '<div id="opennamu_forge_get_user_info">' + html.escape(ip_check()) + '</div>'
@@ -2414,9 +2314,8 @@ async def re_error(conn, data):
         elif num == 16:
             data = await get_lang('same_file_error')
         elif num == 17:
-            curs.execute(db_change('select data from other where name = "upload"'))
-            db_data = curs.fetchall()
-            file_max = number_check(db_data[0][0]) if db_data and db_data[0][0] != '' else '2'
+            db_data = get_other_setting_repository().get('upload')
+            file_max = number_check(db_data) if db_data != '' else '2'
             data = await get_lang('file_capacity_error') + file_max
         elif num == 18:
             data = await get_lang('email_send_error')
@@ -2431,9 +2330,7 @@ async def re_error(conn, data):
         elif num == 23:
             data = await get_lang('regex_error')
         elif num == 24:
-            curs.execute(db_change("select data from other where name = 'slow_edit'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('slow_edit')
             data = await get_lang('fast_edit_error') + db_data
         elif num == 25:
             data = await get_lang('too_many_dec_error')
@@ -2459,38 +2356,26 @@ async def re_error(conn, data):
         elif num == 37:
             data = await get_lang('error_edit_send_request')
         elif num == 38:
-            curs.execute(db_change("select data from other where name = 'title_max_length'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('title_max_length')
             data = await get_lang('error_title_length_too_long') + db_data
         elif num == 39:
-            curs.execute(db_change("select data from other where name = 'title_topic_max_length'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('title_topic_max_length')
             data = await get_lang('error_title_length_too_long') + db_data
         elif num == 40:
-            curs.execute(db_change("select data from other where name = 'password_min_length'"))
-            db_data = curs.fetchall()
-            password_min_length = '' if not db_data else db_data[0][0]
+            password_min_length = get_other_setting_repository().get('password_min_length')
             data = await get_lang('error_password_length_too_short') + password_min_length
         elif num == 41:
-            curs.execute(db_change("select data from other where name = 'edit_timeout'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('edit_timeout')
             data = await get_lang('timeout_error') + db_data
         elif num == 42:
-            curs.execute(db_change("select data from other where name = 'slow_thread'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('slow_thread')
             data = await get_lang('fast_edit_error') + db_data
         elif num == 43:
             title = await get_lang('application_submitted')
             sub_title = title
             data = await get_lang('waiting_for_approval')
         elif num == 44:
-            curs.execute(db_change("select data from other where name = 'document_content_max_length'"))
-            db_data = curs.fetchall()
-            db_data = '' if not db_data else db_data[0][0]
+            db_data = get_other_setting_repository().get('document_content_max_length')
             data = await get_lang('error_content_length_too_long') + db_data
         elif num == 45:
             data = await get_lang('cidr_error')

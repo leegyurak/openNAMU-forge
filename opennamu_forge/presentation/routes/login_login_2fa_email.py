@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def login_login_2fa_email():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         # email 2fa
         # pw 2fa
@@ -25,12 +25,9 @@ async def login_login_2fa_email():
             user_id = flask.session['b_id']
             user_pw = flask.request.form.get('pw', '')
 
-            curs.execute(db_change('select data from user_set where name = "2fa_pw" and id = ?'), [user_id])
-            user_1 = curs.fetchall()
-            if user_1:
-                curs.execute(db_change('select data from user_set where name = "2fa_pw_encode" and id = ?'), [user_id])
-                user_1 = user_1[0][0]
-                user_2 = curs.fetchall()[0][0]
+            user_1 = user_settings.get(user_id, "2fa_pw")
+            if user_1 != "":
+                user_2 = user_settings.get(user_id, "2fa_pw_encode")
 
                 pw_check_d = pw_check(conn, user_pw, user_1, user_2, user_id)
                 if pw_check_d != 1:

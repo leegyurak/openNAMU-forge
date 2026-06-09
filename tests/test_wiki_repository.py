@@ -92,7 +92,10 @@ def test_wiki_document_repository는_prefix_count를_조회한다(seeded_wiki_db
 
     repository = WikiDocumentRepository(seeded_wiki_db_set)
 
+    assert repository.count_all_titles() == 4
     assert repository.count_titles(prefix="file:") == 1
+    assert repository.exists_title_prefix("file:") is True
+    assert repository.exists_title_prefix("missing/") is False
 
 
 def test_wiki_document_repository는_문서본문을_조회한다(seeded_wiki_db_set):
@@ -102,6 +105,21 @@ def test_wiki_document_repository는_문서본문을_조회한다(seeded_wiki_db
 
     assert repository.get_data("FrontPage") == "main"
     assert repository.get_data("Missing", default="fallback") == "fallback"
+    assert repository.find_title("FrontPage") == "FrontPage"
+    assert repository.find_title("frontpage") is None
+    assert repository.find_title_case_insensitive("frontpage") == "FrontPage"
+
+
+def test_wiki_document_repository는_문서를_upsert한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    repository.upsert_title("FrontPage", "updated")
+    repository.upsert_title("NewPage", "created")
+
+    assert repository.get_data("FrontPage") == "updated"
+    assert repository.get_data("NewPage") == "created"
 
 
 def test_wiki_document_repository는_문서제목을_변경한다(seeded_wiki_db_set):
@@ -123,6 +141,19 @@ def test_wiki_document_repository는_문서를_삭제한다(seeded_wiki_db_set):
     repository.delete_title("FrontPage")
 
     assert repository.exists_title("FrontPage") is False
+
+
+def test_wiki_document_repository는_필요한_문서목록을_조회한다(seeded_wiki_db_set):
+    from opennamu_forge.infrastructure.db_model import Backlink, get_sqlmodel_session
+    from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
+
+    with get_sqlmodel_session(seeded_wiki_db_set) as session:
+        session.add(Backlink(title="MissingPage", link="FrontPage", type="no", data=""))
+        session.commit()
+
+    repository = WikiDocumentRepository(seeded_wiki_db_set)
+
+    assert repository.list_needed_titles() == ["MissingPage"]
 
 
 def test_wiki_document_repository는_역링크를_이동한다(seeded_wiki_db_set):

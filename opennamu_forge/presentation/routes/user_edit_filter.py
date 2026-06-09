@@ -2,7 +2,8 @@ from .tool.func import *
 
 async def user_edit_filter(name = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
+        user_settings = get_user_setting_repository()
 
         owner_auth = await acl_check(tool = 'ban_auth')
         owner_auth = 1 if owner_auth == 0 else 0
@@ -12,20 +13,17 @@ async def user_edit_filter(name = ''):
                 return redirect(conn, '/recent_block')
 
         if flask.request.method == 'POST':
-            curs.execute(db_change('delete from user_set where name = "edit_filter" and id = ?'), [name])
+            user_settings.delete(name, "edit_filter")
 
             return redirect(conn, '/edit_filter/' + url_pas(name))
         else:
-            curs.execute(db_change('select data from user_set where name = "edit_filter" and id = ?'), [name])
-            db_data = curs.fetchall()
-            p_data = db_data[0][0] if db_data else ''
+            p_data = user_settings.get(name, "edit_filter")
             p_data = '<textarea readonly class="opennamu_forge_textarea_500 __ON_TEXTAREA__">' + html.escape(p_data) + '</textarea>'
 
             search_list = '<ul>'
 
-            curs.execute(db_change("select plus, plus_t from html_filter where kind = 'regex_filter' and plus != ''"))
-            for data_list in curs.fetchall():
-                match = re.compile(data_list[0], re.I)
+            for data_list in html_filters.list_regex_filters_with_plus():
+                match = re.compile(data_list.plus, re.I)
                 search = match.search(p_data)
                 if search:
                     search = search.group()

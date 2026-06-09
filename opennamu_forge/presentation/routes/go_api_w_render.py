@@ -4,7 +4,7 @@ from .go_api_w_raw import api_w_raw
 
 async def api_w_render(name = '', tool = '', request_method = '', request_data = {}):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        document_meta = get_document_meta_repository()
         wiki_settings = get_wiki_settings_service()
 
         flask_data = flask_data_or_variable(flask.request.form, request_data)
@@ -17,10 +17,9 @@ async def api_w_render(name = '', tool = '', request_method = '', request_data =
 
             markup = ''
             if tool in ('', 'from', 'include'):
-                curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_markup'"), [name])
-                db_data = curs.fetchall()
-                if db_data and db_data[0][0] != '' and db_data[0][0] != 'normal':
-                    markup = db_data[0][0]
+                markup_data = document_meta.get(name, 'document_markup')
+                if markup_data != '' and markup_data != 'normal':
+                    markup = markup_data
 
                 if markup == '':
                     markup = wiki_settings.get(SettingKey.MARKUP, default='namumark')

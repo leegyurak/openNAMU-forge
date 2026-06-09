@@ -2,17 +2,15 @@ from .tool.func import *
 
 async def user_setting_key():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if ip_or_user(ip) == 0:
             while 1:
                 key = load_random_key()
-                curs.execute(db_change('select data from user_set where name = "random_key" and data = ?'), [key])
-                if not curs.fetchall():
+                if not user_settings.data_exists("random_key", key):
                     break
 
-            curs.execute(db_change("delete from user_set where name = 'random_key' and id = ?"), [ip])
-            curs.execute(db_change("insert into user_set (name, id, data) values ('random_key', ?, ?)"), [ip, key])
+            user_settings.upsert(ip, "random_key", key)
 
         return redirect(conn, '/change')

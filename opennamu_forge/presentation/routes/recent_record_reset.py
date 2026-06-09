@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def recent_record_reset(name = 'Test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
 
         if await acl_check('', 'owner_auth', '', '') == 1:
             return await re_error(conn, 3)
@@ -10,7 +10,7 @@ async def recent_record_reset(name = 'Test'):
         if flask.request.method == 'POST':
             await acl_check(tool = 'owner_auth', memo = 'record reset ' + name)
 
-            curs.execute(db_change("delete from history where ip = ?"), [name])
+            history.delete_by_ip(name)
 
             return redirect(conn, '/record/' + url_pas(name))
         else:

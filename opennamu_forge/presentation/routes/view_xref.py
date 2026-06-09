@@ -2,7 +2,8 @@ from .tool.func import *
 
 async def view_xref(name = 'Test', xref_type = 1, num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        backlinks = get_backlink_repository()
+        document_meta = get_document_meta_repository()
         wiki_settings = get_wiki_settings_service()
 
         if await acl_check(name, 'render') == 1:
@@ -19,25 +20,23 @@ async def view_xref(name = 'Test', xref_type = 1, num = 1):
 
         div += '<ul>'
 
-        link_case_insensitive = ' collate nocase' if wiki_settings.get(SettingKey.LINK_CASE_INSENSITIVE) != '' else ''
-
         if xref_type == 2:
-            curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'link_count'"), [name])
-            db_data = curs.fetchall()
-            div += '<li>' + await get_lang('link_count') + ' : ' +  (db_data[0][0] if db_data else await get_lang('data_missing')) + '</li>'
+            link_count = document_meta.get(name, 'link_count', default=await get_lang('data_missing'))
+            div += '<li>' + await get_lang('link_count') + ' : ' +  link_count + '</li>'
 
         sql_insert = ['link', 'title'] if xref_type == 1 else ['title', 'link']
-        curs.execute(db_change("select distinct " + sql_insert[0] + ", type from back where " + sql_insert[1] + " = ?" + link_case_insensitive + " and not type = 'no' and not type = 'nothing' order by type asc, " + sql_insert[0] + " asc limit ?, 50"), [name, sql_num])
-        data_list = curs.fetchall()
+        if wiki_settings.get(SettingKey.LINK_CASE_INSENSITIVE) != '':
+            data_list = backlinks.list_distinct_refs_case_insensitive(sql_insert[0], sql_insert[1], name, offset=sql_num)
+        else:
+            data_list = backlinks.list_distinct_refs(sql_insert[0], sql_insert[1], name, offset=sql_num)
+
         for data in data_list:
             div += '<li><a href="/w/' + url_pas(data[0]) + '">' + html.escape(data[0]) + '</a>'
 
             if data[1]:
                 div += ' (' + data[1] + ')'
 
-            curs.execute(db_change("select title from back where title = ? and type = 'include'"), [data[0]])
-            db_data = curs.fetchall()
-            if db_data:
+            if backlinks.has_include_title(data[0]):
                 div += ' <a class="opennamu_forge_link_inter" href="/xref/' + url_pas(data[0]) + '">(' + await get_lang('backlink') + ')</a>'
 
             div += '</li>'

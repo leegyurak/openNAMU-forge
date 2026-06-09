@@ -2,10 +2,10 @@ from .tool.func import *
 
 async def user_setting_email_delete():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if ip_or_user(ip) == 0:
-            curs.execute(db_change("delete from user_set where name = 'email' and id = ?"), [ip])
+            user_settings.delete(ip, "email")
     
         return redirect(conn, '/change')

@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def list_user_check_delete(name = None, ip = None, time = None, do_type = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_agents = get_user_agent_repository()
 
         if await acl_check('', 'owner_auth', '', '') == 1:
             return await re_error(conn, 4)
@@ -13,7 +13,7 @@ async def list_user_check_delete(name = None, ip = None, time = None, do_type = 
 
         if user_id and user_ip and time:
             if flask.request.method == 'POST':
-                curs.execute(db_change("delete from ua_d where name = ? and ip = ? and today = ?"), [user_id, user_ip, time])
+                user_agents.delete(user_id, user_ip, time)
 
                 return redirect(conn, '/list/user/check/' + url_pas(user_id if return_type == '0' else user_ip))
             else:

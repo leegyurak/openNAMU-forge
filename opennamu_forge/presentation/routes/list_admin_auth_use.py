@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def list_admin_auth_use(arg_num = 1, arg_search = 'normal'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        admin = get_admin_repository()
         wiki_settings = get_wiki_settings_service()
 
         sql_num = (arg_num * 50 - 50) if arg_num * 50 > 0 else 0
@@ -11,27 +11,23 @@ async def list_admin_auth_use(arg_num = 1, arg_search = 'normal'):
             return redirect(conn, '/list/admin/auth_use_page/1/' + url_pas(flask.request.form.get('search', 'normal')))
         else:
             arg_search = 'normal' if arg_search == '' else arg_search
-            
-            if arg_search == 'normal':
-                curs.execute(db_change("select who, what, time from re_admin order by time desc limit ?, 50"), [sql_num])
-            else:
-                curs.execute(db_change("select who, what, time from re_admin where what like ? order by time desc limit ?, 50"), [arg_search + "%", sql_num])
+            action_prefix = '' if arg_search == 'normal' else arg_search
 
             list_data = '<ul>'
 
-            get_list = curs.fetchall()
+            get_list = admin.list_records(action_prefix=action_prefix, offset=sql_num, limit=50)
             for data in get_list:
-                do_data = data[1]
+                do_data = data.action
 
-                if ip_or_user(data[0]) != 0:
+                if ip_or_user(data.actor) != 0:
                     ip_view = wiki_settings.get(SettingKey.IP_VIEW)
                     ip_view = '' if await acl_check(tool = 'ban_auth') != 1 else ip_view
                     
                     if ip_view != '':
                         do_data = do_data.split(' ')
-                        do_data = do_data[0] if do_data[0] in ['ban'] else data[1]
+                        do_data = do_data[0] if do_data[0] in ['ban'] else data.action
 
-                list_data += '<li>' + await ip_pas(data[0]) + ' | ' + html.escape(do_data) + ' | ' + data[2] + '</li>'
+                list_data += '<li>' + await ip_pas(data.actor) + ' | ' + html.escape(do_data) + ' | ' + data.time + '</li>'
 
             list_data += '</ul>'
             list_data += await get_next_page_bottom('/list/admin/auth_use_page/{}/' + url_pas(arg_search), arg_num, get_list)

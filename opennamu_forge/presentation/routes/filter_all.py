@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def filter_all(tool):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
 
         div = '<table id="main_table_set">'
         div += '<tr id="main_table_top_tr">'
@@ -22,62 +22,62 @@ async def filter_all(tool):
 
         if tool == 'inter_wiki':
             title = await get_lang('interwiki_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'inter_wiki'"))
+            filter_kind = 'inter_wiki'
         elif tool == 'email_filter':
             title = await get_lang('email_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'email'"))
+            filter_kind = 'email'
         elif tool == 'name_filter':
             title = await get_lang('id_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'name'"))
+            filter_kind = 'name'
         elif tool == 'edit_filter':
             title = await get_lang('edit_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'regex_filter'"))
+            filter_kind = 'regex_filter'
         elif tool == 'file_filter':
             title = await get_lang('file_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'file'"))
+            filter_kind = 'file'
         elif tool == 'image_license':
             title = await get_lang('image_license_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'image_license'"))
+            filter_kind = 'image_license'
         elif tool == 'extension_filter':
             title = await get_lang('extension_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'extension'"))
+            filter_kind = 'extension'
         elif tool == 'document':
             title = await get_lang('document_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'document'"))
+            filter_kind = 'document'
         elif tool == 'outer_link':
             title = await get_lang('outer_link_filter_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'outer_link'"))
+            filter_kind = 'outer_link'
         elif tool == 'template':
             title = await get_lang('template_document_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'template'"))
+            filter_kind = 'template'
         else:
             title = await get_lang('edit_tool_list')
-            curs.execute(db_change("select html, plus, plus_t from html_filter where kind = 'edit_top'"))
+            filter_kind = 'edit_top'
 
-        db_data = curs.fetchall()
+        db_data = html_filters.list_by_kind(filter_kind)
         for data in db_data:
             div += '<tr>'
             div += '<td>'
 
-            div += html.escape(data[0])
+            div += html.escape(data.html)
             if admin == 1:
                 if tool in ('inter_wiki', 'outer_link', 'edit_filter', 'document', 'edit_top', 'template'):
-                    div += ' <a href="/filter/' + tool + '/add/' + url_pas(data[0]) + '">(' + await get_lang('edit') + ')</a>'
+                    div += ' <a href="/filter/' + tool + '/add/' + url_pas(data.html) + '">(' + await get_lang('edit') + ')</a>'
                     
-                div += ' <a href="/filter/' + tool + '/del/' + url_pas(data[0]) + '">(' + await get_lang('delete') + ')</a>'
+                div += ' <a href="/filter/' + tool + '/del/' + url_pas(data.html) + '">(' + await get_lang('delete') + ')</a>'
 
             div += '</td>'
 
             if tool in ('inter_wiki', 'outer_link'):
                 if tool == 'inter_wiki':
-                    div += '<td><a class="opennamu_forge_link_out" href="' + html.escape(data[1]) + '">' + html.escape(data[1]) + '</a></td>'
+                    div += '<td><a class="opennamu_forge_link_out" href="' + html.escape(data.plus) + '">' + html.escape(data.plus) + '</a></td>'
                 else:
-                    div += '<td>' + html.escape(data[1]) + '</td>'
+                    div += '<td>' + html.escape(data.plus) + '</td>'
                 
-                div += '<td>' + data[2] + '</td>'
+                div += '<td>' + data.plus_t + '</td>'
             else:
-                div += '<td>' + html.escape(data[1]) + '</td>'
-                div += '<td>' + html.escape(data[2]) + '</td>'
+                div += '<td>' + html.escape(data.plus) + '</td>'
+                div += '<td>' + html.escape(data.plus_t) + '</td>'
             
             div += '</tr>'
 

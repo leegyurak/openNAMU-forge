@@ -2,29 +2,22 @@ from .tool.func import *
 
 async def login_find_key():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
         wiki_settings = get_wiki_settings_service()
         if flask.request.method == 'POST':
             if await captcha_post(conn, flask.request.form.get('g-recaptcha-response', flask.request.form.get('g-recaptcha', ''))) == 1:
                 return await re_error(conn, 13)
             
             input_key = flask.request.form.get('key', '')
-            curs.execute(db_change('select id from user_set where name = "random_key" and data = ?'), [input_key])
-            db_data = curs.fetchall()
-            if not db_data:
+            user_id = user_settings.find_id_by_name_data("random_key", input_key)
+            if user_id is None:
                 return redirect(conn, '/user')
-            else:
-                user_id = db_data[0][0]
             
             key = load_random_key(32)
-            curs.execute(db_change("update user_set set data = ? where name = 'pw' and id = ?"), [
-                pw_encode(conn, key), 
-                user_id
-            ])
+            user_settings.upsert(user_id, "pw", pw_encode(conn, key))
             
-            curs.execute(db_change('select data from user_set where name = "2fa" and id = ?'), [user_id])
-            if curs.fetchall():
-                curs.execute(db_change("update user_set set data = '' where name = '2fa' and id = ?"), [user_id])
+            if user_settings.exists(user_id, "2fa"):
+                user_settings.upsert(user_id, "2fa", "")
             
             reset_user_text = wiki_settings.get(SettingKey.RESET_USER_TEXT)
             b_text = (reset_user_text + '<hr class="main_hr">') if reset_user_text != '' else ''

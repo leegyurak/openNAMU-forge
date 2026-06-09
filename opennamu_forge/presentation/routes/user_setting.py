@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_setting():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         support_language = ['default'] + get_init_set_list()['language']['list']
         
@@ -25,8 +25,7 @@ async def user_setting():
                     if twofa_pw != '':
                         twofa_pw = pw_encode(conn, twofa_pw)
 
-                        curs.execute(db_change("select data from user_set where id = ? and name = 'encode'"), [ip])
-                        twofa_encode = curs.fetchall()[0][0]
+                        twofa_encode = user_settings.get(ip, 'encode')
                         
                         auto_list += [['2fa', 'on'], ['2fa_pw', twofa_pw], ['2fa_pw_encode', twofa_encode]]
                     else:
@@ -35,52 +34,38 @@ async def user_setting():
                     auto_list += [['2fa', '']]
 
                 for auto_data in auto_list:
-                    curs.execute(db_change('select data from user_set where name = ? and id = ?'), [auto_data[0], ip])
-                    if curs.fetchall():
-                        curs.execute(db_change("update user_set set data = ? where name = ? and id = ?"), [auto_data[1], auto_data[0], ip])
-                    else:
-                        curs.execute(db_change("insert into user_set (name, id, data) values (?, ?, ?)"), [auto_data[0], ip, auto_data[1]])
+                    user_settings.upsert(ip, auto_data[0], auto_data[1])
 
                 return redirect(conn, '/change')
             else:
-                curs.execute(db_change('select data from user_set where name = "email" and id = ?'), [ip])
-                data = curs.fetchall()
-                email = data[0][0] if data and data[0][0] != '' else '-'
+                data = user_settings.get(ip, 'email')
+                email = data if data != '' else '-'
 
-                curs.execute(db_change('select data from user_set where name = "random_key" and id = ?'), [ip])
-                data = curs.fetchall()
-                ramdom_key = data[0][0] if data and data[0][0] != '' else '-'
+                data = user_settings.get(ip, 'random_key')
+                ramdom_key = data if data != '' else '-'
 
-                curs.execute(db_change('select data from user_set where name = "skin" and id = ?'), [ip])
-                data = curs.fetchall()
-                div2 = await load_skin(data[0][0] if data else '', 0, 1)
+                div2 = await load_skin(user_settings.get(ip, 'skin'), 0, 1)
 
-                curs.execute(db_change('select data from user_set where name = "lang" and id = ?'), [ip])
-                data = curs.fetchall()
-                data = [['default']] if not data else data
+                data = user_settings.get(ip, 'lang', default='default')
                 div3 = ''
                 for lang_data in support_language:
                     see_data = lang_data if lang_data != 'default' else await get_lang('default')
 
-                    if data and data[0][0] == lang_data:
+                    if data == lang_data:
                         div3 = '<option value="' + lang_data + '">' + see_data + '</option>' + div3
                     else:
                         div3 += '<option value="' + lang_data + '">' + see_data + '</option>'
 
-                curs.execute(db_change('select data from user_set where name = "user_title" and id = ?'), [ip])
-                data = curs.fetchall()
-                data = [['']] if not data else data
+                data = user_settings.get(ip, 'user_title')
                 user_title_list = await get_user_title_list(conn, ip)
                 div4 = ''
                 for user_title in user_title_list:                
-                    if data and data[0][0] == user_title:
+                    if data == user_title:
                         div4 = '<option value="' + user_title + '">' + user_title_list[user_title] + '</option>' + div4
                     else:
                         div4 += '<option value="' + user_title + '">' + user_title_list[user_title] + '</option>'
 
-                curs.execute(db_change('select data from user_set where name = "2fa" and id = ?'), [ip])
-                fa_data = curs.fetchall()
-                fa_data = fa_data[0][0] if fa_data and fa_data[0][0] != '' else ''
+                fa_data = user_settings.get(ip, '2fa')
                 fa_data_select = ''
                 fa_data_sp_list = [[await get_lang('off'), ''], [await get_lang('password'), 'on']]
                 for fa_data_get in fa_data_sp_list:
@@ -90,17 +75,12 @@ async def user_setting():
 
                     fa_data_select += '<option ' + fa_data_selected + ' value="' + fa_data_get[1] + '">' + fa_data_get[0] + '</option>'
 
-                curs.execute(db_change('select data from user_set where name = "2fa_pw" and id = ?'), [ip])
-                fa_data_pw = curs.fetchall()
-                fa_data_pw = await get_lang('2fa_password_change') if fa_data_pw else await get_lang('2fa_password')
+                fa_data_pw = await get_lang('2fa_password_change') if user_settings.exists(ip, '2fa_pw') else await get_lang('2fa_password')
 
-                curs.execute(db_change('select data from user_set where name = "user_name" and id = ?'), [ip])
-                db_data = curs.fetchall()
-                user_name = db_data[0][0] if db_data else ip
+                db_data = user_settings.get(ip, 'user_name')
+                user_name = db_data if db_data != '' else ip
 
-                curs.execute(db_change('select data from user_set where name = "sub_user_name" and id = ?'), [ip])
-                db_data = curs.fetchall()
-                sub_user_name = db_data[0][0] if db_data else ''
+                sub_user_name = user_settings.get(ip, 'sub_user_name')
 
                 return await render_template(
                     await get_lang('user_setting'),

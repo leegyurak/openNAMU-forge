@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def topic_tool_setting(topic_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         if await acl_check(tool = 'toron_auth') == 1:
             return await re_error(conn, 3)
@@ -11,9 +11,8 @@ async def topic_tool_setting(topic_num = 1):
         time = get_time()
         topic_num = str(topic_num)
 
-        curs.execute(db_change("select stop, agree from rd where code = ?"), [topic_num])
-        rd_d = curs.fetchall()
-        if not rd_d:
+        rd_d = topics.get_recent_discuss(topic_num)
+        if rd_d is None:
             return redirect(conn, '/')
 
         if flask.request.method == 'POST':
@@ -23,11 +22,8 @@ async def topic_tool_setting(topic_num = 1):
             why_d = flask.request.form.get('why', '')
             agree_d = flask.request.form.get('agree', '')
 
-            if stop_d != rd_d[0][0]:
-                curs.execute(db_change("update rd set stop = ? where code = ?"), [
-                    stop_d,
-                    topic_num
-                ])
+            if stop_d != rd_d.stop:
+                topics.update_recent_discuss_stop(topic_num, stop_d)
 
                 if stop_d == 'S':
                     t_state = 'topic_state_change_stop'
@@ -42,11 +38,8 @@ async def topic_tool_setting(topic_num = 1):
                     '1'
                 )
 
-            if agree_d != rd_d[0][1]:
-                curs.execute(db_change("update rd set agree = ? where code = ?"), [
-                    agree_d,
-                    topic_num
-                ])
+            if agree_d != rd_d.agree:
+                topics.update_recent_discuss_agree(topic_num, agree_d)
 
                 if agree_d == 'O':
                     t_state = 'topic_state_change_agree'
@@ -82,12 +75,12 @@ async def topic_tool_setting(topic_num = 1):
             ]
 
             for i in for_list:
-                if rd_d and rd_d[0][0] == i[0]:
+                if rd_d.stop == i[0]:
                     stop_d_list = '<option value="' + i[0] + '">' + i[1] + '</option>' + stop_d_list
                 else:
                     stop_d_list += '<option value="' + i[0] + '">' + i[1] + '</option>'
 
-            agree_check = 'checked="checked"' if rd_d[0][1] == 'O' else ''
+            agree_check = 'checked="checked"' if rd_d.agree == 'O' else ''
 
             return await render_template(
                 await get_lang('topic_setting'),

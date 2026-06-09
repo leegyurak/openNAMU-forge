@@ -12,6 +12,9 @@ class FakeSettings:
     def get(self, name, *, coverage="", default=""):
         return self.values.get((name, coverage), default)
 
+    def list_name_data_by_names(self, names, *, coverage=""):
+        raise NotImplementedError
+
     def exists(self, name, *, coverage=""):
         return (name, coverage) in self.values
 

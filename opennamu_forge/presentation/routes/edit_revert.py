@@ -2,19 +2,18 @@ from .tool.func import *
 
 async def edit_revert(name, num):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
+        wiki_documents = get_wiki_document_repository()
         wiki_settings = get_wiki_settings_service()
 
-        curs.execute(db_change("select title from history where title = ? and id = ? and hide = 'O'"), [name, str(num)])
-        if curs.fetchall() and await acl_check(tool = 'hidel_auth') == 1:
+        if history.is_hidden(name, str(num)) and await acl_check(tool = 'hidel_auth') == 1:
             return await re_error(conn, 3)
 
         if await acl_check(name, 'document_edit') == 1:
             return await re_error(conn, 0)
         
-        curs.execute(db_change("select data from history where title = ? and id = ?"), [name, str(num)])
-        data = curs.fetchall()
-        if not data:
+        data = history.find_data(name, str(num))
+        if data is None:
             return redirect(conn, '/w/' + url_pas(name))
 
         if flask.request.method == 'POST':
@@ -33,26 +32,25 @@ async def edit_revert(name, num):
             if do_edit_text_bottom_check_box_check(conn, agree) == 1:
                 return await re_error(conn, 29)
 
-            if await do_edit_filter(conn, data[0][0]) == 1:
+            if await do_edit_filter(conn, data) == 1:
                 return await re_error(conn, 21)
             
             document_content_max_length = wiki_settings.get(SettingKey.DOCUMENT_CONTENT_MAX_LENGTH)
             if document_content_max_length != '':
-                if int(number_check(document_content_max_length)) < len(data[0][0]):
+                if int(number_check(document_content_max_length)) < len(data):
                     return await re_error(conn, 44)
 
-            curs.execute(db_change("select data from data where title = ?"), [name])
-            data_old = curs.fetchall()
-            if data_old:
-                leng = leng_check(len(data_old[0][0]), len(data[0][0]))
-                curs.execute(db_change("update data set data = ? where title = ?"), [data[0][0], name])
+            data_old = wiki_documents.get_data(name)
+            if wiki_documents.exists_title(name):
+                leng = leng_check(len(data_old), len(data))
             else:
-                leng = '+' + str(len(data[0][0]))
-                curs.execute(db_change("insert into data (title, data) values (?, ?)"), [name, data[0][0]])
+                leng = '+' + str(len(data))
+
+            wiki_documents.upsert_title(name, data)
 
             history_plus(conn, 
                 name,
-                data[0][0],
+                data,
                 get_time(),
                 ip_check(),
                 flask.request.form.get('send', ''),
@@ -63,14 +61,14 @@ async def edit_revert(name, num):
 
             await render_set(conn, 
                 doc_name = name,
-                doc_data = data[0][0],
+                doc_data = data,
                 data_type = 'backlink'
             )
 
             return redirect(conn, '/w/' + url_pas(name))
         else:
             if data:
-                preview = '<hr class="main_hr"><pre>' + html.escape(data[0][0]) + '</pre>'
+                preview = '<hr class="main_hr"><pre>' + html.escape(data) + '</pre>'
             else:
                 preview = ''
             

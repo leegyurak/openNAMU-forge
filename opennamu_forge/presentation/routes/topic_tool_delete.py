@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def topic_tool_delete(topic_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         if await acl_check(tool = 'owner_auth') == 1:
             return await re_error(conn, 3)
@@ -12,8 +12,7 @@ async def topic_tool_delete(topic_num = 1):
         if flask.request.method == 'POST':
             await acl_check(tool = 'owner_auth', memo = 'delete topic (' + topic_num + ')')
 
-            curs.execute(db_change("delete from topic where code = ?"), [topic_num])
-            curs.execute(db_change("delete from rd where code = ?"), [topic_num])
+            topics.delete_thread(topic_num)
 
             return redirect(conn, '/')
         else:

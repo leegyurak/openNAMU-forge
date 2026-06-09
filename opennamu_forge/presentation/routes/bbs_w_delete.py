@@ -4,14 +4,11 @@ from .go_api_bbs_w import api_bbs_w
 
 async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
-        curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num])
-        db_data = curs.fetchall()
-        if not db_data:
+        bbs_name = bbs.get_setting(str(bbs_num), "bbs_name")
+        if bbs_name == "":
             return redirect(conn, '/bbs/main')
-
-        bbs_name = db_data[0][0]
         
         bbs_num_str = str(bbs_num)
         post_num_str = str(post_num)
@@ -25,9 +22,7 @@ async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
         
         if flask.request.method == 'POST':
             if comment_num == '':
-                curs.execute(db_change('delete from bbs_data where set_code = ? and set_id = ?'), [post_num_str, bbs_num_str])
-                curs.execute(db_change('delete from bbs_set where set_code = ? and set_id = ?'), [post_num_str, bbs_num_str])
-                curs.execute(db_change('delete from bbs_data where set_id = ? or set_id like ?'), [bbs_num_str + '-' + post_num_str, bbs_num_str + '-' + post_num_str + '-%'])
+                bbs.delete_post(bbs_num_str, post_num_str)
                 
                 return redirect(conn, '/bbs/in/' + bbs_num_str)
             else:
@@ -40,7 +35,7 @@ async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
 
                 set_code = comment_num_split[len(comment_num_split) - 1]
 
-                curs.execute(db_change("update bbs_data set set_data = '' where set_code = ? and set_id = ?"), [set_code, set_id])
+                bbs.clear_comment(set_id, set_code)
                 
                 return redirect(conn, '/bbs/w/' + bbs_num_str + '/' + post_num_str)
         else:

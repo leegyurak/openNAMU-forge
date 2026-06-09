@@ -2,7 +2,8 @@ from .tool.func import *
 
 async def login_register_email():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
+        user_settings = get_user_setting_repository()
         wiki_settings = get_wiki_settings_service()
 
         if not 'reg_id' in flask.session:
@@ -16,10 +17,7 @@ async def login_register_email():
             if email_data:
                 email_data = email_data.group(1)
 
-                curs.execute(db_change(
-                    "select html from html_filter where html = ? and kind = 'email'"
-                ), [email_data])
-                if not curs.fetchall():                
+                if not html_filters.exists(email_data, 'email'):
                     return redirect(conn, '/filter/email_filter')
 
             email_title = wiki_settings.get(SettingKey.EMAIL_TITLE)
@@ -34,8 +32,7 @@ async def login_register_email():
             else:
                 i_text = 'Key : ' + str(flask.session.get('reg_key'))
 
-            curs.execute(db_change('select id from user_set where name = "email" and data = ?'), [user_email])
-            if curs.fetchall():
+            if user_settings.data_exists("email", user_email):
                 return await re_error(conn, 35)
 
             if await send_email(conn, user_email, t_text, i_text) == 0:

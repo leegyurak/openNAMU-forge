@@ -2,7 +2,8 @@ from .tool.func import *
 
 async def edit_upload():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
+        wiki_documents = get_wiki_document_repository()
         wiki_settings = get_wiki_settings_service()
 
         if await acl_check('', 'upload') == 1:
@@ -44,8 +45,7 @@ async def edit_upload():
                 if len(value_tmp) >= 2:
                     value = value_tmp[1]
 
-                curs.execute(db_change("select html from html_filter where kind = 'extension'"))
-                extension = [i[0].lower() for i in curs.fetchall()]
+                extension = [i.html.lower() for i in html_filters.list_by_kind('extension')]
                 if not re.sub(r'^\.', '', value).lower() in extension:
                     return await re_error(conn, 14)
 
@@ -61,14 +61,12 @@ async def edit_upload():
 
                 e_data = sha224_replace(piece[0]) + piece[1]
 
-                curs.execute(db_change("select title from data where title = ?"), ['file:' + name])
-                if curs.fetchall():
+                if wiki_documents.exists_title('file:' + name):
                     return await re_error(conn, 16)
 
-                curs.execute(db_change("select html from html_filter where kind = 'file'"))
-                db_data = curs.fetchall()
+                db_data = html_filters.list_by_kind('file')
                 for i in db_data:
-                    t_re = re.compile(i[0])
+                    t_re = re.compile(i.html)
                     if t_re.search(name):
                         return redirect(conn, '/filter/file_filter')
 
@@ -95,7 +93,7 @@ async def edit_upload():
                         (g_lice if g_lice != '' else '') + \
                     ''
 
-                curs.execute(db_change("insert into data (title, data) values (?, ?)"), ['file:' + name, file_d])
+                wiki_documents.upsert_title('file:' + name, file_d)
 
                 await render_set(conn, 
                     doc_name = 'file:' + name,
@@ -121,9 +119,8 @@ async def edit_upload():
             license_list = '<option value="direct_input">' + await get_lang('direct_input') + '</option>'
             file_name = html.escape(flask.request.args.get('name', ''))
 
-            curs.execute(db_change("select html from html_filter where kind = 'image_license'"))
-            db_data = curs.fetchall()
-            license_list += ''.join(['<option value="' + i[0] + '">' + i[0] + '</option>' for i in db_data])
+            db_data = html_filters.list_by_kind('image_license')
+            license_list += ''.join(['<option value="' + i.html + '">' + i.html + '</option>' for i in db_data])
 
             upload_help_raw = wiki_settings.get(SettingKey.UPLOAD_HELP)
             upload_help = ('<hr class="main_hr">' + upload_help_raw) if upload_help_raw != '' else ''

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from sqlalchemy import func
-from sqlmodel import select
+from sqlmodel import col, select
 
 from opennamu_forge.infrastructure.db_model import Other, get_sqlmodel_session
 from opennamu_forge.infrastructure.mappers.setting_mapper import other_settings_to_rows
@@ -24,6 +24,17 @@ class OtherSettingRepository:
             )
 
             return cast(str, session.exec(select(func.coalesce(value.scalar_subquery(), default))).one())
+
+    def list_name_data_by_names(self, names: tuple[str, ...], *, coverage: str = "") -> list[tuple[str, str]]:
+        with get_sqlmodel_session(self.db_set) as session:
+            rows = session.exec(
+                select(col(Other.name), col(Other.data)).where(
+                    col(Other.name).in_(names),
+                    Other.coverage == coverage,
+                )
+            ).all()
+
+            return cast(list[tuple[str, str]], rows)
 
     def exists(self, name: str, *, coverage: str = "") -> bool:
         with get_sqlmodel_session(self.db_set) as session:

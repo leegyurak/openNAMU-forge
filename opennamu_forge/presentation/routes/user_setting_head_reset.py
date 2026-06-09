@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_setting_head_reset():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         skin_name = await skin_check(1)
         ip = ip_check()
@@ -10,17 +10,8 @@ async def user_setting_head_reset():
         if flask.request.method == 'POST':
             get_data = ''
             if ip_or_user(ip) == 0:
-                curs.execute(db_change("select id from user_set where id = ? and name = ?"), [ip, 'custom_css'])
-                if curs.fetchall():
-                    curs.execute(db_change("update user_set set data = ? where id = ? and name = ?"), [get_data, ip, 'custom_css'])
-                else:
-                    curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [ip, 'custom_css', get_data])
-
-                curs.execute(db_change("select id from user_set where id = ? and name = ?"), [ip, 'custom_css_' + skin_name])
-                if curs.fetchall():
-                    curs.execute(db_change("update user_set set data = ? where id = ? and name = ?"), [get_data, ip, 'custom_css_' + skin_name])
-                else:
-                    curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [ip, 'custom_css_' + skin_name, get_data])
+                user_settings.upsert(ip, 'custom_css', get_data)
+                user_settings.upsert(ip, 'custom_css_' + skin_name, get_data)
 
             flask.session['head'] = ''
             flask.session['head_' + skin_name] = ''
@@ -28,13 +19,8 @@ async def user_setting_head_reset():
             return redirect(conn, '/change/head')
         else:
             if ip_or_user(ip) == 0:
-                curs.execute(db_change("select data from user_set where id = ? and name = ?"), [ip, 'custom_css'])
-                head_data = curs.fetchall()
-                data = head_data[0][0] if head_data else ''
-
-                curs.execute(db_change("select data from user_set where id = ? and name = ?"), [ip, 'custom_css_' + skin_name])
-                head_data = curs.fetchall()
-                data_skin = head_data[0][0] if head_data else ''
+                data = user_settings.get(ip, 'custom_css')
+                data_skin = user_settings.get(ip, 'custom_css_' + skin_name)
             else:
                 data = flask.session['head'] if 'head' in flask.session else ''
                 data_skin = flask.session['head_' + skin_name] if 'head_' + skin_name in flask.session else ''

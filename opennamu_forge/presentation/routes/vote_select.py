@@ -2,38 +2,33 @@ from .tool.func import *
 
 async def vote_select(num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        votes = get_vote_repository()
         
         num = str(num)
 
-        curs.execute(db_change('select name, subject, data, type from vote where id = ? and user = ""'), [num])
-        data_list = curs.fetchall()
-        if not data_list:
+        vote = votes.get_main(num)
+        if vote is None:
             return redirect(conn, '/vote')
 
-        if data_list[0][3] == 'close' or data_list[0][3] == 'n_close':
+        if vote.type == 'close' or vote.type == 'n_close':
             return redirect(conn, '/vote/end/' + num)
 
         if await acl_check('', 'vote', num) == 1:
             return redirect(conn, '/vote/end/' + num)
 
-        curs.execute(db_change('select user from vote where id = ? and user = ?'), [num, ip_check()])
-        if curs.fetchall():
+        if votes.has_user_selection(num, ip_check()):
             return redirect(conn, '/vote/end/' + num)
         
-        curs.execute(db_change('select data from vote where id = ? and name = "end_date" and type = "option"'), [num])
-        db_data = curs.fetchall()
-        time_limit = ''
-        if db_data:
-            time_limit = db_data[0][0]
+        time_limit = votes.get_option(num, "end_date")
+        if time_limit != '':
             
-            time_db = db_data[0][0].split()[0]
+            time_db = time_limit.split()[0]
             time_today = get_time().split()[0]
             
             if time_today > time_db:
                 return redirect(conn, '/vote/end/' + num)
 
-        vote_data = re.findall(r'([^\n]+)', data_list[0][2].replace('\r', ''))
+        vote_data = re.findall(r'([^\n]+)', vote.data.replace('\r', ''))
 
         if flask.request.method == 'POST':
             try:
@@ -44,16 +39,16 @@ async def vote_select(num = 1):
             if len(vote_data) - 1 < vaild_check:
                 return redirect(conn, '/vote/' + num)
 
-            curs.execute(db_change("insert into vote (name, id, subject, data, user, type) values ('', ?, '', ?, ?, 'select')"), [
+            votes.add_selection(
                 num,
                 str(vaild_check),
                 ip_check()
-            ])
+            )
 
             return redirect(conn, '/vote/end/' + num)
         else:
-            data = '<h2>' + data_list[0][0] + '</h2>'
-            data += '<b>' + data_list[0][1] + '</b><hr class="main_hr">' if data_list[0][1] != '' else ''
+            data = '<h2>' + vote.name + '</h2>'
+            data += '<b>' + vote.subject + '</b><hr class="main_hr">' if vote.subject != '' else ''
             data += '<span>~ ' + time_limit + '</span><hr class="main_hr">' if time_limit != '' else ''
 
             select_data = '<span class="__ON_SELECT_DIV__"><select class="__ON_SELECT__" name="vote_data">'

@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def filter_all_add(tool, name = None):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
 
         if not name and tool == 'edit_filter':
             return redirect(conn, '/manager/9')
@@ -17,11 +17,9 @@ async def filter_all_add(tool, name = None):
                 icon = flask.request.form.get('icon', '')
                 inter_type = flask.request.form.get('inter_type', '')
 
-                curs.execute(db_change("delete from html_filter where html = ? and kind = ?"), [title, tool])
-                curs.execute(db_change('insert into html_filter (html, plus, plus_t, kind) values (?, ?, ?, ?)'), [title, link, icon, tool])
+                html_filters.upsert(title, tool, plus=link, plus_t=icon)
                 if tool == 'inter_wiki':
-                    curs.execute(db_change("delete from html_filter where html = ? and kind = 'inter_wiki_sub'"), [title])
-                    curs.execute(db_change('insert into html_filter (html, plus, plus_t, kind) values (?, "inter_wiki_type", ?, "inter_wiki_sub")'), [title, inter_type])
+                    html_filters.upsert(title, 'inter_wiki_sub', plus='inter_wiki_type', plus_t=inter_type)
                 
                 await acl_check(tool = 'owner_auth', memo = tool + ' edit')
             elif tool == 'edit_filter':
@@ -37,8 +35,7 @@ async def filter_all_add(tool, name = None):
                 except:
                     return await re_error(conn, 23)
                 
-                curs.execute(db_change("delete from html_filter where html = ? and kind = 'regex_filter'"), [name])
-                curs.execute(db_change("insert into html_filter (html, plus, plus_t, kind) values (?, ?, ?, 'regex_filter')"), [name, content, end])
+                html_filters.upsert(name, 'regex_filter', plus=content, plus_t=end)
                 await acl_check(tool = 'owner_auth', memo = 'edit_filter edit')
             elif tool == 'document':
                 post_name = flask.request.form.get('name', '')
@@ -52,7 +49,7 @@ async def filter_all_add(tool, name = None):
                 except:
                     return await re_error(conn, 23)
                 
-                curs.execute(db_change('insert into html_filter (html, kind, plus, plus_t) values (?, "document", ?, ?)'), [post_name, post_regex, post_acl])
+                html_filters.upsert(post_name, 'document', plus=post_regex, plus_t=post_acl)
                 await acl_check(tool = 'owner_auth', memo = 'document_filter edit')
             else:
                 plus_d = ''
@@ -94,9 +91,9 @@ async def filter_all_add(tool, name = None):
                     plus_d = flask.request.form.get('markup', 'test')
 
                 if name:
-                    curs.execute(db_change("delete from html_filter where html = ? and kind = ?"), [name, type_d])
+                    html_filters.delete(name, type_d)
 
-                curs.execute(db_change('insert into html_filter (html, kind, plus, plus_t) values (?, ?, ?, ?)'), [title, type_d, plus_d, ''])
+                html_filters.upsert(title, type_d, plus=plus_d)
 
             return redirect(conn, '/filter/' + tool)
         else:
@@ -107,18 +104,15 @@ async def filter_all_add(tool, name = None):
             if tool in ('inter_wiki', 'outer_link'):
                 value = ['', '', '']
                 if name != '':
-                    curs.execute(db_change("select html, plus, plus_t from html_filter where html = ? and kind = ?"), [name, tool])
-                    exist = curs.fetchall()
-                    value = exist[0] if exist else value
+                    exist = html_filters.get(name, tool)
+                    value = [exist.html, exist.plus, exist.plus_t] if exist else value
 
                 select = ''
                 if tool == 'inter_wiki':
                     ex = 'https://namu.wiki/w/'
 
                     select = ['', '']
-                    curs.execute(db_change("select plus_t from html_filter where kind = 'inter_wiki_sub' and html = ?"), [name])
-                    db_data = curs.fetchall()
-                    if db_data and db_data[0][0] == 'under_bar':
+                    if html_filters.get_plus_t(name, 'inter_wiki_sub') == 'under_bar':
                         select = ['', 'selected']
 
                     select = '''
@@ -149,11 +143,10 @@ async def filter_all_add(tool, name = None):
                     ''' + select + '''
                 '''
             elif tool == 'edit_filter':            
-                curs.execute(db_change("select plus, plus_t from html_filter where html = ? and kind = 'regex_filter'"), [name])
-                exist = curs.fetchall()
+                exist = html_filters.get(name, 'regex_filter')
                 if exist:
-                    textarea = exist[0][0]
-                    time_data = '' if exist[0][1] == 'X' else exist[0][1]
+                    textarea = exist.plus
+                    time_data = '' if exist.plus_t == 'X' else exist.plus_t
                     if time_data != '':
                         time_data = re.sub(r'[^0-9]', '', time_data)
                         time_data = str(int(int(number_check(time_data)) / (24 * 60 * 60)))
@@ -210,9 +203,8 @@ async def filter_all_add(tool, name = None):
             elif tool == 'document':
                 acl_list = await get_acl_list()
                 
-                curs.execute(db_change("select plus, plus_t from html_filter where html = ? and kind = 'document'"), [name])
-                db_data = curs.fetchall()
-                acl_list = [['selected' if db_data and db_data[0][1] == for_a else '', for_a] for for_a in acl_list]
+                db_data = html_filters.get(name, 'document')
+                acl_list = [['selected' if db_data and db_data.plus_t == for_a else '', for_a] for for_a in acl_list]
 
                 title = await get_lang('document_filter_add')
                 form_data = '''
@@ -222,7 +214,7 @@ async def filter_all_add(tool, name = None):
                     <hr class="main_hr">
                     ''' + await get_lang('regex') + '''
                     <hr class="main_hr">
-                    <input class="__ON_INPUT__" value="''' + (html.escape(db_data[0][0]) if db_data else '') + '''" type="text" name="regex">
+                    <input class="__ON_INPUT__" value="''' + (html.escape(db_data.plus) if db_data else '') + '''" type="text" name="regex">
                     <hr class="main_hr">
                     <a href="/acl/Test#exp">''' + await get_lang('acl') + '''</a>
                     <hr class="main_hr">
@@ -235,9 +227,8 @@ async def filter_all_add(tool, name = None):
 
                 value = ''
                 if name:
-                    curs.execute(db_change("select plus from html_filter where html = ? and kind = 'template'"), [name])
-                    exist = curs.fetchall()
-                    value = exist[0][0] if exist else '' 
+                    exist = html_filters.get(name, 'template')
+                    value = exist.plus if exist else ''
 
                 form_data = '' + \
                     await get_lang('template') + \
@@ -254,9 +245,8 @@ async def filter_all_add(tool, name = None):
                 
                 value = ''
                 if name:
-                    curs.execute(db_change("select plus from html_filter where html = ? and kind = 'edit_top'"), [name])
-                    exist = curs.fetchall()
-                    value = exist[0][0] if exist else ''    
+                    exist = html_filters.get(name, 'edit_top')
+                    value = exist.plus if exist else ''
 
                 form_data = '''
                     ''' + await get_lang('title') + '''

@@ -4,54 +4,43 @@ from .view_diff import view_diff_do
 
 async def edit_request(name = 'Test', do_type = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        document_meta = get_document_meta_repository()
+        history = get_history_repository()
+        user_settings = get_user_setting_repository()
+        wiki_documents = get_wiki_document_repository()
 
         disabled = ""
         if await acl_check(name, 'document_edit') == 1:
             disabled = "disabled"
 
-        curs.execute(db_change("select id from history where title = ? order by id + 0 desc"), [name])
-        doc_ver = curs.fetchall()
-        doc_ver = doc_ver[0][0] if doc_ver else '0'
+        doc_ver = history.latest_revision_id(name) or '0'
 
         if doc_ver == '0':
             if await acl_check(name, 'document_make_acl') == 1:
                 disabled = "disabled"
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_data'"), [name, doc_ver])
-        db_data = curs.fetchall()
-        if not db_data:
+        if not document_meta.exists(name, 'edit_request_data', doc_rev=doc_ver):
             return redirect(conn, '/edit/' + url_pas(name))
-        
-        edit_request_data = db_data[0][0]
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_user'"), [name, doc_ver])
-        db_data = curs.fetchall()
-        edit_request_user = db_data[0][0] if db_data else ''
+        edit_request_data = document_meta.get(name, 'edit_request_data', doc_rev=doc_ver)
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_date'"), [name, doc_ver])
-        db_data = curs.fetchall()
-        edit_request_date = db_data[0][0] if db_data else ''
+        edit_request_user = document_meta.get(name, 'edit_request_user', doc_rev=doc_ver)
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_send'"), [name, doc_ver])
-        db_data = curs.fetchall()
-        edit_request_send = db_data[0][0] if db_data else ''
+        edit_request_date = document_meta.get(name, 'edit_request_date', doc_rev=doc_ver)
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_leng'"), [name, doc_ver])
-        db_data = curs.fetchall()
-        edit_request_leng = db_data[0][0] if db_data else ''
+        edit_request_send = document_meta.get(name, 'edit_request_send', doc_rev=doc_ver)
+
+        edit_request_leng = document_meta.get(name, 'edit_request_leng', doc_rev=doc_ver)
 
         if flask.request.method == 'POST':
             if disabled != "":
                 return redirect(conn, '/w/' + url_pas(name))
             
-            curs.execute(db_change("select id from user_set where name = 'watchlist' and data = ?"), [name])
-            for scan_user in curs.fetchall():
-                await add_alarm(scan_user[0], edit_request_user, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
+            for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
+                await add_alarm(scan_user, edit_request_user, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
 
             if flask.request.form.get('check', '') == 'Y':
-                curs.execute(db_change("delete from data where title = ?"), [name])
-                curs.execute(db_change("insert into data (title, data) values (?, ?)"), [name, edit_request_data])
+                wiki_documents.upsert_title(name, edit_request_data)
                         
                 history_plus(conn, 
                     name,
@@ -84,9 +73,7 @@ async def edit_request(name = 'Test', do_type = ''):
             else:
                 return redirect(conn, '/w/' + url_pas(name))
         else:
-            curs.execute(db_change("select data from data where title = ?"), [name])
-            db_data = curs.fetchall()
-            old_data = db_data[0][0] if db_data else ''
+            old_data = wiki_documents.get_data(name)
 
             result = view_diff_do(old_data, edit_request_data, 'r' + doc_ver, await get_lang('edit_request'))
 

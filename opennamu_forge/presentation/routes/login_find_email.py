@@ -3,7 +3,8 @@ from .tool.func import *
 # 개편 필요
 async def login_find_email(tool):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
+        user_settings = get_user_setting_repository()
         wiki_settings = get_wiki_settings_service()
         
         if flask.request.method == 'POST':
@@ -28,8 +29,7 @@ async def login_find_email(tool):
                 user_email = flask.request.form.get('email', '')
                 email_data = re.search(r'@([^@]+)$', user_email)
                 if email_data:
-                    curs.execute(db_change("select html from html_filter where html = ? and kind = 'email'"), [email_data.group(1)])
-                    if not curs.fetchall():
+                    if not html_filters.exists(email_data.group(1), 'email'):
                         for i in re_set_list:
                             flask.session.pop(i, None)
                         
@@ -47,8 +47,7 @@ async def login_find_email(tool):
             i_text = (html.escape(email_text) + '\n\nKey : ' + flask.session['c_key']) if email_text != '' else ('Key : ' + flask.session['c_key'])
             
             if tool == 'pass_find':
-                curs.execute(db_change("select id from user_set where id = ? and name = 'email' and data = ?"), [user_id, user_email])
-                if not curs.fetchall():
+                if not user_settings.exists_data(user_id, "email", user_email):
                     return await re_error(conn, 12)
                     
                 if await send_email(conn, user_email, t_text, i_text) == 0:
@@ -56,8 +55,7 @@ async def login_find_email(tool):
         
                 return redirect(conn, '/pass_find/email')
             else:
-                curs.execute(db_change('select id from user_set where name = "email" and data = ?'), [user_email])
-                if curs.fetchall():
+                if user_settings.data_exists("email", user_email):
                     for i in re_set_list:
                         flask.session.pop(i, None)
         

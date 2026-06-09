@@ -2,22 +2,20 @@ from .tool.func import *
 
 async def bbs_make():   
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
         if await acl_check('', 'owner_auth', '', '') == 1:
             return await re_error(conn, 3)
         
         if flask.request.method == 'POST':
-            curs.execute(db_change('select set_id from bbs_set where set_name = "bbs_name" order by set_id + 0 desc'))
-            db_data = curs.fetchall()
-
-            bbs_num = str(int(db_data[0][0]) + 1) if db_data else '1'
+            latest_board_id = bbs.latest_board_id()
+            bbs_num = str(latest_board_id + 1) if latest_board_id is not None else '1'
             bbs_name = flask.request.form.get('bbs_name', 'test')
             bbs_type = flask.request.form.get('bbs_type', 'comment')
             bbs_type = bbs_type if bbs_type in ['comment', 'thread'] else 'comment'
 
-            curs.execute(db_change("insert into bbs_set (set_name, set_code, set_id, set_data) values ('bbs_name', '', ?, ?)"), [bbs_num, bbs_name])
-            curs.execute(db_change("insert into bbs_set (set_name, set_code, set_id, set_data) values ('bbs_type', '', ?, ?)"), [bbs_num, bbs_type])
+            bbs.add_setting(bbs_num, 'bbs_name', bbs_name)
+            bbs.add_setting(bbs_num, 'bbs_type', bbs_type)
 
             return redirect(conn, '/bbs/main')
         else:

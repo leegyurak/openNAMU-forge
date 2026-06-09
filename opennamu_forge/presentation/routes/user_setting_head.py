@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_setting_head(skin_name = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
 
@@ -13,11 +13,7 @@ async def user_setting_head(skin_name = ''):
         if flask.request.method == 'POST':
             get_data = flask.request.form.get('content', '')
             if ip_or_user(ip) == 0:
-                curs.execute(db_change("select id from user_set where id = ? and name = ?"), [ip, 'custom_css' + skin_name])
-                if curs.fetchall():
-                    curs.execute(db_change("update user_set set data = ? where id = ? and name = ?"), [get_data, ip, 'custom_css' + skin_name])
-                else:
-                    curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [ip, 'custom_css' + skin_name, get_data])
+                user_settings.upsert(ip, 'custom_css' + skin_name, get_data)
         
             flask.session['head' + skin_name] = get_data
 
@@ -29,9 +25,7 @@ async def user_setting_head(skin_name = ''):
             if ip_or_user(ip) == 0:
                 start = ''
 
-                curs.execute(db_change("select data from user_set where id = ? and name = ?"), [ip, 'custom_css' + skin_name])
-                head_data = curs.fetchall()
-                data = head_data[0][0] if head_data else ''
+                data = user_settings.get(ip, 'custom_css' + skin_name)
             else:
                 start = '' + \
                     '<span>' + await get_lang('user_head_warning') + '</span>' + \

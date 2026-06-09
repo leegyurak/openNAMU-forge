@@ -2,26 +2,17 @@ from .tool.func import *
 
 async def user_count(name = None):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        histories = get_history_repository()
+        topics = get_topic_repository()
 
         if name == None:
             that = ip_check()
         else:
             that = name
 
-        curs.execute(db_change("select count(*) from history where ip = ?"), [that])
-        count = curs.fetchall()
-        if count:
-            data = count[0][0]
-        else:
-            data = 0
+        data = histories.count_by_ip(that)
 
-        curs.execute(db_change("select count(*) from topic where ip = ?"), [that])
-        count = curs.fetchall()
-        if count:
-            data_topic = count[0][0]
-        else:
-            data_topic = 0
+        data_topic = topics.count_by_ip(that)
             
         date = get_time()
         date = date.split()
@@ -30,10 +21,9 @@ async def user_count(name = None):
         data_today = 0
         data_today_len = 0
             
-        curs.execute(db_change("select leng from history where date like ? and ip = ?"), [date + '%', that])
-        db_data = curs.fetchall()
+        db_data = histories.list_lengths_by_ip_date_prefix(that, date)
         for count in db_data:
-            count_data = count[0]
+            count_data = count
             count_data = count_data.replace('+', '')
             count_data = count_data.replace('-', '')
 
@@ -47,10 +37,9 @@ async def user_count(name = None):
         data_yesterday = 0
         data_yesterday_len = 0
             
-        curs.execute(db_change("select leng from history where date like ? and ip = ?"), [date_yesterday + '%', that])
-        db_data = curs.fetchall()
+        db_data = histories.list_lengths_by_ip_date_prefix(that, date_yesterday)
         for count in db_data:
-            count_data = count[0]
+            count_data = count
             count_data = count_data.replace('+', '')
             count_data = count_data.replace('-', '')
 

@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def main_tool_redirect(num = 1, add_2 = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        html_filters = get_html_filter_repository()
 
         title_list = {
             0 : [await get_lang('document_name'), '/acl', await get_lang('document_setting')],
@@ -49,11 +49,9 @@ async def main_tool_redirect(num = 1, add_2 = ''):
 
             top_plus = ''
             if num == 13:
-                curs.execute(db_change("select html, plus from html_filter where kind = 'template'"))
-                db_data = curs.fetchall()
-                for for_a in db_data:
+                for for_a in html_filters.list_by_kind('template'):
                     top_plus += '' + \
-                        '<a href="javascript:opennamu_forge_insert_v(\'data_field\', \'' + get_tool_js_safe(for_a[0]) + '\')">' + html.escape(for_a[0]) + '</a> : ' + html.escape(for_a[1]) + \
+                        '<a href="javascript:opennamu_forge_insert_v(\'data_field\', \'' + get_tool_js_safe(for_a.html) + '\')">' + html.escape(for_a.html) + '</a> : ' + html.escape(for_a.plus) + \
                         '<hr class="main_hr">' + \
                     ''
 

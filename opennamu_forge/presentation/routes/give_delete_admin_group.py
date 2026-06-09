@@ -2,7 +2,8 @@ from .tool.func import *
 
 async def give_delete_admin_group(name = 'test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        admin = get_admin_repository()
+        user_settings = get_user_setting_repository()
 
         if name in get_default_admin_group():
             return redirect(conn, '/auth/list')
@@ -11,11 +12,10 @@ async def give_delete_admin_group(name = 'test'):
             return await re_error(conn, 3)
 
         if flask.request.method == 'POST':
-            curs.execute(db_change("select name from user_set where name = 'acl' and data = ? limit 1"), [name])
-            if not curs.fetchall():
+            if not user_settings.data_exists('acl', name):
                 await acl_check(tool = 'owner_auth', memo = 'auth list delete (' + name + ')')
 
-                curs.execute(db_change("delete from alist where name = ?"), [name])
+                admin.delete_group(name)
 
                 return redirect(conn, '/auth/list')
             else:

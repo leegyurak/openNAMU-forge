@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def topic_tool_acl(topic_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         if await acl_check(tool = 'toron_auth') == 1:
             return await re_error(conn, 3)
@@ -11,37 +11,21 @@ async def topic_tool_acl(topic_num = 1):
         time = get_time()
         topic_num = str(topic_num)
 
-        curs.execute(db_change("select title, sub from rd where code = ?"), [topic_num])
-        rd_d = curs.fetchall()
+        rd_d = topics.get_recent_discuss(topic_num)
         if not rd_d:
             return redirect(conn, '/')
 
         if flask.request.method == 'POST':
             await acl_check(tool = 'toron_auth', memo = 'topic_acl_set (code ' + topic_num + ')')
 
-            curs.execute(db_change("select id from topic where code = ? order by id + 0 desc limit 1"), [topic_num])
-            topic_check = curs.fetchall()
+            topic_check = topics.latest_comment_id(topic_num)
             if topic_check:
                 acl_data = flask.request.form.get('acl', '')
                 acl_data_view = flask.request.form.get('acl_view', '')
 
-                curs.execute(db_change("update rd set acl = ? where code = ?"), [
-                    acl_data, 
-                    topic_num
-                ])
+                topics.update_recent_discuss_acl(topic_num, acl_data)
                 
-                curs.execute(db_change("select set_data from topic_set where thread_code = ? and set_name = 'thread_view_acl'"), [topic_num])
-                db_data = curs.fetchall()
-                if db_data:
-                    curs.execute(db_change("update topic_set set set_data = ? where thread_code = ?"), [
-                        acl_data_view,
-                        topic_num
-                    ])
-                else:
-                    curs.execute(db_change("insert into topic_set (thread_code, set_name, set_id, set_data) values (?, 'thread_view_acl', '1', ?)"), [
-                        topic_num,
-                        acl_data_view
-                    ])
+                topics.upsert_thread_setting(topic_num, 'thread_view_acl', acl_data_view)
 
                 do_add_thread(conn, 
                     topic_num,
@@ -59,20 +43,18 @@ async def topic_tool_acl(topic_num = 1):
             acl_html_list = ''
             acl_html_list_view = ''
 
-            curs.execute(db_change("select acl from rd where code = ?"), [topic_num])
-            topic_acl_get = curs.fetchall()
+            topic_acl_get = rd_d.acl
             for data_list in acl_list:
-                if topic_acl_get and topic_acl_get[0][0] == data_list:
+                if topic_acl_get == data_list:
                     check = 'selected="selected"'
                 else:
                     check = ''
 
                 acl_html_list += '<option value="' + data_list + '" ' + check + '>' + (data_list if data_list != '' else 'normal') + '</option>'
 
-            curs.execute(db_change("select set_data from topic_set where thread_code = ? and set_name = 'thread_view_acl'"), [topic_num])
-            db_data = curs.fetchall()
+            db_data = topics.get_thread_setting(topic_num, 'thread_view_acl')
             for data_list in acl_list:
-                if db_data and db_data[0][0] == data_list:
+                if db_data == data_list:
                     check = 'selected="selected"'
                 else:
                     check = ''

@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
         
         data = ''
         title_name = ''
@@ -13,56 +13,48 @@ async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
         admin_auth = 1 if admin_auth == 0 else 0
 
         if tool == 'bbs':
-            curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num])
-            db_data = curs.fetchall()
-            if not db_data:
+            bbs_name = bbs.get_setting(bbs_num, 'bbs_name')
+            if bbs_name == '':
                 return redirect(conn, '/bbs/main')
         
-            bbs_name = db_data[0][0]
             bbs_num_str = str(bbs_num)
 
             title_name = bbs_name
             sub = '(' + await get_lang('bbs') + ')'
             menu = [['bbs/main', await get_lang('return')], ['bbs/edit/' + bbs_num_str, await get_lang('add')], ['bbs/set/' + bbs_num_str, await get_lang('bbs_set')]]
         elif tool == 'record':
-            curs.execute(db_change('select set_data, set_id from bbs_set where set_name = "bbs_name"'))
-            db_data = curs.fetchall()
-            bbs_name_dict = { for_a[1] : for_a[0] for for_a in db_data } if db_data else {}
+            db_data = bbs.list_board_names()
+            bbs_name_dict = { for_a[0] : for_a[1] for for_a in db_data } if db_data else {}
             
             title_name = name
             sub = '(' + await get_lang('bbs_record') + ')'
             menu = [['user/' + url_pas(name), await get_lang('user_tool')]]
         elif tool == 'comment_record':
-            curs.execute(db_change('select set_data, set_id from bbs_set where set_name = "bbs_name"'))
-            db_data = curs.fetchall()
-            bbs_name_dict = { for_a[1] : for_a[0] for for_a in db_data } if db_data else {}
+            db_data = bbs.list_board_names()
+            bbs_name_dict = { for_a[0] : for_a[1] for for_a in db_data } if db_data else {}
             
             title_name = name
             sub = '(' + await get_lang('bbs_comment_record') + ')'
             menu = [['user/' + url_pas(name), await get_lang('user_tool')]]
         else:
-            curs.execute(db_change('select set_data, set_id from bbs_set where set_name = "bbs_name"'))
-            db_data = curs.fetchall()
+            db_data = bbs.list_board_names()
             if db_data:
                 data += '<ul>'
                 for for_a in db_data:
-                    bbs_name_dict[for_a[1]] = for_a[0]
+                    bbs_name_dict[for_a[0]] = for_a[1]
 
-                    curs.execute(db_change('select set_data from bbs_set where set_name = "bbs_type" and set_id = ?'), [for_a[1]])
-                    db_data_2 = curs.fetchall()
-                    bbs_type = db_data_2[0][0] if db_data_2 else 'comment'
+                    bbs_type = bbs.get_setting(for_a[0], 'bbs_type', default='comment')
 
                     if bbs_type == 'thread':
                         bbs_type = await get_lang('thread_base')
                     else:
                         bbs_type = await get_lang('comment_base')
                     
-                    curs.execute(db_change('select set_data from bbs_data where set_id = ? and set_name = "date" order by set_code + 0 desc limit 1'), [for_a[1]])
-                    db_data_2 = curs.fetchall()
-                    last_date = ('(' + db_data_2[0][0] + ')') if db_data_2 else ''
+                    last_date_data = bbs.latest_board_post_date(for_a[0])
+                    last_date = ('(' + last_date_data + ')') if last_date_data != '' else ''
 
                     data += '<li>'
-                    data += '<a href="/bbs/in/' + for_a[1] + '">' + html.escape(for_a[0]) + '</a> (' + bbs_type + ') ' + last_date
+                    data += '<a href="/bbs/in/' + for_a[0] + '">' + html.escape(for_a[1]) + '</a> (' + bbs_type + ') ' + last_date
                     data += '</li>'
 
                 data += '</ul>'
@@ -92,35 +84,17 @@ async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
             '''
 
         if tool == 'bbs':
-            curs.execute(db_change('select set_code, set_id, set_name from bbs_data where set_name = "pinned" and set_id like ? order by set_data desc'), [bbs_num])
-            db_data = curs.fetchall()
-            db_data = list(db_data) if db_data else []
-            
-            curs.execute(db_change('select set_code, set_id from bbs_data where set_name = "title" and set_id like ? order by set_code + 0 desc'), [bbs_num])
-            db_data_2 = curs.fetchall()
-            db_data += list(db_data_2) if db_data_2 else []
+            db_data = bbs.list_pinned_post_refs(bbs_num)
+            db_data += bbs.list_title_post_refs(bbs_num)
         elif tool == 'record':
-            try:
-                curs.execute(db_change('select set_code, set_id, set_data from bbs_data where set_name = "date" and (set_code, set_id) in (select set_code, set_id from bbs_data where set_name = "user_id" and set_data = ?) as sub_query order by set_data desc limit 50'), [name])
-            except:
-                curs.execute(db_change('select set_code, set_id from bbs_data where set_name = "user_id" and set_data = ? order by set_data desc limit 50'), [name])
-
-            db_data = curs.fetchall()
+            db_data = bbs.list_post_refs_by_user(name)
         elif tool == 'comment_record':
-            try:
-                curs.execute(db_change('select set_code, set_id, set_data from bbs_data where set_name = "comment_date" and (set_code, set_id) in (select set_code, set_id from bbs_data where set_name = "comment_user_id" and set_data = ?) as sub_query order by set_data desc limit 50'), [name])
-            except:
-                curs.execute(db_change('select set_code, set_id from bbs_data where set_name = "comment_user_id" and set_data = ? order by set_data desc limit 50'), [name])
-            
-            db_data = curs.fetchall()
+            db_data = bbs.list_comment_refs_by_user(name)
         else:
-            curs.execute(db_change('select set_code, set_id, set_data from bbs_data where set_name = "date" order by set_data desc limit 50'))
-            db_data = curs.fetchall()
+            db_data = bbs.list_recent_post_refs()
 
         for for_b in db_data:
-            curs.execute(db_change('select set_name, set_data, set_code, set_id from bbs_data where set_code = ? and set_id = ?'), [for_b[0], for_b[1]])
-            db_data = curs.fetchall()
-            db_data = list(db_data) if db_data else []
+            db_data = bbs.list_data_rows(for_b[1], for_b[0])
 
             temp_dict = { for_a[0] : for_a[1] for for_a in db_data }
 
@@ -137,11 +111,7 @@ async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
                 notice = 0
 
             if tool == 'comment_record':
-                curs.execute(db_change('select set_name, set_data, set_code, set_id from bbs_data where set_name = "title" and set_code = ? and set_id = ?'), [bbs_split[1], bbs_split[0]])
-                db_data = curs.fetchall()
-                db_data = list(db_data) if db_data else []
-                for for_a in db_data:
-                    temp_dict[for_a[0]] = for_a[1]
+                temp_dict['title'] = bbs.get_data(bbs_split[0], 'title', bbs_split[1])
             
                 comment_link = ''
                 if len(bbs_split) > 2:
@@ -163,13 +133,10 @@ async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
                     </tr>
                 '''
             else:
-                curs.execute(db_change('select count(*) from bbs_data where set_name = "comment_date" and (set_id = ? or set_id like ?) order by set_code + 0 desc'), [for_b[1] + '-' + for_b[0], for_b[1] + '-' + for_b[0] + '-%'])
-                db_data = curs.fetchall()
-                comment_count = str(db_data[0][0]) if db_data else '0'
+                comment_set_id = for_b[1] + '-' + for_b[0]
+                comment_count = str(bbs.count_comments_for_post(comment_set_id))
 
-                curs.execute(db_change('select set_data from bbs_data where set_name = "comment_date" and (set_id = ? or set_id like ?) order by set_data desc limit 1'), [for_b[1] + '-' + for_b[0], for_b[1] + '-' + for_b[0] + '-%'])
-                db_data = curs.fetchall()
-                last_comment_date = db_data[0][0] if db_data else '0'
+                last_comment_date = bbs.latest_comment_date_for_post(comment_set_id)
             
                 data += '''
                     <tr class="''' + ('opennamu_forge_comment_color_red' if notice == 1 else '') + '''">

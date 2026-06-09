@@ -4,11 +4,19 @@ from pathlib import Path
 import pytest
 
 REPOSITORY_FILES = (
+    Path("opennamu_forge/infrastructure/admin_repository.py"),
+    Path("opennamu_forge/infrastructure/backlink_repository.py"),
+    Path("opennamu_forge/infrastructure/bbs_repository.py"),
     Path("opennamu_forge/infrastructure/document_meta_repository.py"),
     Path("opennamu_forge/infrastructure/history_repository.py"),
+    Path("opennamu_forge/infrastructure/html_filter_repository.py"),
+    Path("opennamu_forge/infrastructure/recent_block_repository.py"),
     Path("opennamu_forge/infrastructure/setting_repository.py"),
     Path("opennamu_forge/infrastructure/topic_repository.py"),
+    Path("opennamu_forge/infrastructure/user_agent_repository.py"),
+    Path("opennamu_forge/infrastructure/user_notice_repository.py"),
     Path("opennamu_forge/infrastructure/user_setting_repository.py"),
+    Path("opennamu_forge/infrastructure/vote_repository.py"),
     Path("opennamu_forge/infrastructure/wiki_repository.py"),
 )
 class RepositoryControlFlowVisitor(ast.NodeVisitor):

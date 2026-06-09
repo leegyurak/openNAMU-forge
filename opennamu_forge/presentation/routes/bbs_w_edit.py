@@ -7,15 +7,14 @@ from .edit import edit_editor
 
 async def bbs_w_edit(bbs_num = '', post_num = '', comment_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
         bbs_num_str = str(bbs_num)
         post_num_str = str(post_num)
 
         ip = ip_check()
 
-        curs.execute(db_change('select set_id from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num_str])
-        if not curs.fetchall():
+        if bbs.get_setting(bbs_num_str, 'bbs_name') == '':
             return redirect(conn, '/bbs/main')
         
         if comment_num != '':
@@ -43,9 +42,8 @@ async def bbs_w_edit(bbs_num = '', post_num = '', comment_num = ''):
                 return await re_error(conn, 13)
         
             if post_num == '':
-                curs.execute(db_change('select set_code from bbs_data where set_name = "title" and set_id = ? order by set_code + 0 desc'), [bbs_num_str])
-                db_data = curs.fetchall()
-                id_data = str(int(db_data[0][0]) + 1) if db_data else '1'
+                latest_code = bbs.latest_data_code(bbs_num_str, 'title')
+                id_data = str(latest_code + 1) if latest_code else '1'
             else:
                 id_data = post_num_str
 
@@ -73,16 +71,16 @@ async def bbs_w_edit(bbs_num = '', post_num = '', comment_num = ''):
                     
                 sub_code = '-'.join(sub_code)
 
-                curs.execute(db_change("update bbs_data set set_data = ? where set_name = 'comment' and set_code = ? and set_id = ?"), [data, sub_code_last, sub_code])
+                bbs.update_data(sub_code, 'comment', sub_code_last, data)
             elif post_num == '':
-                curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('title', ?, ?, ?)"), [id_data, bbs_num_str, title])
-                curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('data', ?, ?, ?)"), [id_data, bbs_num_str, data])
-                curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('date', ?, ?, ?)"), [id_data, bbs_num_str, date])
-                curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('user_id', ?, ?, ?)"), [id_data, bbs_num_str, ip])
+                bbs.add_data(bbs_num_str, 'title', id_data, title)
+                bbs.add_data(bbs_num_str, 'data', id_data, data)
+                bbs.add_data(bbs_num_str, 'date', id_data, date)
+                bbs.add_data(bbs_num_str, 'user_id', id_data, ip)
             else:
-                curs.execute(db_change("update bbs_data set set_data = ? where set_name = 'title' and set_code = ? and set_id = ?"), [title, post_num, bbs_num_str])
-                curs.execute(db_change("update bbs_data set set_data = ? where set_name = 'data' and set_code = ? and set_id = ?"), [data, id_data, bbs_num_str])
-                curs.execute(db_change("update bbs_data set set_data = ? where set_name = 'date' and set_code = ? and set_id = ?"), [date, id_data, bbs_num_str])
+                bbs.update_data(bbs_num_str, 'title', post_num, title)
+                bbs.update_data(bbs_num_str, 'data', id_data, data)
+                bbs.update_data(bbs_num_str, 'date', id_data, date)
 
             if comment_num != '':
                 return redirect(conn, '/bbs/w/' + bbs_num_str + '/' + id_data + '#' + url_pas(comment_num))

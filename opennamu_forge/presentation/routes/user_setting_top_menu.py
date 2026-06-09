@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_setting_top_menu():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if (await ban_check(ip))[0] == 1:
@@ -12,17 +12,11 @@ async def user_setting_top_menu():
             return redirect(conn, '/login')
         
         if flask.request.method == 'POST':
-            curs.execute(db_change("select data from user_set where name = 'top_menu' and id = ?"), [ip])
-            if curs.fetchall():
-                curs.execute(db_change("update user_set set data = ? where name = 'top_menu' and id = ?"), [flask.request.form.get('content', ''), ip])
-            else:
-                curs.execute(db_change("insert into user_set (name, data, id) values ('top_menu', ?, ?)"), [flask.request.form.get('content', ''), ip])
+            user_settings.upsert(ip, 'top_menu', flask.request.form.get('content', ''))
 
             return redirect(conn, '/change/top_menu')
         else:
-            curs.execute(db_change("select data from user_set where name = 'top_menu' and id = ?"), [ip])
-            db_data = curs.fetchall()
-            db_data = db_data[0][0] if db_data else ''
+            db_data = user_settings.get(ip, 'top_menu')
             
             return await render_template(
                 await get_lang('user_added_menu'),

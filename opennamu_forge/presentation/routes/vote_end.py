@@ -4,40 +4,34 @@ async def vote_end(num = 1):
     num = str(num)
     
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        votes = get_vote_repository()
 
-        curs.execute(db_change('select name, subject, data, type from vote where id = ? and user = ""'), [num])
-        data_list = curs.fetchall()
-        if not data_list:
+        vote = votes.get_main(num)
+        if vote is None:
             return redirect(conn, '/vote')
 
         data = ''
-        if data_list[0][3] == 'open' or data_list[0][3] == 'n_open':
+        if vote.type == 'open' or vote.type == 'n_open':
             data += '<a href="/vote/close/' + num + '">(' + await get_lang('close_vote') + ')</a>'
         else:
             data += '<a href="/vote/close/' + num + '">(' + await get_lang('re_open_vote') + ')</a>'
         
-        curs.execute(db_change('select data from vote where id = ? and name = "end_date" and type = "option"'), [num])
-        db_data = curs.fetchall()
-        time_limit = ''
-        if db_data:
-            time_limit = db_data[0][0]
+        time_limit = votes.get_option(num, "end_date")
 
-        data += '<h2>' + data_list[0][0] + '</h2>'
-        data += '<b>' + data_list[0][1] + '</b><hr class="main_hr">' if data_list[0][1] != '' else ''
+        data += '<h2>' + vote.name + '</h2>'
+        data += '<b>' + vote.subject + '</b><hr class="main_hr">' if vote.subject != '' else ''
         data += '<span>~ ' + time_limit + '</span><hr class="main_hr">' if time_limit != '' else ''
 
-        vote_data = re.findall(r'([^\n]+)', data_list[0][2].replace('\r', ''))
+        vote_data = re.findall(r'([^\n]+)', vote.data.replace('\r', ''))
         for i in range(0, len(vote_data)):
             data += '<h2>' + vote_data[i] + '</h2>'
             data += '<ul>'
 
-            curs.execute(db_change('select user from vote where id = ? and user != "" and data = ?'), [num, str(i)])
-            data_list_2 = curs.fetchall()
-            if data_list[0][3] == 'open' or data_list[0][3] == 'close':
-                all_ip = await ip_pas([j[0] for j in data_list_2])
+            data_list_2 = votes.list_selection_users(num, str(i))
+            if vote.type == 'open' or vote.type == 'close':
+                all_ip = await ip_pas(data_list_2)
                 for j in data_list_2:
-                    data += '<li>' + all_ip[j[0]] + '</li>'
+                    data += '<li>' + all_ip[j] + '</li>'
 
             data += '<li>' + await get_lang('result') + ' : ' + str(len(data_list_2)) + '</li>'
             data += '</ul>'

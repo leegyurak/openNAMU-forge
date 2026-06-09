@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def topic_tool_change(topic_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         if await acl_check(tool = 'owner_auth') == 1:
             return await re_error(conn, 3)
@@ -10,9 +10,8 @@ async def topic_tool_change(topic_num = 1):
         time = get_time()
         topic_num = str(topic_num)
 
-        curs.execute(db_change("select title, sub from rd where code = ?"), [topic_num])
-        rd_d = curs.fetchall()
-        if not rd_d:
+        rd_d = topics.get_recent_discuss(topic_num)
+        if rd_d is None:
             return redirect(conn, '/')
 
         if flask.request.method == 'POST':
@@ -21,9 +20,9 @@ async def topic_tool_change(topic_num = 1):
             title_d = flask.request.form.get('title', 'test')
             sub_d = flask.request.form.get('sub', 'test')
 
-            curs.execute(db_change("update rd set title = ?, sub = ? where code = ?"), [title_d, sub_d, topic_num])
+            topics.update_recent_discuss_title_subtitle(topic_num, title_d, sub_d)
 
-            do_add_thread(conn, topic_num, await get_lang('topic_name_change') + ' : ' + rd_d[0][1] + ' (' + rd_d[0][0] + ') → ' + sub_d + ' (' + title_d + ')', '1')
+            do_add_thread(conn, topic_num, await get_lang('topic_name_change') + ' : ' + rd_d.subtitle + ' (' + rd_d.title + ') → ' + sub_d + ' (' + title_d + ')', '1')
             do_reload_recent_thread(conn, topic_num, time)
 
             return redirect(conn, '/thread/' + topic_num)
@@ -34,11 +33,11 @@ async def topic_tool_change(topic_num = 1):
                     <form method="post">
                         ''' + await get_lang('document_name') + '''
                         <hr class="main_hr">
-                        <input class="__ON_INPUT__" value="''' + html.escape(rd_d[0][0]) + '''" name="title" type="text">
+                        <input class="__ON_INPUT__" value="''' + html.escape(rd_d.title) + '''" name="title" type="text">
                         <hr class="main_hr">
                         ''' + await get_lang('discussion_name') + '''
                         <hr class="main_hr">
-                        <input class="__ON_INPUT__" value="''' + html.escape(rd_d[0][1]) + '''" name="sub" type="text">
+                        <input class="__ON_INPUT__" value="''' + html.escape(rd_d.subtitle) + '''" name="sub" type="text">
                         <hr class="main_hr">
                         <button class="__ON_BUTTON__" type="submit">''' + await get_lang('save') + '''</button>
                     </form>

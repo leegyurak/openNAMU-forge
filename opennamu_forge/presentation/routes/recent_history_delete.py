@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def recent_history_delete(name = 'Test', rev = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
 
         num = str(rev)
 
@@ -12,7 +12,7 @@ async def recent_history_delete(name = 'Test', rev = 1):
         if flask.request.method == 'POST':
             await acl_check(tool = 'owner_auth', memo = 'history delete ' + name + ' r' + num)
 
-            curs.execute(db_change("delete from history where id = ? and title = ?"), [num, name])
+            history.delete_revision(name, num)
 
             return redirect(conn, '/history/' + url_pas(name))
         else:

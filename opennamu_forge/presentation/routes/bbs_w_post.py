@@ -9,14 +9,11 @@ from .edit import edit_editor
 
 async def bbs_w_post(bbs_num = '', post_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
-        curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num])
-        db_data_3 = curs.fetchall()
-        if not db_data_3:
+        bbs_name = bbs.get_setting(bbs_num, 'bbs_name')
+        if bbs_name == '':
             return redirect(conn, '/bbs/main')
-        
-        bbs_name = db_data_3[0][0]
 
         bbs_num_str = str(bbs_num)
         post_num_str = str(post_num)
@@ -27,13 +24,12 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
         if temp_dict == {}:
             return redirect(conn, '/bbs/main')
         
-        curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_type"'), [bbs_num])
-        db_data_2 = curs.fetchall()
-        if not db_data_2:
+        bbs_type = bbs.get_setting(bbs_num, 'bbs_type')
+        if bbs_type == '':
             return redirect(conn, '/bbs/main')
         else:
             if flask.request.method == 'POST':
-                if db_data_2[0][0] == 'thread':
+                if bbs_type == 'thread':
                     if bbs_comment_acl == 1:
                         return redirect(conn, '/bbs/set/' + bbs_num_str)
                     
@@ -42,9 +38,8 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
 
                     set_id = bbs_num_str + '-' + post_num_str
 
-                    curs.execute(db_change('select set_code from bbs_data where set_name = "comment" and set_id = ? order by set_code + 0 desc'), [set_id])
-                    db_data_4 = curs.fetchall()
-                    id_data = str(int(db_data_4[0][0]) + 1) if db_data_4 else '1'
+                    latest_code = bbs.latest_data_code(set_id, 'comment')
+                    id_data = str(latest_code + 1) if latest_code else '1'
 
                     data = flask.request.form.get('content', '')
                     if data == '':
@@ -56,9 +51,9 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
                     
                     date = get_time()
 
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment', ?, ?, ?)"), [id_data, set_id, data])
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment_date', ?, ?, ?)"), [id_data, set_id, date])
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment_user_id', ?, ?, ?)"), [id_data, set_id, ip])
+                    bbs.add_data(set_id, 'comment', id_data, data)
+                    bbs.add_data(set_id, 'comment_date', id_data, date)
+                    bbs.add_data(set_id, 'comment_user_id', id_data, ip)
 
                     await add_alarm(temp_dict['user_id'], ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + id_data + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + id_data + '</a>')
 
@@ -78,28 +73,27 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
                     if select != '':
                         select_split = select.split('-')
                         if len(select_split) < 2:
-                            curs.execute(db_change('select set_data from bbs_data where set_name = "comment_user_id" and set_id = ? and set_code = ? limit 1'), [bbs_num_str + '-' + post_num_str, select_split[0]])    
-                            db_data_6 = curs.fetchall()
-                            if not db_data_6:
+                            comment_user_name = bbs.get_data(bbs_num_str + '-' + post_num_str, 'comment_user_id', select_split[0])
+                            if comment_user_name == '':
                                 # re_error로 변경 예정
                                 return redirect(conn, '/bbs/w/' + bbs_num_str + '/' + post_num_str)
                             else:
                                 set_id = bbs_num_str + '-' + post_num_str + '-' + select_split[0]
-                                comment_user_name = db_data_6[0][0]
                         else:
-                            curs.execute(db_change('select set_data from bbs_data where set_name = "comment_user_id" and set_id = ? and set_code = ? limit 1'), [bbs_num_str + '-' + post_num_str + '-' + '-'.join(select_split[0:len(select_split) - 1]), select_split[len(select_split) - 1]])
-                            db_data_7 = curs.fetchall()
-                            if not db_data_7:
+                            comment_user_name = bbs.get_data(
+                                bbs_num_str + '-' + post_num_str + '-' + '-'.join(select_split[0:len(select_split) - 1]),
+                                'comment_user_id',
+                                select_split[len(select_split) - 1],
+                            )
+                            if comment_user_name == '':
                                 return redirect(conn, '/bbs/w/' + bbs_num_str + '/' + post_num_str)
                             else:
                                 set_id = bbs_num_str + '-' + post_num_str + '-' + '-'.join(select_split)
-                                comment_user_name = db_data_7[0][0]
                     else:
                         set_id = bbs_num_str + '-' + post_num_str
 
-                    curs.execute(db_change('select set_code from bbs_data where set_name = "comment" and set_id = ? order by set_code + 0 desc limit 1'), [set_id])
-                    db_data_5 = curs.fetchall()
-                    id_data = str(int(db_data_5[0][0]) + 1) if db_data_5 else '1'
+                    latest_code = bbs.latest_data_code(set_id, 'comment')
+                    id_data = str(latest_code + 1) if latest_code else '1'
 
                     data = flask.request.form.get('content', '')
                     if data == '':
@@ -108,9 +102,9 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
 
                     date = get_time()
 
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment', ?, ?, ?)"), [id_data, set_id, data])
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment_date', ?, ?, ?)"), [id_data, set_id, date])
-                    curs.execute(db_change("insert into bbs_data (set_name, set_code, set_id, set_data) values ('comment_user_id', ?, ?, ?)"), [id_data, set_id, ip])
+                    bbs.add_data(set_id, 'comment', id_data, data)
+                    bbs.add_data(set_id, 'comment_date', id_data, date)
+                    bbs.add_data(set_id, 'comment_user_id', id_data, ip)
                 
                     if set_id == '':
                         end_id = id_data

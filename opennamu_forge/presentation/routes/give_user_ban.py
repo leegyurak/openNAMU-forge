@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def give_user_ban(name = None, ban_type = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        recent_blocks = get_recent_block_repository()
 
         ip = ip_check()
         
@@ -119,10 +119,9 @@ async def give_user_ban(name = None, ban_type = ''):
             date_value = ''
             info_data = ''
             if name:
-                curs.execute(db_change("select end from rb where block = ? and ongoing = '1'"), [name])
-                db_data = curs.fetchall()
-                if db_data and db_data[0][0] != '':
-                    date_value = db_data[0][0].split()[0]
+                db_data = recent_blocks.get_ongoing_end(name)
+                if db_data != '':
+                    date_value = db_data.split()[0]
 
                 if ban_type == '':
                     info_data = '<div id="opennamu_forge_get_user_info">' + html.escape(name) + '</div>'

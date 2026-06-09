@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def recent_record_topic(name = 'Test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         num = int(number_check(flask.request.args.get('num', '1')))
         sql_num = (num * 50 - 50) if num * 50 > 0 else 0
@@ -18,21 +18,21 @@ async def recent_record_topic(name = 'Test'):
         sub = '(' + html.escape(name) + ')'
         pas_name = await ip_pas(name)
 
-        curs.execute(db_change("select code, id, date from topic where ip = ? order by date desc limit ?, 50"), [name, sql_num])
-        data_list = curs.fetchall()
+        data_list = topics.list_by_ip(name, offset=sql_num, limit=50)
         for data in data_list:
-            title = html.escape(data[0])
+            title = html.escape(data.code)
 
-            curs.execute(db_change("select title, sub from rd where code = ?"), [data[0]])
-            other_data = curs.fetchall()
+            other_data = topics.get_recent_discuss(data.code)
+            other_title = other_data.title if other_data is not None else ''
+            other_subtitle = other_data.subtitle if other_data is not None else title
 
             div += '' + \
                 '<tr>' + \
                     '<td>' + \
-                        '<a href="/thread/' + data[0] + '#' + data[1] + '">' + other_data[0][1] + '#' + data[1] + '</a> (' + other_data[0][0] + ')' + \
+                        '<a href="/thread/' + data.code + '#' + data.comment_id + '">' + other_subtitle + '#' + data.comment_id + '</a> (' + other_title + ')' + \
                     '</td>' + \
                     '<td>' + pas_name + '</td>' + \
-                    '<td>' + data[2] + '</td>' + \
+                    '<td>' + data.date + '</td>' + \
                 '</tr>' + \
             ''
 

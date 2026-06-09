@@ -25,7 +25,7 @@ def recent_change_send_render(data):
 
 async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
 
         ip = ip_check()
         
@@ -74,11 +74,9 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
 
                 set_type = '' if set_type == 'edit' else set_type
                 if set_type != 'normal':
-                    curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where title = ? and type = ? order by id + 0 desc limit ?, 50'), [name, set_type, sql_num])
+                    data_list = history.list_records_by_title_type(name, set_type, offset=sql_num)
                 else:
-                    curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where title = ? order by id + 0 desc limit ?, 50'), [name, sql_num])
-
-                data_list = curs.fetchall()
+                    data_list = history.list_records_by_title(name, offset=sql_num)
             elif tool == 'record':
                 div +=  '''
                     <td id="main_table_width">''' + await get_lang('document_name') + '''</td>
@@ -89,11 +87,9 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                 set_type = '' if set_type == 'edit' else set_type
 
                 if set_type != 'normal':
-                    curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where ip = ? and type = ? order by date desc limit ?, 50'), [name, set_type, sql_num])
+                    data_list = history.list_records_by_ip_type(name, set_type, offset=sql_num)
                 else:
-                    curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where ip = ? order by date desc limit ?, 50'), [name, sql_num])
-                
-                data_list = curs.fetchall()
+                    data_list = history.list_records_by_ip(name, offset=sql_num)
             else:
                 div +=  '''
                     <td id="main_table_width">''' + await get_lang('document_name') + '''</td>
@@ -106,48 +102,43 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                 data_list = []
 
                 if num == 1 or all_admin != 1:
-                    curs.execute(db_change('select title, id from rc where type = ? order by date desc limit 50'), [set_type])
-                    for for_a in curs.fetchall():
-                        curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where title = ? and id = ?'), for_a)
-                        data_list += curs.fetchall()
+                    data_list = history.list_recent_change_records_by_type(set_type)
                 else:
                     if set_type != 'normal':
-                        curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history where type = ? order by date desc limit ?, 50'), [set_type, sql_num])
+                        data_list = history.list_records_by_type(set_type, offset=sql_num)
                     else:
-                        curs.execute(db_change('select id, title, date, ip, send, leng, hide, type from history order by date desc limit ?, 50'), [sql_num])
-
-                    data_list = curs.fetchall()
+                        data_list = history.list_records(offset=sql_num)
 
             div += '</tr>'
 
-            all_ip = await ip_pas([i[3] for i in data_list])
+            all_ip = await ip_pas([i.author for i in data_list])
             for data in data_list:
-                select += '<option value="' + data[0] + '">' + data[0] + '</option>'
-                send = data[4]
+                select += '<option value="' + data.revision_id + '">' + data.revision_id + '</option>'
+                send = data.send
 
-                if re.search(r"\+", data[5]):
-                    leng = '<span style="color:green;">(' + data[5] + ')</span>'
-                elif re.search(r"\-", data[5]):
-                    leng = '<span style="color:red;">(' + data[5] + ')</span>'
+                if re.search(r"\+", data.length):
+                    leng = '<span style="color:green;">(' + data.length + ')</span>'
+                elif re.search(r"\-", data.length):
+                    leng = '<span style="color:red;">(' + data.length + ')</span>'
                 else:
-                    leng = '<span style="color:gray;">(' + data[5] + ')</span>'
+                    leng = '<span style="color:gray;">(' + data.length + ')</span>'
 
-                ip = all_ip[data[3]]
-                m_tool = '<a href="/history_tool/' + data[0] + '/' + url_pas(data[1]) + '">(' + await get_lang('tool') + ')</a>'
+                ip = all_ip[data.author]
+                m_tool = '<a href="/history_tool/' + data.revision_id + '/' + url_pas(data.title) + '">(' + await get_lang('tool') + ')</a>'
 
                 style = ['', '']
-                date = data[2]
+                date = data.date
 
                 type_data = ''
-                if data[7] != '':
-                    if data[7] == 'r1':
-                        type_data = ' (' + data[7] + ')'
+                if data.change_type != '':
+                    if data.change_type == 'r1':
+                        type_data = ' (' + data.change_type + ')'
                     else:
-                        type_data = ' (' + await get_lang(data[7]) + ')'
+                        type_data = ' (' + await get_lang(data.change_type) + ')'
 
                 send += type_data
 
-                if data[6] == 'O':
+                if data.hide == 'O':
                     if admin == 1:
                         style[0] = 'class="opennamu_forge_history_blind"'
                         style[1] = 'class="opennamu_forge_history_blind"'
@@ -161,16 +152,16 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                         style[1] = 'class="opennamu_forge_history_blind"'
 
                 if tool == 'history':
-                    if int(data[0]) < 2:
-                        title = '<a href="/raw_rev/' + data[0] + '/' + url_pas(name) + '">r' + data[0] + '</a> '
+                    if int(data.revision_id) < 2:
+                        title = '<a href="/raw_rev/' + data.revision_id + '/' + url_pas(name) + '">r' + data.revision_id + '</a> '
                     else:
-                        title = '<a href="/diff/' + str(int(data[0]) - 1) + '/' + data[0] + '/' + url_pas(name) + '">r' + data[0] + '</a> '
+                        title = '<a href="/diff/' + str(int(data.revision_id) - 1) + '/' + data.revision_id + '/' + url_pas(name) + '">r' + data.revision_id + '</a> '
                 else:
-                    title = '<a href="/w/' + url_pas(data[1]) + '">' + html.escape(data[1]) + '</a> '
-                    if int(data[0]) < 2:
-                        title += '<a href="/history/' + url_pas(data[1]) + '">(r' + data[0] + ')</a> '
+                    title = '<a href="/w/' + url_pas(data.title) + '">' + html.escape(data.title) + '</a> '
+                    if int(data.revision_id) < 2:
+                        title += '<a href="/history/' + url_pas(data.title) + '">(r' + data.revision_id + ')</a> '
                     else:
-                        title += '<a href="/diff/' + str(int(data[0]) - 1) + '/' + data[0] + '/' + url_pas(data[1]) + '">(r' + data[0] + ')</a> '
+                        title += '<a href="/diff/' + str(int(data.revision_id) - 1) + '/' + data.revision_id + '/' + url_pas(data.title) + '">(r' + data.revision_id + ')</a> '
 
                 div += '''
                     <tr ''' + style[0] + '''>

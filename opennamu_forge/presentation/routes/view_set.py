@@ -1,16 +1,14 @@
 from .tool.func import *
 
 def view_set_markup(conn, document_name = '', markup = '', addon = '', disable = ''):
-    curs = conn.cursor()
+    document_meta = get_document_meta_repository()
     wiki_settings = get_wiki_settings_service()
 
     default_markup = wiki_settings.get(SettingKey.MARKUP, default='namumark')
 
     markup_load = markup
     if markup == '':
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_markup'"), [document_name])
-        db_data = curs.fetchall()
-        markup_load = db_data[0][0] if db_data and db_data[0][0] != '' else ''
+        markup_load = document_meta.get(document_name, 'document_markup')
 
     markup_list = ['normal'] + get_init_set_list('markup')['list']
     markup_html = ''
@@ -26,7 +24,8 @@ def view_set_markup(conn, document_name = '', markup = '', addon = '', disable =
 
 async def view_set(name = 'Test', multiple = False):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        document_meta = get_document_meta_repository()
+        wiki_documents = get_wiki_document_repository()
 
         check_ok = ''
         ip = ip_check()
@@ -74,14 +73,13 @@ async def view_set(name = 'Test', multiple = False):
                 acl_text += i + '\n'
                 acl_text += form_data + '\n'
             
-                curs.execute(db_change("delete from acl where title = ? and type = ?"), [name, i])
-                curs.execute(db_change("insert into acl (title, data, type) values (?, ?, ?)"), [name, form_data, i])
+                document_meta.upsert_acl(name, i, form_data)
                 
-                curs.execute(db_change("delete from data_set where doc_name = ? and doc_rev = ? and set_name = 'acl_date'"), [name, i])
+                document_meta.delete(name, 'acl_date', doc_rev=i)
                     
                 time_limit = flask.request.form.get(i + '_date', '')
                 if re.search(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$', time_limit):
-                    curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'acl_date', ?)"), [name, i, time_limit])
+                    document_meta.upsert(name, 'acl_date', time_limit, doc_rev=i)
                     
                     acl_text += time_limit + '\n'
 
@@ -92,19 +90,16 @@ async def view_set(name = 'Test', multiple = False):
             acl_text += 'document_markup\n'
             acl_text += markup_data + '\n\n'
 
-            curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_markup'"), [name])
-            db_data = curs.fetchall()
+            old_markup_data = document_meta.get(name, 'document_markup')
 
-            curs.execute(db_change("delete from data_set where doc_name = ? and set_name = 'document_markup'"), [name])
-            curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'document_markup', ?)"), [name, markup_data])
+            document_meta.upsert(name, 'document_markup', markup_data)
 
-            if not db_data or db_data[0][0] != markup_data:
-                curs.execute(db_change("select data from data where title = ?"), [name])
-                db_data_2 = curs.fetchall()
-                if db_data_2:
+            if old_markup_data != markup_data:
+                doc_data = wiki_documents.get_data(name)
+                if wiki_documents.exists_title(name):
                     await render_set(conn, 
                         doc_name = name,
-                        doc_data = db_data_2[0][0],
+                        doc_data = doc_data,
                         data_type = 'backlink'
                     )
 
@@ -116,16 +111,14 @@ async def view_set(name = 'Test', multiple = False):
                 acl_text += 'document_top\n'
                 acl_text += document_top + '\n\n'
 
-                curs.execute(db_change("delete from data_set where doc_name = ? and set_name = 'document_top'"), [name])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'document_top', ?)"), [name, document_top])
+                document_meta.upsert(name, 'document_top', document_top)
                 
                 document_editor_top = flask.request.form.get('document_editor_top', '')
 
                 acl_text += 'document_editor_top\n'
                 acl_text += document_editor_top + '\n\n'
 
-                curs.execute(db_change("delete from data_set where doc_name = ? and set_name = 'document_editor_top'"), [name])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, '', 'document_editor_top', ?)"), [name, document_editor_top])
+                document_meta.upsert(name, 'document_editor_top', document_editor_top)
 
             if need_admin:
                 await acl_check(tool = 'acl_auth', memo = check_data)
@@ -160,10 +153,9 @@ async def view_set(name = 'Test', multiple = False):
                     '<span class="__ON_SELECT_DIV__"><select class="__ON_SELECT__" name="' + i[1] + '" ' + check_ok + '>' + \
                 ''
 
-                curs.execute(db_change("select data from acl where title = ? and type = ?"), [name, i[1]])
-                acl_data = curs.fetchall()
+                acl_data = document_meta.get_acl(name, i[1])
                 for data_list in acl_list:
-                    check = 'selected="selected"' if acl_data and acl_data[0][0] == data_list else ''
+                    check = 'selected="selected"' if acl_data == data_list else ''
                     data += '<option value="' + data_list + '" ' + check + '>' + (data_list if data_list != '' else 'normal') + '</option>'
 
                 data += '</select></span>'
@@ -171,17 +163,12 @@ async def view_set(name = 'Test', multiple = False):
                 
                 date_value = ''
                 
-                curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'acl_date'"), [name, i[1]])
-                db_data = curs.fetchall()
-                if db_data:
-                    date_value = db_data[0][0]
+                date_value = document_meta.get(name, 'acl_date', doc_rev=i[1])
                 
                 data += '<input class="__ON_INPUT__" type="date" ' + check_ok + ' value="' + date_value + '" name="' + i[1] + '_date" pattern="\\d{4}-\\d{2}-\\d{2}">'
                 data += '<hr class="main_hr">'
 
-            curs.execute(db_change("select data from acl where title = ? and type = ?"), [name, 'why'])
-            acl_data = curs.fetchall()
-            acl_why = html.escape(acl_data[0][0]) if acl_data else ''
+            acl_why = html.escape(document_meta.get_acl(name, 'why'))
             data += '' + \
                 '<h3>' + await get_lang('why') + '</h3>' + \
                 '<input class="__ON_INPUT__" value="' + acl_why + '" ' + check_ok + ' placeholder="' + await get_lang('why') + '" name="why" ' + check_ok + '>' + \
@@ -217,13 +204,9 @@ async def view_set(name = 'Test', multiple = False):
             if await acl_check('', 'owner_auth', '', '') == 1:
                 check_ok = 'disabled'
 
-            curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_top'"), [name])
-            db_data = curs.fetchall()
-            document_top = db_data[0][0] if db_data and db_data[0][0] != '' else ''
+            document_top = document_meta.get(name, 'document_top')
 
-            curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_editor_top'"), [name])
-            db_data = curs.fetchall()
-            document_editor_top = db_data[0][0] if db_data and db_data[0][0] != '' else ''
+            document_editor_top = document_meta.get(name, 'document_editor_top')
 
             data += '''
                 <h2>''' + await get_lang('document_top') + ''' (HTML)</h2>

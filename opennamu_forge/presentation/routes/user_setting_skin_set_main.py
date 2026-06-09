@@ -104,8 +104,8 @@ async def user_setting_skin_set_main_set_list():
 
 async def user_setting_skin_set_main():
     with get_db_connect() as conn:
-        curs = conn.cursor()
         wiki_settings = get_wiki_settings_service()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if (await ban_check(ip))[0] == 1:
@@ -121,19 +121,7 @@ async def user_setting_skin_set_main():
                 if for_b in use_cookie:
                     html_data.set_cookie(for_b, flask.request.form.get(for_b, set_list[for_b][0][0]))
                 elif ip_or_user(ip) == 0:
-                    curs.execute(db_change('select data from user_set where name = ? and id = ?'), [for_b, ip])
-                    if curs.fetchall():
-                        curs.execute(db_change("update user_set set data = ? where name = ? and id = ?"), [
-                            flask.request.form.get(for_b, set_list[for_b][0][0]),
-                            for_b,
-                            ip
-                        ])
-                    else:
-                        curs.execute(db_change('insert into user_set (name, id, data) values (?, ?, ?)'), [
-                            for_b, 
-                            ip,
-                            flask.request.form.get(for_b, set_list[for_b][0][0])
-                        ])
+                    user_settings.upsert(ip, for_b, flask.request.form.get(for_b, set_list[for_b][0][0]))
                 else:
                     flask.session[for_b] = flask.request.form.get(for_b, set_list[for_b][0][0])
 
@@ -145,9 +133,7 @@ async def user_setting_skin_set_main():
                 if for_b in use_cookie:
                     get_data = flask.request.cookies.get(for_b, '')
                 elif ip_or_user(ip) == 0:
-                    curs.execute(db_change('select data from user_set where name = ? and id = ?'), [for_b, ip])
-                    db_data = curs.fetchall()
-                    get_data = db_data[0][0] if db_data else ''
+                    get_data = user_settings.get(ip, for_b)
                 else:
                     get_data = flask.session[for_b] if for_b in flask.session else ''
 

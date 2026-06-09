@@ -2,45 +2,29 @@ from .tool.func import *
 
 async def topic_tool(topic_num = 1):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        topics = get_topic_repository()
 
         data = ''
         topic_num = str(topic_num)
 
-        curs.execute(db_change("select stop, agree from rd where code = ?"), [topic_num])
-        close_data = curs.fetchall()
-        if close_data:
-            if close_data[0][0] == 'S':
+        close_data = topics.get_recent_discuss(topic_num)
+        if close_data is not None:
+            if close_data.stop == 'S':
                 t_state = await get_lang('topic_stop')
-            elif close_data[0][0] == 'O':
+            elif close_data.stop == 'O':
                 t_state = await get_lang('topic_close')
             else:
                 t_state = await get_lang('topic_normal')
                 
-            if close_data[0][1] == 'O':
+            if close_data.agree == 'O':
                 t_state += ' (' + await get_lang('topic_agree') + ')'
         else:
             t_state = await get_lang('topic_normal')
 
-        curs.execute(db_change("select acl from rd where code = ?"), [topic_num])
-        db_data = curs.fetchall()
-        if db_data:
-            if db_data[0][0] == '':
-                acl_state = 'normal'
-            else:
-                acl_state = db_data[0][0]
-        else:
-            acl_state = 'normal'
+        acl_state = close_data.acl if close_data is not None and close_data.acl != '' else 'normal'
         
-        curs.execute(db_change("select set_data from topic_set where thread_code = ? and set_name = 'thread_view_acl'"), [topic_num])
-        db_data = curs.fetchall()
-        if db_data:
-            if db_data[0][0] == '':
-                acl_view_state = 'normal'
-            else:
-                acl_view_state = db_data[0][0]
-        else:
-            acl_view_state = 'normal'
+        thread_view_acl = topics.get_thread_setting(topic_num, 'thread_view_acl')
+        acl_view_state = thread_view_acl if thread_view_acl != '' else 'normal'
 
         if await acl_check(tool = 'toron_auth') != 1:
             data = '''

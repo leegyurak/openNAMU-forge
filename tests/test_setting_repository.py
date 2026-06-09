@@ -55,3 +55,19 @@ def test_other_setting_repository는_없는_setting을_기본값으로_반환한
     assert repository.get("missing", default="fallback") == "fallback"
     migration_result.engine.dispose()
     reset_sqlmodel_engine()
+
+
+def test_other_setting_repository는_name_data를_목록으로_조회한다(sqlite_db_set):
+    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.migrations import run_schema_migrations
+    from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
+
+    reset_sqlmodel_engine()
+    migration_result = run_schema_migrations(sqlite_db_set)
+    repository = OtherSettingRepository(sqlite_db_set)
+
+    repository.upsert("wiki_name", "Forge")
+
+    assert repository.list_name_data_by_names(("wiki_name", "missing")) == [("wiki_name", "Forge")]
+    migration_result.engine.dispose()
+    reset_sqlmodel_engine()

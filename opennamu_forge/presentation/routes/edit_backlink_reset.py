@@ -2,14 +2,13 @@ from .tool.func import *
 
 async def edit_backlink_reset(name = 'Test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        wiki_documents = get_wiki_document_repository()
 
-        curs.execute(db_change("select data from data where title = ?"), [name])
-        old = curs.fetchall()
-        if old:
+        if wiki_documents.exists_title(name):
+            old = wiki_documents.get_data(name)
             await render_set(conn, 
                 doc_name = name,
-                doc_data = old[0][0],
+                doc_data = old,
                 data_type = 'backlink'
             )
 

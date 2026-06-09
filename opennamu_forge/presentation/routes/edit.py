@@ -20,7 +20,7 @@ async def edit_timeout(conn, name, content, timeout = 3):
         return 1
         
 async def edit_editor(conn, ip, data_main = '', do_type = 'edit', addon = '', name = ''):
-    curs = conn.cursor()
+    document_meta = get_document_meta_repository()
     wiki_settings = get_wiki_settings_service()
 
     monaco_editor_top = ''
@@ -29,9 +29,7 @@ async def edit_editor(conn, ip, data_main = '', do_type = 'edit', addon = '', na
     if do_type == 'edit':
         help_text = wiki_settings.get(SettingKey.EDIT_HELP)
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_top'"), [name])
-        body = curs.fetchall()
-        div = body[0][0] if body else ''
+        div = document_meta.get(name, 'document_top')
     elif do_type == 'bbs':
         help_text = wiki_settings.get(SettingKey.BBS_HELP)
     elif do_type == 'bbs_comment':
@@ -111,7 +109,10 @@ async def edit_editor(conn, ip, data_main = '', do_type = 'edit', addon = '', na
 
 async def edit(name = 'Test', section = 0, do_type = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        document_meta = get_document_meta_repository()
+        history = get_history_repository()
+        user_settings = get_user_setting_repository()
+        wiki_documents = get_wiki_document_repository()
         wiki_settings = get_wiki_settings_service()
     
         ip = ip_check()
@@ -125,16 +126,13 @@ async def edit(name = 'Test', section = 0, do_type = ''):
         if do_title_length_check(conn, name) == 1:
             return await re_error(conn, 38)
         
-        curs.execute(db_change("select id from history where title = ? order by id + 0 desc"), [name])
-        doc_ver = curs.fetchall()
-        doc_ver = doc_ver[0][0] if doc_ver else '0'
+        doc_ver = history.latest_revision_id(name) or '0'
 
         if doc_ver == '0':
             if await acl_check(name, 'document_make_acl') == 1:
                 edit_req_mode = 1
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and doc_rev = ? and set_name = 'edit_request_data'"), [name, doc_ver])
-        if curs.fetchall():
+        if document_meta.exists(name, 'edit_request_data', doc_rev=doc_ver):
             return redirect(conn, '/edit_request_from/' + url_pas(name))
         
         section = '' if section == 0 else section
@@ -168,10 +166,8 @@ async def edit(name = 'Test', section = 0, do_type = ''):
             if do_edit_text_bottom_check_box_check(conn, agree) == 1:
                 return await re_error(conn, 29)
             
-            curs.execute(db_change("select data from data where title = ?"), [name])
-            db_data = curs.fetchall()
-            if db_data:
-                o_data = db_data[0][0].replace('\r', '')
+            if wiki_documents.exists_title(name):
+                o_data = wiki_documents.get_data(name).replace('\r', '')
 
                 if section != '':
                     if flask.request.form.get('doc_section_edit_apply', 'X') != 'X':
@@ -213,12 +209,10 @@ async def edit(name = 'Test', section = 0, do_type = ''):
             
             if edit_req_mode == 0:
                 # 진짜 기록 부분
-                curs.execute(db_change("delete from data where title = ?"), [name])
-                curs.execute(db_change("insert into data (title, data) values (?, ?)"), [name, content])
+                wiki_documents.upsert_title(name, content)
         
-                curs.execute(db_change("select id from user_set where name = 'watchlist' and data = ?"), [name])
-                for scan_user in curs.fetchall():
-                    await add_alarm(scan_user[0], ip, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
+                for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
+                    await add_alarm(scan_user, ip, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
                         
                 history_plus(conn, 
                     name,
@@ -238,16 +232,15 @@ async def edit(name = 'Test', section = 0, do_type = ''):
                 section = (('#edit_load_' + str(section)) if section != '' else '')
                 return redirect(conn, '/w/' + url_pas(name) + section)
             else:
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_data', ?)"), [name, doc_ver, content])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_user', ?)"), [name, doc_ver, ip])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_date', ?)"), [name, doc_ver, today])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_send', ?)"), [name, doc_ver, send])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_leng', ?)"), [name, doc_ver, leng])
-                curs.execute(db_change("insert into data_set (doc_name, doc_rev, set_name, set_data) values (?, ?, 'edit_request_doing', ?)"), [name, doc_ver, today])
+                document_meta.upsert(name, 'edit_request_data', content, doc_rev=doc_ver)
+                document_meta.upsert(name, 'edit_request_user', ip, doc_rev=doc_ver)
+                document_meta.upsert(name, 'edit_request_date', today, doc_rev=doc_ver)
+                document_meta.upsert(name, 'edit_request_send', send, doc_rev=doc_ver)
+                document_meta.upsert(name, 'edit_request_leng', leng, doc_rev=doc_ver)
+                document_meta.upsert(name, 'edit_request_doing', today, doc_rev=doc_ver)
 
-                curs.execute(db_change("select id from user_set where name = 'watchlist' and data = ?"), [name])
-                for scan_user in curs.fetchall():
-                    await add_alarm(scan_user[0], ip, '<a href="/edit_request/' + url_pas(name) + '">' + html.escape(name) + '</a> edit_request')
+                for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
+                    await add_alarm(scan_user, ip, '<a href="/edit_request/' + url_pas(name) + '">' + html.escape(name) + '</a> edit_request')
             
                 return redirect(conn, '/edit_request_from/' + url_pas(name))
         else:
@@ -272,9 +265,7 @@ async def edit(name = 'Test', section = 0, do_type = ''):
                 elif section != '':
                     load_title = name
                     
-                curs.execute(db_change("select data from data where title = ?"), [load_title])
-                db_data = curs.fetchall()
-                data = db_data[0][0] if db_data else ''
+                data = wiki_documents.get_data(load_title)
                 data = data.replace('\r', '')
 
                 if section != '':

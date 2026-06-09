@@ -45,20 +45,17 @@ data_db_set = class_check_json()
 do_db_set(data_db_set)
 
 with get_db_connect(init_mode = True) as conn:
-    curs = conn.cursor()
+    legacy_bootstrap = get_legacy_bootstrap_repository()
 
     setup_tool = ''
+    old_ver = ""
     try:
-        curs.execute(db_change('select data from other where name = "ver"'))
+        old_ver = get_other_setting_repository().get('ver')
     except:
         setup_tool = 'init'
 
-    old_ver = ""
-
     if setup_tool != 'init':
-        ver_set_data = curs.fetchall()
-        if ver_set_data:
-            old_ver = ver_set_data[0][0]
+        if old_ver != '':
             if int(version_list['c_ver']) > int(old_ver):
                 setup_tool = 'update'
             else:
@@ -91,98 +88,27 @@ with get_db_connect(init_mode = True) as conn:
                 logger.info('Complete Download')
 
     if data_db_set['type'] == 'mysql':
-        try:
-            curs.execute(db_change('create database ' + data_db_set['name'] + ' default character set utf8mb4'))
-        except:
-            try:
-                curs.execute(db_change('alter database ' + data_db_set['name'] + ' character set utf8mb4'))
-            except:
-                pass
+        legacy_bootstrap.ensure_mysql_database(conn, data_db_set['name'])
 
         conn.select_db(data_db_set['name'])
     elif data_db_set['type'] == 'sqlite':
-        conn.execute('pragma journal_mode = WAL')
+        legacy_bootstrap.set_sqlite_wal_journal(conn)
 
     if should_init_sqlmodel(data_db_set):
         run_schema_migrations(data_db_set)
 
     if setup_tool != 'normal':
-        create_data = get_db_table_list()
-        for create_table in create_data:
-            for create in ['test'] + create_data[create_table]:
-                db_pass = 0
-
-                try:
-                    curs.execute(db_change('select ' + create + ' from ' + create_table + ' limit 1'))
-                    db_pass = 1
-                except:
-                    pass
-
-                field_text = 'longtext' if data_db_set['type'] == 'mysql' else 'text'
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change('create table ' + create_table + '(test ' + field_text + ' default (""))'))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change('create table ' + create_table + '(test ' + field_text + ' default "")'))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change('create table ' + create_table + '(test ' + field_text + ')'))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change("alter table " + create_table + " add column " + create + " " + field_text + " default ('')"))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change("alter table " + create_table + " add column " + create + " " + field_text + " default ''"))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    try:
-                        curs.execute(db_change("alter table " + create_table + " add column " + create + " " + field_text))
-                        db_pass = 1
-                    except Exception:
-                        # print(e)
-                        pass
-
-                if db_pass == 0:
-                    raise
-        try:
-            curs.execute(db_change("create index history_index on history (title, ip)"))
-        except:
-            pass
+        legacy_bootstrap.ensure_legacy_schema(conn, get_db_table_list(), data_db_set['type'])
+        legacy_bootstrap.create_history_index_if_missing(conn)
 
         if setup_tool == 'update':
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(update(conn, int(ver_set_data[0][0]), data_db_set))
+                loop.create_task(update(conn, int(old_ver), data_db_set))
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                loop.run_until_complete(update(conn, int(ver_set_data[0][0]), data_db_set))
+                loop.run_until_complete(update(conn, int(old_ver), data_db_set))
         else:
             set_init(conn)
 
@@ -212,9 +138,8 @@ with get_db_connect(init_mode = True) as conn:
     app.url_map.converters['everything'] = EverythingConverter
     app.url_map.converters['regex'] = RegexConverter
 
-    curs.execute(db_change('select data from other where name = "key"'))
-    sql_data = curs.fetchall()
-    app.secret_key = sql_data[0][0]
+    settings = get_other_setting_repository()
+    app.secret_key = settings.get('key')
 
     # Init-DB_Data
     server_set = {}
@@ -228,14 +153,13 @@ with get_db_connect(init_mode = True) as conn:
         'encode' : os.getenv('NAMU_ENCRYPT')
     }
     for i in server_set_var:
-        curs.execute(db_change('select data from other where name = ?'), [i])
-        server_set_val = curs.fetchall()
-        if server_set_val:
-            server_set_val = server_set_val[0][0]
+        server_set_val = settings.get(i)
+        if server_set_val != '':
+            pass
         elif server_set_env[i] != None:
             server_set_val = server_set_env[i]
 
-            curs.execute(db_change('insert into other (name, data, coverage) values (?, ?, "")'), [i, server_set_env[i]])
+            settings.upsert(i, server_set_env[i])
         else:
             if 'list' in server_set_var[i]:
                 print(server_set_var[i]['display'] + ' (' + server_set_var[i]['default'] + ') [' + ', '.join(server_set_var[i]['list']) + ']' + ' : ', end = '')
@@ -249,7 +173,7 @@ with get_db_connect(init_mode = True) as conn:
                 if not server_set_val in server_set_var[i]['list']:
                     server_set_val = server_set_var[i]['default']
 
-            curs.execute(db_change('insert into other (name, data, coverage) values (?, ?, "")'), [i, server_set_val])
+            settings.upsert(i, server_set_val)
 
         logger.info("%s : %s", server_set_var[i]['display'], server_set_val)
 
@@ -335,134 +259,119 @@ except RuntimeError:
 ###
 
 def back_up(data_db_set):
-    with get_db_connect() as conn:
-        curs = conn.cursor()
-    
-        try:
-            curs.execute(db_change('select data from other where name = "back_up"'))
-            back_time = curs.fetchall()
-            back_time = float(number_check(back_time[0][0], True)) if back_time and back_time[0][0] != '' else 0
+    try:
+        settings = get_other_setting_repository()
+        back_time_data = settings.get('back_up')
+        back_time = float(number_check(back_time_data, True)) if back_time_data != '' else 0
 
-            curs.execute(db_change('select data from other where name = "backup_count"'))
-            back_up_count = curs.fetchall()
-            back_up_count = int(number_check(back_up_count[0][0])) if back_up_count and back_up_count[0][0] != '' else 3
+        back_up_count_data = settings.get('backup_count')
+        back_up_count = int(number_check(back_up_count_data)) if back_up_count_data != '' else 3
 
-            if back_time != 0:
-                curs.execute(db_change('select data from other where name = "backup_where"'))
-                back_up_where = curs.fetchall()
-                back_up_where = back_up_where[0][0] if back_up_where and back_up_where[0][0] != '' else data_db_set['name'] + '.db'
+        if back_time != 0:
+            back_up_where = settings.get('backup_where') or data_db_set['name'] + '.db'
 
-                logger.info('Back up state : %s hours', back_time)
-                logger.info('Back up directory : %s', back_up_where)
-                if back_up_count != 0:
-                    logger.info('Back up max number : %s', back_up_count)
+            logger.info('Back up state : %s hours', back_time)
+            logger.info('Back up directory : %s', back_up_where)
+            if back_up_count != 0:
+                logger.info('Back up max number : %s', back_up_count)
 
-                    file_dir = os.path.split(back_up_where)[0]
-                    file_dir = '.' if file_dir == '' else file_dir
-                    
-                    file_name = os.path.split(back_up_where)[1]
-                    file_name = re.sub(r'\.db$', '_[0-9]{14}.db', file_name)
+                file_dir = os.path.split(back_up_where)[0]
+                file_dir = '.' if file_dir == '' else file_dir
+                
+                file_name = os.path.split(back_up_where)[1]
+                file_name = re.sub(r'\.db$', '_[0-9]{14}.db', file_name)
 
-                    backup_file = [for_a for for_a in os.listdir(file_dir) if re.search('^' + file_name + '$', for_a)]
-                    backup_file = sorted(backup_file)
-                    
-                    if len(backup_file) >= back_up_count:
-                        remove_dir = os.path.join(file_dir, backup_file[0])
-                        os.remove(remove_dir)
-                        logger.info('Back up : Remove (%s)', remove_dir)
+                backup_file = [for_a for for_a in os.listdir(file_dir) if re.search('^' + file_name + '$', for_a)]
+                backup_file = sorted(backup_file)
+                
+                if len(backup_file) >= back_up_count:
+                    remove_dir = os.path.join(file_dir, backup_file[0])
+                    os.remove(remove_dir)
+                    logger.info('Back up : Remove (%s)', remove_dir)
 
-                now_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-                new_file_name = re.sub(r'\.db$', '_' + now_time + '.db', back_up_where)
-                shutil.copyfile(
-                    data_db_set['name'] + '.db', 
-                    new_file_name
-                )
+            now_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            new_file_name = re.sub(r'\.db$', '_' + now_time + '.db', back_up_where)
+            shutil.copyfile(
+                data_db_set['name'] + '.db', 
+                new_file_name
+            )
 
-                logger.info('Back up : OK (%s)', new_file_name)
-            else:
-                logger.info('Back up state : Turn off')
-
-                back_time = 1
-        except Exception:
-            logger.exception('Back up : Error')
+            logger.info('Back up : OK (%s)', new_file_name)
+        else:
+            logger.info('Back up state : Turn off')
 
             back_time = 1
+    except Exception:
+        logger.exception('Back up : Error')
 
-        threading.Timer(60 * 60 * back_time, back_up, [data_db_set]).start()
+        back_time = 1
+
+    threading.Timer(60 * 60 * back_time, back_up, [data_db_set]).start()
 
 async def do_every_day():
-    with get_db_connect() as conn:
-        curs = conn.cursor()
+    # 오늘의 날짜 불러오기
+    time_today = get_time().split()[0]
+    settings = get_other_setting_repository()
+    votes = get_vote_repository()
+    user_settings = get_user_setting_repository()
+    document_meta = get_document_meta_repository()
+
+    # vote 관리
+    for for_a in votes.list_by_types(('open', 'n_open'), limit=100000):
+        db_data = votes.get_option(for_a.vote_id, 'end_date')
+        if db_data != '':
+            time_db = db_data.split()[0]
+            if time_today > time_db:
+                votes.update_main_type(for_a.vote_id, for_a.type, 'close' if for_a.type == 'open' else 'n_close')
+
+    # ban 관리
+    get_recent_block_repository().close_expired(get_time())
+
+    # auth 관리
+    for for_a in user_settings.list_id_data_by_name('auth_date'):
+        time_db = for_a[1].split()[0]
+        if time_today > time_db:
+            user_settings.upsert(for_a[0], 'acl', 'user')
+            user_settings.delete(for_a[0], 'auth_date')
+            
+    # acl 관리
+    for for_a in document_meta.list_doc_rev_data_by_set_name('acl_date'):
+        time_db = for_a[2].split()[0]
+        if time_today > time_db:
+            document_meta.delete_acl(for_a[0], for_a[1])
+            document_meta.delete(for_a[0], 'acl_date', doc_rev=for_a[1])
+            
+    # ua 관리
+    db_data = settings.get('ua_expiration_date')
+    if db_data != '':
+        time_db = int(number_check(db_data))
         
-        # 오늘의 날짜 불러오기
-        time_today = get_time().split()[0]
-    
-        # vote 관리
-        curs.execute(db_change('select id, type from vote where type = "open" or type = "n_open"'))
-        for for_a in curs.fetchall():
-            curs.execute(db_change('select data from vote where id = ? and name = "end_date" and type = "option"'), [for_a[0]])
-            db_data = curs.fetchall()
-            if db_data:
-                time_db = db_data[0][0].split()[0]
-                if time_today > time_db:
-                    curs.execute(db_change("update vote set type = ? where user = '' and id = ? and type = ?"), ['close' if for_a[1] == 'open' else 'n_close', for_a[0], for_a[1]])
+        time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
+        time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
+        
+        get_user_agent_repository().delete_older_than(time_calc)
+        
+    # auth history 관리
+    db_data = settings.get('auth_history_expiration_date')
+    if db_data != '':
+        time_db = int(number_check(db_data))
+        
+        time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
+        time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
+        
+        get_admin_repository().delete_records_older_than(time_calc)
 
-        # ban 관리
-        curs.execute(db_change("update rb set ongoing = '' where end < ? and end != '' and ongoing = '1'"), [get_time()])
+    # 사이트맵 생성 관리
+    db_data = settings.get('sitemap_auto_make')
+    if db_data != '':
+        await main_setting_sitemap(1)
 
-        # auth 관리
-        curs.execute(db_change('select id, data from user_set where name = "auth_date"'))
-        db_data = curs.fetchall()
-        for for_a in db_data:
-            time_db = for_a[1].split()[0]
-            if time_today > time_db:
-                curs.execute(db_change("update user_set set data = 'user' where id = ? and name = 'acl'"), [for_a[0]])
-                curs.execute(db_change('delete from user_set where name = "auth_date" and id = ?'), [for_a[0]])
-                
-        # acl 관리
-        curs.execute(db_change("select doc_name, doc_rev, set_data from data_set where set_name = 'acl_date'"))
-        db_data = curs.fetchall()
-        for for_a in db_data:
-            time_db = for_a[2].split()[0]
-            if time_today > time_db:
-                curs.execute(db_change("delete from acl where title = ? and type = ?"), [for_a[0], for_a[1]])
-                curs.execute(db_change("delete from data_set where doc_name = ? and doc_rev = ? and set_name = 'acl_date'"), [for_a[0], for_a[1]])
-                
-        # ua 관리
-        curs.execute(db_change('select data from other where name = "ua_expiration_date"'))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            time_db = int(number_check(db_data[0][0]))
-            
-            time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
-            time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
-            
-            curs.execute(db_change("delete from ua_d where today < ?"), [time_calc])
-            
-        # auth history 관리
-        curs.execute(db_change('select data from other where name = "auth_history_expiration_date"'))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            time_db = int(number_check(db_data[0][0]))
-            
-            time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
-            time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
-            
-            curs.execute(db_change("delete from re_admin where time < ?"), [time_calc])
+        logger.info('Make sitemap')
 
-        # 사이트맵 생성 관리
-        curs.execute(db_change('select data from other where name = "sitemap_auto_make"'))
-        db_data = curs.fetchall()
-        if db_data and db_data[0][0] != '':
-            await main_setting_sitemap(1)
-
-            logger.info('Make sitemap')
-
-        # 칭호 관리
-        curs.execute(db_change("select id from user_set where name = 'user_title' and data = '✅'"))
-        for for_a in curs.fetchall():
-            if await acl_check('', 'all_admin_auth', '', for_a[0]) == 1:
-                curs.execute(db_change("update user_set set data = '☑️' where name = 'user_title' and data = '✅' and id = ?"), [for_a[0]])
+    # 칭호 관리
+    for for_a in user_settings.list_ids_by_name_data('user_title', '✅'):
+        if await acl_check('', 'all_admin_auth', '', for_a) == 1:
+            user_settings.update_user_title_checkmark(for_a)
 
 async def daily_loop():
     while True:

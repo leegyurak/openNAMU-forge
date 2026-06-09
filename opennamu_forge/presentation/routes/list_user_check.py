@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def list_user_check(name = 'test', plus_name = None, arg_num = 1, do_type = 'normal'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_agents = get_user_agent_repository()
 
         plus_id = plus_name
 
@@ -23,20 +23,19 @@ async def list_user_check(name = 'test', plus_name = None, arg_num = 1, do_type 
 
         if check_type == '':
             if ip_or_user(name) == 0:
-                curs.execute(db_change("select data from user_set where name = \"approval_question\" and id = ?"), [name])
-                approval_question = curs.fetchall()
-                if approval_question and approval_question[0][0]:
-                    curs.execute(db_change("select data from user_set where name = \"approval_question_answer\" and id = ?"), [name])
-                    approval_question_answer = curs.fetchall()
-                    if approval_question_answer and approval_question_answer[0]:
+                user_settings = get_user_setting_repository()
+                approval_question = user_settings.get(name, 'approval_question')
+                if approval_question:
+                    approval_question_answer = user_settings.get(name, 'approval_question_answer')
+                    if approval_question_answer:
                         div += '''
                             <table id="main_table_set">
                                 <tbody>
                                     <tr id="main_table_top_tr">
                                         <td>Q</td>
-                                        <td>''' + approval_question[0][0] + '''</td>
+                                        <td>''' + approval_question + '''</td>
                                         <td>A</td>
-                                        <td>''' + approval_question_answer[0][0] + '''</td>
+                                        <td>''' + approval_question_answer + '''</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -44,42 +43,22 @@ async def list_user_check(name = 'test', plus_name = None, arg_num = 1, do_type 
                         '''
 
             if plus_id:
-                plus = "or " + ('ip' if ip_or_user(plus_id) == 1 else 'name') + " = ? "
-                set_list = [name, plus_id, sql_num]
+                name_column = 'ip' if ip_or_user(name) == 1 else 'name'
+                plus_column = 'ip' if ip_or_user(plus_id) == 1 else 'name'
 
                 if num == 1:
-                    curs.execute(db_change("" + \
-                        "select distinct ip from ua_d " + \
-                        "where " + ('ip' if ip_or_user(name) == 1 else 'name') + " = ? or " + ('ip' if ip_or_user(plus_id) == 1 else 'name') + " = ?"
-                    ""), [name, plus_id])
-                    all_ip_count = len(curs.fetchall())
-
-                    curs.execute(db_change("" + \
-                        "select distinct ip from ua_d " + \
-                        "where " + ('ip' if ip_or_user(name) == 1 else 'name') + " = ?" + \
-                    ""), [name])
-                    a_ip_count = len(curs.fetchall())
-
-                    curs.execute(db_change("" + \
-                        "select distinct ip from ua_d " + \
-                        "where " + ('ip' if ip_or_user(plus_id) == 1 else 'name') + " = ?"
-                    ""), [plus_id])
-                    b_ip_count = len(curs.fetchall())
+                    all_ip_count = user_agents.count_distinct_ips_by_two_identities(name_column, name, plus_column, plus_id)
+                    a_ip_count = user_agents.count_distinct_ips_by_identity(name_column, name)
+                    b_ip_count = user_agents.count_distinct_ips_by_identity(plus_column, plus_id)
 
                     if a_ip_count + b_ip_count != all_ip_count:
                         div += await get_lang('same_ip_exist') + '<hr class="main_hr">'    
+
+                record = user_agents.list_by_two_identities(name_column, name, plus_column, plus_id, offset=sql_num)
             else:
-                plus = ''
-                set_list = [name, sql_num]
+                name_column = 'ip' if ip_or_user(name) == 1 else 'name'
+                record = user_agents.list_by_identity(name_column, name, offset=sql_num)
 
-            curs.execute(db_change("" + \
-                "select name, ip, ua, today from ua_d " + \
-                "where " + ('ip' if ip_or_user(name) == 1 else 'name') + " = ? " + \
-                plus + \
-                "order by today desc limit ?, 50" + \
-            ""), set_list)
-
-            record = curs.fetchall()
             if record:
                 if not plus_id:
                     div = '' + \
@@ -106,28 +85,28 @@ async def list_user_check(name = 'test', plus_name = None, arg_num = 1, do_type 
 
                 set_n = 0
                 for data in record:
-                    if data[2]:
-                        if len(data[2]) > 300:
+                    if data.ua:
+                        if len(data.ua) > 300:
                             ua = '' + \
                                 '<a href="javascript:void();" onclick="document.getElementById(\'check_' + str(set_n) + '\').style.display=\'block\';">(300+)</a>' + \
-                                '<div id="check_' + str(set_n) + '" style="display:none;">' + html.escape(data[2]) + '</div>' + \
+                                '<div id="check_' + str(set_n) + '" style="display:none;">' + html.escape(data.ua) + '</div>' + \
                             ''
                             set_n += 1
                         else:
-                            ua = html.escape(data[2])
+                            ua = html.escape(data.ua)
                     else:
                         ua = '<br>'
 
                     div += '''
                         <tr>
                             <td>
-                                <a href="/list/user/check/''' + url_pas(data[0]) + '''">''' + data[0] + '''</a>
-                                <a href="/list/user/check/delete/''' + url_pas(data[0]) + '/' + url_pas(data[1]) + '/' + url_pas(data[3]) + '/' + ('0' if ip_or_user(name) == 0 else '1') + '''">
+                                <a href="/list/user/check/''' + url_pas(data.name) + '''">''' + data.name + '''</a>
+                                <a href="/list/user/check/delete/''' + url_pas(data.name) + '/' + url_pas(data.ip) + '/' + url_pas(data.today) + '/' + ('0' if ip_or_user(name) == 0 else '1') + '''">
                                     (''' + await get_lang('delete') + ''')
                                 </a>
                             </td>
-                            <td><a href="/list/user/check/''' + url_pas(data[1]) + '''">''' + data[1] + '''</a></td>
-                            <td>''' + data[3] + '''</td>
+                            <td><a href="/list/user/check/''' + url_pas(data.ip) + '''">''' + data.ip + '''</a></td>
+                            <td>''' + data.today + '''</td>
                         </tr>
                         <tr>
                             <td colspan="3">''' + ua + '''</td>
@@ -162,16 +141,13 @@ async def list_user_check(name = 'test', plus_name = None, arg_num = 1, do_type 
                 [['manager', await get_lang('return')]]
             )
         else:
-            curs.execute(db_change("" + \
-                "select distinct " + ('name' if ip_or_user(name) == 1 else 'ip') + " from ua_d " + \
-                "where " + ('ip' if ip_or_user(name) == 1 else 'name') + " = ? "
-                "order by today desc limit ?, 50" + \
-            ""), [name, sql_num])
-            record = curs.fetchall()
+            value_column = 'name' if ip_or_user(name) == 1 else 'ip'
+            identity_column = 'ip' if ip_or_user(name) == 1 else 'name'
+            record = user_agents.list_distinct_values_by_identity(value_column, identity_column, name, offset=sql_num)
 
             div = ''
             for for_a in record:
-                div += '<li><a href="/list/user/check/' + url_pas(for_a[0]) + '/simple">' + for_a[0] + '</a></li>'
+                div += '<li><a href="/list/user/check/' + url_pas(for_a) + '/simple">' + for_a + '</a></li>'
 
             if div != '':
                 div = '<ul>' + div + '</ul>'

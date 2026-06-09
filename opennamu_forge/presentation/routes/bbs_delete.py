@@ -2,14 +2,11 @@ from .tool.func import *
 
 async def bbs_delete(bbs_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
-        curs.execute(db_change('select set_data from bbs_set where set_id = ? and set_name = "bbs_name"'), [bbs_num])
-        db_data = curs.fetchall()
-        if not db_data:
+        bbs_name = bbs.get_setting(str(bbs_num), "bbs_name")
+        if bbs_name == "":
             return redirect(conn, '/bbs/main')
-        
-        bbs_name = db_data[0][0]
         
         bbs_num_str = str(bbs_num)
 
@@ -20,9 +17,7 @@ async def bbs_delete(bbs_num = ''):
             return redirect(conn, '/bbs/in/' + bbs_num_str)
         
         if flask.request.method == 'POST':
-            curs.execute(db_change('delete from bbs_data where set_id = ?'), [bbs_num_str])
-            curs.execute(db_change('delete from bbs_set where set_id = ?'), [bbs_num_str])
-            curs.execute(db_change('delete from bbs_data where set_id like ?'), [bbs_num_str + '-%'])
+            bbs.delete_board(bbs_num_str)
             
             return redirect(conn, '/bbs/main')
         else:

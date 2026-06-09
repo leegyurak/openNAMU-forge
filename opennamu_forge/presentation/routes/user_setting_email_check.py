@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_setting_email_check():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
         wiki_settings = get_wiki_settings_service()
 
         ip = ip_check()
@@ -21,8 +21,7 @@ async def user_setting_email_check():
             user_agent = flask.request.headers.get('User-Agent', '')
 
             if flask.session['c_key'] == input_key:
-                curs.execute(db_change('delete from user_set where name = "email" and id = ?'), [ip])
-                curs.execute(db_change('insert into user_set (name, id, data) values ("email", ?, ?)'), [ip, flask.session['c_email']])
+                user_settings.upsert(ip, "email", flask.session['c_email'])
 
             for i in re_set_list:
                 flask.session.pop(i, None)

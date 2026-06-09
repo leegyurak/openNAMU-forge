@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def user_watch_list_name(tool, name = 'Test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if ip_or_user(ip) != 0:
@@ -21,17 +21,14 @@ async def user_watch_list_name(tool, name = 'Test'):
         else:
             type_data = 'star_doc'
 
-        curs.execute(db_change("select data from user_set where name = ? and id = ? and data = ?"), [type_data, ip, name])
-        if curs.fetchall():
-            curs.execute(db_change("delete from user_set where name = ? and id = ? and data = ?"), [type_data, ip, name])
+        if user_settings.exists_data(ip, type_data, name):
+            user_settings.delete_data(ip, type_data, name)
         else:
             if tool == 'watch_list':
-                curs.execute(db_change("select count(*) from user_set where id = ? and name = ?"), [ip, type_data])
-                count = curs.fetchall()
-                if count and count[0][0] > 10:
+                if user_settings.count_by_name(ip, type_data) > 10:
                     return await re_error(conn, 28)
 
-            curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [ip, type_data, name])
+            user_settings.upsert(ip, type_data, name)
 
         if name_from == 1:
             return redirect(conn, '/w/' + url_pas(name))

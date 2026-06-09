@@ -3,8 +3,8 @@ from .tool.func import *
 # 개편 필요
 async def login_find_email_check(tool):
     with get_db_connect() as conn:
-        curs = conn.cursor()
         wiki_settings = get_wiki_settings_service()
+        user_settings = get_user_setting_repository()
         
         if flask.request.method == 'POST' or ('c_key' in flask.session and flask.session['c_key'] == 'email_pass'):
             re_set_list = ['c_id', 'c_pw', 'c_ans', 'c_que', 'c_key', 'c_type', 'c_email']
@@ -18,11 +18,10 @@ async def login_find_email_check(tool):
                 user_id = flask.session['c_id']
                 user_pw = flask.session['c_key']
             
-                curs.execute(db_change("update user_set set data = ? where name = 'pw' and id = ?"), [pw_encode(conn, user_pw), user_id])
+                user_settings.upsert(user_id, 'pw', pw_encode(conn, user_pw))
                 
-                curs.execute(db_change('select data from user_set where name = "2fa" and id = ?'), [user_id])
-                if curs.fetchall():
-                    curs.execute(db_change("update user_set set data = '' where name = '2fa' and id = ?"), [user_id])
+                if user_settings.exists(user_id, '2fa'):
+                    user_settings.upsert(user_id, '2fa', '')
         
                 for i in re_set_list:
                     flask.session.pop(i, None)
@@ -48,18 +47,15 @@ async def login_find_email_check(tool):
                     if flask.session['c_key'] == 'email_pass':
                         flask.session['c_email'] = ''
         
-                    curs.execute(db_change("select id from user_set limit 1"))
-                    first = 1 if not curs.fetchall() else 0
+                    first = 0 if user_settings.has_any() else 1
         
-                    curs.execute(db_change("select id from user_set where id = ?"), [flask.session['c_id']])
-                    if curs.fetchall():
+                    if user_settings.id_exists(flask.session['c_id']):
                         for i in re_set_list:
                             flask.session.pop(i, None)
         
                         return await re_error(conn, 8)
                 
-                    curs.execute(db_change("select id from user_set where id = ? and name = 'application'"), [flask.session['c_id']])
-                    if curs.fetchall():
+                    if user_settings.exists(flask.session['c_id'], 'application'):
                         for i in re_set_list:
                             flask.session.pop(i, None)
         
@@ -77,7 +73,7 @@ async def login_find_email_check(tool):
                         user_app_data['ua'] = user_agent
                         user_app_data['email'] = flask.session['c_email']
                         
-                        curs.execute(db_change("insert into user_set (id, name, data) values (?, ?, ?)"), [flask.session['c_id'], 'application', json_dumps(user_app_data)])
+                        user_settings.upsert(flask.session['c_id'], 'application', json_dumps(user_app_data))
         
                         for i in re_set_list:
                             flask.session.pop(i, None)
@@ -89,19 +85,18 @@ async def login_find_email_check(tool):
                         else:
                             user_auth = 'owner'
                         
-                        curs.execute(db_change("insert into user_set (id, name, data) values (?, 'pw', ?)"), [flask.session['c_id'], flask.session['c_pw']])
-                        curs.execute(db_change("insert into user_set (id, name, data) values (?, 'acl', ?)"), [flask.session['c_id'], user_auth])
-                        curs.execute(db_change("insert into user_set (id, name, data) values (?, 'date', ?)"), [flask.session['c_id'], get_time()])
-                        curs.execute(db_change("insert into user_set (id, name, data) values (?, 'encode', ?)"), [flask.session['c_id'], encode])
+                        user_settings.upsert(flask.session['c_id'], 'pw', flask.session['c_pw'])
+                        user_settings.upsert(flask.session['c_id'], 'acl', user_auth)
+                        user_settings.upsert(flask.session['c_id'], 'date', get_time())
+                        user_settings.upsert(flask.session['c_id'], 'encode', encode)
         
-                    curs.execute(db_change("insert into user_set (name, id, data) values ('email', ?, ?)"), [flask.session['c_id'], flask.session['c_email']])
+                    user_settings.upsert(flask.session['c_id'], 'email', flask.session['c_email'])
                     ua_plus(conn, flask.session['c_id'], ip, user_agent, get_time())
         
                     flask.session['id'] = flask.session['c_id']
                     flask.session['head'] = ''
                 else:
-                    curs.execute(db_change('delete from user_set where name = "email" and id = ?'), [ip])
-                    curs.execute(db_change('insert into user_set (name, id, data) values ("email", ?, ?)'), [ip, flask.session['c_email']])
+                    user_settings.upsert(ip, 'email', flask.session['c_email'])
         
                     first = 0
         

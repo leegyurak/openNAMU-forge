@@ -6,7 +6,9 @@ from .edit import edit_editor
 
 async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        history = get_history_repository()
+        topics = get_topic_repository()
+        user_settings = get_user_setting_repository()
         topic_num = str(topic_num)
 
         if topic_num == '0':
@@ -16,11 +18,10 @@ async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
             name_value = doc_name
             sub_value = ''
         else:
-            curs.execute(db_change("select title, sub from rd where code = ?"), [topic_num])
-            name = curs.fetchall()
-            if name:
-                sub = name[0][1]
-                name = name[0][0]
+            recent_discuss = topics.get_recent_discuss(topic_num)
+            if recent_discuss:
+                sub = recent_discuss.subtitle
+                name = recent_discuss.title
 
                 name_value = name
                 sub_value = sub
@@ -58,9 +59,8 @@ async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
                 return await re_error(conn, 21)
             
             if topic_num == '0':
-                curs.execute(db_change("select code from topic order by code + 0 desc limit 1"))
-                t_data = curs.fetchall()
-                topic_num = str(int(t_data[0][0]) + 1) if t_data else '1'
+                latest_topic_code = topics.latest_topic_code()
+                topic_num = str(latest_topic_code + 1) if latest_topic_code else '1'
             
             if flask.request.form.get('content', 'Test') == '':
                 return redirect(conn, '/thread/' + topic_num)
@@ -73,37 +73,29 @@ async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
             if topic_acl == 1:
                 return await re_error(conn, 0)
 
-            curs.execute(db_change("select id from topic where code = ? order by id + 0 desc limit 1"), [topic_num])
-            old_num = curs.fetchall()
-            num = str((int(old_num[0][0]) + 1) if old_num else 1)
+            old_num = topics.latest_comment_id(topic_num)
+            num = str((old_num + 1) if old_num else 1)
 
             match = re.search(r'^user:([^/]+)', name)
             if match:
                 match = match.group(1)
                 y_check = 0
                 if ip_or_user(match) == 1:
-                    curs.execute(db_change("select ip from history where ip = ? limit 1"), [match])
-                    u_data = curs.fetchall()
-                    if u_data:
+                    if history.count_by_ip(match) > 0:
                         y_check = 1
                     else:
-                        curs.execute(db_change("select ip from topic where ip = ? limit 1"), [match])
-                        u_data = curs.fetchall()
-                        if u_data:
+                        if topics.count_by_ip(match) > 0:
                             y_check = 1
                 else:
-                    curs.execute(db_change("select id from user_set where id = ?"), [match])
-                    u_data = curs.fetchall()
-                    if u_data:
+                    if user_settings.id_exists(match):
                         y_check = 1
 
                 if y_check == 1:
                     await add_alarm(match, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
             
-            curs.execute(db_change("select ip from topic where code = ? and id = '1'"), [topic_num])
-            ip_data = curs.fetchall()
-            if ip_data and ip_or_user(ip_data[0][0]) == 0:
-                await add_alarm(ip_data[0][0], ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+            ip_data = topics.first_comment_author(topic_num)
+            if ip_data and ip_or_user(ip_data) == 0:
+                await add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
 
             data = await api_topic_thread_pre_render(conn, data, num, ip, topic_num, name, sub)
 
@@ -126,10 +118,9 @@ async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
             name_display = 'display: none;' if topic_num != '0' else ''
 
             shortcut = '<div class="opennamu_forge_thread_shortcut" id="thread_shortcut">'
-            curs.execute(db_change("select id from topic where code = ? order by id + 0 asc"), [topic_num])
-            db_data = curs.fetchall()
+            db_data = topics.list_comment_ids_ascending(topic_num)
             for for_a in db_data:
-                shortcut += '<a href="#' + for_a[0] + '">#' + for_a[0] + '</a> '
+                shortcut += '<a href="#' + for_a + '">#' + for_a + '</a> '
             
             shortcut += '</div>'
 

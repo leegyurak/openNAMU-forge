@@ -161,43 +161,42 @@ def test_ip_check는_사용자형_헤더를_루프백으로_대체한다(func_to
         assert func_tool.ip_check() == "::1"
 
 
-class FakeCursor:
-    def __init__(self, rows):
-        self.rows = list(rows)
-        self.executed = []
+@pytest.fixture()
+def main_skin_db_set(tmp_path, func_tool):
+    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
-    def execute(self, sql, params):
-        self.executed.append((sql, params))
+    db_set = {"type": "sqlite", "name": str(Path(tmp_path) / "main-skin")}
+    reset_sqlmodel_engine()
+    migration_result = run_schema_migrations(db_set)
+    func_tool.global_func_some_set_do("db_type", "sqlite")
+    func_tool.global_func_some_set_do("db_name", db_set["name"])
 
-    def fetchall(self):
-        return self.rows.pop(0)
+    yield db_set
 
-
-class FakeConnection:
-    def __init__(self, rows):
-        self.cursor_instance = FakeCursor(rows)
-
-    def cursor(self):
-        return self.cursor_instance
+    migration_result.engine.dispose()
+    reset_sqlmodel_engine()
 
 
-def test_main_skin_set은_사용자_설정을_우선한다(func_tool):
-    conn = FakeConnection([[("ringo",)]])
+def test_main_skin_set은_사용자_설정을_우선한다(func_tool, main_skin_db_set):
+    from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
 
-    assert func_tool.get_main_skin_set(conn, {}, "main_skin", "wiki-user") == "ringo"
-    assert conn.cursor_instance.executed == [
-        ("select data from user_set where name = ? and id = ?", ["main_skin", "wiki-user"])
-    ]
+    UserSettingRepository(main_skin_db_set).upsert("wiki-user", "main_skin", "ringo")
 
-
-def test_main_skin_set은_기본값이면_공통_설정으로_fallback한다(func_tool):
-    conn = FakeConnection([[("liberty",)]])
-
-    assert func_tool.get_main_skin_set(conn, {}, "main_skin", "127.0.0.1") == "liberty"
-    assert conn.cursor_instance.executed == [("select data from other where name = ?", ["main_skin"])]
+    assert func_tool.get_main_skin_set(None, {}, "main_skin", "wiki-user") == "ringo"
 
 
-def test_main_skin_set은_설정이_비어있으면_default를_반환한다(func_tool):
-    conn = FakeConnection([[("",)], []])
+def test_main_skin_set은_기본값이면_공통_설정으로_fallback한다(func_tool, main_skin_db_set):
+    from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 
-    assert func_tool.get_main_skin_set(conn, {}, "main_skin", "wiki-user") == "default"
+    OtherSettingRepository(main_skin_db_set).upsert("main_skin", "liberty")
+
+    assert func_tool.get_main_skin_set(None, {}, "main_skin", "127.0.0.1") == "liberty"
+
+
+def test_main_skin_set은_설정이_비어있으면_default를_반환한다(func_tool, main_skin_db_set):
+    from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
+
+    UserSettingRepository(main_skin_db_set).upsert("wiki-user", "main_skin", "")
+
+    assert func_tool.get_main_skin_set(None, {}, "main_skin", "wiki-user") == "default"

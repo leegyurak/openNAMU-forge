@@ -5,6 +5,9 @@ import urllib.parse
 
 import flask
 
+from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
+from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
+
 try:
     import orjson
 
@@ -62,6 +65,35 @@ def db_change(data):
     return data
 
 
+def _get_current_db_set():
+    db_type = global_func_some_set_do("db_type")
+    db_set = {
+        "type": db_type,
+        "name": global_func_some_set_do("db_name"),
+    }
+
+    if db_type == "mysql":
+        db_set.update(
+            {
+                "mysql_host": global_func_some_set_do("db_mysql_host"),
+                "mysql_user": global_func_some_set_do("db_mysql_user"),
+                "mysql_pw": global_func_some_set_do("db_mysql_pw"),
+                "mysql_port": global_func_some_set_do("db_mysql_port"),
+            }
+        )
+    elif db_type == "postgresql":
+        db_set.update(
+            {
+                "postgresql_host": global_func_some_set_do("db_postgresql_host"),
+                "postgresql_user": global_func_some_set_do("db_postgresql_user"),
+                "postgresql_pw": global_func_some_set_do("db_postgresql_pw"),
+                "postgresql_port": global_func_some_set_do("db_postgresql_port"),
+            }
+        )
+
+    return db_set
+
+
 def ip_check(d_type=0):
     ip = "::1"
     if d_type == 0 and (flask.session and "id" in flask.session):
@@ -114,18 +146,15 @@ def md5_replace(data):
 
 
 def get_main_skin_set(conn, flask_session, set_name, ip):
-    curs = conn.cursor()
+    other_settings = OtherSettingRepository(_get_current_db_set())
+    user_settings = UserSettingRepository(_get_current_db_set())
 
     if ip_or_user(ip) == 0:
-        curs.execute(db_change("select data from user_set where name = ? and id = ?"), [set_name, ip])
-        db_data = curs.fetchall()
-        set_data = db_data[0][0] if db_data and db_data[0][0] != "" else "default"
+        set_data = user_settings.get(ip, set_name) or "default"
     else:
         set_data = flask_session[set_name] if set_name in flask_session and flask_session[set_name] != "" else "default"
 
     if set_data == "default":
-        curs.execute(db_change("select data from other where name = ?"), [set_name])
-        db_data = curs.fetchall()
-        set_data = db_data[0][0] if db_data and db_data[0][0] != "" else "default"
+        set_data = other_settings.get(set_name) or "default"
 
     return set_data

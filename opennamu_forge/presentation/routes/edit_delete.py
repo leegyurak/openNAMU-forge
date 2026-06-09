@@ -2,14 +2,13 @@ from .tool.func import *
 
 async def edit_delete(name):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        wiki_documents = get_wiki_document_repository()
 
         ip = ip_check()
         if await acl_check(name, 'document_delete') == 1:
             return await re_error(conn, 0)
 
-        curs.execute(db_change("select title from data where title = ?"), [name])
-        if not curs.fetchall():
+        if not wiki_documents.exists_title(name):
             return redirect(conn, '/w/' + url_pas(name))
 
         if flask.request.method == 'POST':
@@ -28,28 +27,23 @@ async def edit_delete(name):
             if do_edit_text_bottom_check_box_check(conn, agree) == 1:
                 return await re_error(conn, 29)
 
-            curs.execute(db_change("select data from data where title = ?"), [name])
-            data = curs.fetchall()
-            if data:
-                today = get_time()
-                leng = '-' + str(len(data[0][0]))
+            data = wiki_documents.get_data(name)
+            today = get_time()
+            leng = '-' + str(len(data))
 
-                history_plus(conn, 
-                    name,
-                    '',
-                    today,
-                    ip,
-                    send,
-                    leng,
-                    mode = 'delete'
-                )
+            history_plus(conn, 
+                name,
+                '',
+                today,
+                ip,
+                send,
+                leng,
+                mode = 'delete'
+            )
 
-                curs.execute(db_change("select title, link from back where title = ? and not type = 'cat' and not type = 'no'"), [name])
-                for data in curs.fetchall():
-                    curs.execute(db_change("insert into back (title, link, type, data) values (?, ?, 'no', '')"), [data[0], data[1]])
-
-                curs.execute(db_change("delete from back where link = ?"), [name])
-                curs.execute(db_change("delete from data where title = ?"), [name])
+            wiki_documents.insert_no_backlinks_for_title(name)
+            wiki_documents.delete_backlinks_by_link(name)
+            wiki_documents.delete_title(name)
 
             return redirect(conn, '/w/' + url_pas(name))
         else:            

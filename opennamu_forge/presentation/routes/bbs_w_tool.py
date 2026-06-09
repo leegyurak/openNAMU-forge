@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def bbs_w_tool(bbs_num = '', post_num = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        bbs = get_bbs_repository()
 
         data = ''
         
@@ -17,8 +17,7 @@ async def bbs_w_tool(bbs_num = '', post_num = ''):
         '''
 
         if await acl_check('', 'bbs_auth', '', '') != 1:
-            curs.execute(db_change('select set_data from bbs_data where set_code = ? and set_id = ? and set_name = "pinned"'), [post_num_str, bbs_num_str])
-            pinned = await get_lang('pinned') if not curs.fetchall() else await get_lang('pinned_release')
+            pinned = await get_lang('pinned') if not bbs.is_pinned(bbs_num_str, post_num_str) else await get_lang('pinned_release')
 
             data += '''
                 <h3>''' + await get_lang('admin') + '''</h3>

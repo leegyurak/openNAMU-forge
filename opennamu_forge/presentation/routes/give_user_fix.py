@@ -2,10 +2,9 @@ from .tool.func import *
 
 async def give_user_fix(user_name = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
-        curs.execute(db_change("select data from user_set where id = ? and name = 'pw'"), [user_name])
-        if not curs.fetchall():
+        if not user_settings.exists(user_name, 'pw'):
             return await re_error(conn, 2)
 
         if await acl_check('', 'owner_auth', '', '') == 1:
@@ -21,10 +20,7 @@ async def give_user_fix(user_name = ''):
 
                 if password == check_password:
                     hashed = pw_encode(conn, password)
-                    curs.execute(db_change("update user_set set data = ? where id = ? and name = 'pw'"), [
-                        hashed,
-                        user_name
-                    ])
+                    user_settings.upsert(user_name, 'pw', hashed)
                 else:
                     return await re_error(conn, 20)
             elif select == '2fa_password_change':
@@ -33,17 +29,12 @@ async def give_user_fix(user_name = ''):
 
                 if password == check_password:
                     hashed = pw_encode(conn, password)
-                    curs.execute(db_change('select data from user_set where name = "2fa_pw" and id = ?'), [user_name])
-                    if curs.fetchall():
-                        curs.execute(db_change("update user_set set data = ? where name = '2fa_pw' and id = ?"), [hashed, user_name])
-                    else:
-                        curs.execute(db_change("insert into user_set (name, id, data) values ('2fa_pw', ?, ?)"), [user_name, hashed])
+                    user_settings.upsert(user_name, '2fa_pw', hashed)
                 else:
                     return await re_error(conn, 20)
             elif select == '2fa_off':
-                curs.execute(db_change('select data from user_set where name = "2fa" and id = ?'), [user_name])
-                if curs.fetchall():
-                    curs.execute(db_change("update user_set set data = '' where name = '2fa' and id = ?"), [user_name])
+                if user_settings.exists(user_name, '2fa'):
+                    user_settings.upsert(user_name, '2fa', '')
 
             return redirect(conn, '/user/' + url_pas(user_name))
         else:

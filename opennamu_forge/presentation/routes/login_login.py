@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def login_login():
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_settings = get_user_setting_repository()
 
         ip = ip_check()
         if ip_or_user(ip) == 0:
@@ -23,26 +23,18 @@ async def login_login():
             user_id = flask.request.form.get('id', '')
             user_pw = flask.request.form.get('pw', '')
 
-            curs.execute(db_change("select data from user_set where id = ? and name = 'pw'"), [user_id])
-            db_data = curs.fetchall()
-            if not db_data:
+            db_user_pw = user_settings.get(user_id, "pw")
+            if db_user_pw == "":
                 return await re_error(conn, 2)
-            else:
-                db_user_pw = db_data[0][0]
                 
-            curs.execute(db_change("select data from user_set where id = ? and name = 'encode'"), [user_id])
-            db_data = curs.fetchall()
-            if not db_data:
+            db_user_encode = user_settings.get(user_id, "encode")
+            if db_user_encode == "":
                 return await re_error(conn, 2)
-            else:
-                db_user_encode = db_data[0][0]
 
             if pw_check(conn, user_pw, db_user_pw, db_user_encode, user_id) != 1:
                 return await re_error(conn, 10)
 
-            curs.execute(db_change('select data from user_set where name = "2fa" and id = ?'), [user_id])
-            fa_data = curs.fetchall()
-            if fa_data and fa_data[0][0] != '':
+            if user_settings.get(user_id, "2fa") != "":
                 flask.session['login_id'] = user_id
 
                 return redirect(conn, '/login/2fa')

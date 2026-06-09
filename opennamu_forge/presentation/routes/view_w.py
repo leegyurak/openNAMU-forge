@@ -5,7 +5,12 @@ from .go_api_w_render import api_w_render
 
 async def view_w(name = 'Test', do_type = '', doc_rev = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        backlinks = get_backlink_repository()
+        document_meta = get_document_meta_repository()
+        history = get_history_repository()
+        topics = get_topic_repository()
+        user_settings = get_user_setting_repository()
+        wiki_documents = get_wiki_document_repository()
         wiki_settings = get_wiki_settings_service()
 
         sub = 0
@@ -25,11 +30,9 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         uppage = re.sub(r"/([^/]+)$", '', name)
         uppage = 0 if uppage == name else uppage
 
-        curs.execute(db_change("select sub from rd where title = ? and not stop = 'O' order by date desc"), [name])
-        topic = 1 if curs.fetchall() else 0
+        topic = 1 if topics.exists_open_recent_discuss_title(name) else 0
 
-        curs.execute(db_change("select title from data where title like ?"), [name + '/%'])
-        down = 1 if curs.fetchall() else 0
+        down = 1 if wiki_documents.exists_title_prefix(name + '/') else 0
 
         if re.search(r'^category:', name):
             name_view = name
@@ -41,30 +44,26 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
             count_sub_category = 0
             count_category = 0
 
-            curs.execute(db_change("select distinct link from back where title = ? and type = 'cat' order by link asc"), [name])
-            category_sql = curs.fetchall()
+            category_sql = backlinks.list_distinct_links_by_title_type(name, 'cat')
             for data in category_sql:
-                link_view = data[0]
+                link_view = data
                 if get_main_skin_set(conn, flask.session, 'main_css_category_change_title', ip) != 'off':
-                    curs.execute(db_change("select data from back where title = ? and link = ? and type = 'cat_view' limit 1"), [name, data[0]])
-                    db_data = curs.fetchall()
-                    if db_data and db_data[0][0] != '':
-                        link_view = db_data[0][0]
+                    db_data = backlinks.get_data(name, data, 'cat_view')
+                    if db_data != '':
+                        link_view = db_data
                         
                 link_blur = ''
-                curs.execute(db_change("select data from back where title = ? and link = ? and type = 'cat_blur' limit 1"), [name, data[0]])
-                db_data = curs.fetchall()
-                if db_data:
+                if backlinks.exists(name, data, 'cat_blur'):
                     link_blur = 'opennamu_forge_category_blur'
 
-                if data[0].startswith('category:'):
-                    category_sub += '<li><a class="' + link_blur + '" href="/w/' + url_pas(data[0]) + '">' + html.escape(link_view) + '</a></li>'
+                if data.startswith('category:'):
+                    category_sub += '<li><a class="' + link_blur + '" href="/w/' + url_pas(data) + '">' + html.escape(link_view) + '</a></li>'
                     count_sub_category += 1
                 else:
                     category_doc += '' + \
                         '<li>' + \
-                            '<a class="' + link_blur + '" href="/w/' + url_pas(data[0]) + '">' + html.escape(link_view) + '</a> ' + \
-                            '<a class="opennamu_forge_link_inter" href="/xref/' + url_pas(data[0]) + '">(' + await get_lang('backlink') + ')</a>' + \
+                            '<a class="' + link_blur + '" href="/w/' + url_pas(data) + '">' + html.escape(link_view) + '</a> ' + \
+                            '<a class="opennamu_forge_link_inter" href="/xref/' + url_pas(data) + '">(' + await get_lang('backlink') + ')</a>' + \
                         '</li>' + \
                     ''
                     count_category += 1
@@ -120,9 +119,7 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
             if name == 'user:' + user_name:
                 menu += [['w/' + url_pas(name) + '/' + url_pas(now_time.split()[0]), await get_lang('today_doc')]]
         elif re.search(r"^file:", name):
-            curs.execute(db_change('select id from history where title = ? order by date desc limit 1'), [name])
-            db_data = curs.fetchall()
-            rev = db_data[0][0] if db_data else '1' 
+            rev = history.latest_revision_id(name) or '1'
 
             name_view = name
             doc_type = 'file'
@@ -163,17 +160,14 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
             else:
                 file_data = ''
         else:
-            curs.execute(db_change("select link from back where title = ? and type = 'include' limit 1"), [name])
-            doc_type = 'include' if curs.fetchall() else doc_type
+            doc_type = 'include' if backlinks.has_include_title(name) else doc_type
 
-            curs.execute(db_change("select title, data from back where link = ? and type = 'redirect' limit 1"), [name])
-            db_data = curs.fetchall()
+            db_data = backlinks.get_redirect_for_link(name)
             if db_data:
                 doc_type = 'redirect'
 
-                curs.execute(db_change("select title from data where title = ?"), [db_data[0][0]])
-                if curs.fetchall():
-                    redirect_to = url_pas(db_data[0][0]) + db_data[0][1]
+                if wiki_documents.exists_title(db_data[0]):
+                    redirect_to = url_pas(db_data[0]) + db_data[1]
 
             name_view = name
 
@@ -197,11 +191,11 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
 
         if doc_rev == '':
             await python_to_golang("get_json", path = "v2/page_view_post/" + url_pas(name))
-            curs.execute(db_change("select data from data where title = ?"), [name])
+            data = wiki_documents.get_data(name)
+            data_exists = wiki_documents.exists_title(name)
         else:
-            curs.execute(db_change("select data from history where title = ? and id = ?"), [name, doc_rev])
-            
-        data = curs.fetchall()
+            data = history.find_data(name, doc_rev)
+            data_exists = data is not None
 
         description = ''
         if await acl_check(name, 'render') == 1:
@@ -212,7 +206,7 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
                 end_data = '<h2>' + await get_lang('error') + '</h2><ul><li>' + error_401 + '</li></ul>'
             else:
                 end_data = '<h2>' + await get_lang('error') + '</h2><ul><li>' + await get_lang('authority_error') + '</li></ul>'
-        elif not data:
+        elif not data_exists:
             response_data = 404
 
             error_404 = wiki_settings.get(SettingKey.ERROR_404)
@@ -221,15 +215,12 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
             else:
                 end_data = '<h2>' + await get_lang('error') + '</h2><ul><li>' + await get_lang('document_404_error') + '</li></ul>'
 
-            curs.execute(db_change('select ip from history where title = ? limit 1'), [name])
-            db_data = curs.fetchall()
-            history_color = 1 if db_data else 0
+            history_color = 1 if history.exists_title(name) else 0
         else:
             response_data = 200
-            description = data[0][0].replace('\r', '').replace('\n', ' ')[0:200]
+            description = data.replace('\r', '').replace('\n', ' ')[0:200]
 
-        curs.execute(db_change("select title from acl where title = ?"), [name])
-        acl = 1 if curs.fetchall() else 0
+        acl = 1 if document_meta.acl_title_exists(name) else 0
         menu_acl = 1 if await acl_check(name, 'document_edit') == 1 else 0
         if response_data == 404:
             menu += [['edit/' + url_pas(name), await get_lang('create'), menu_acl]] 
@@ -256,8 +247,7 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
             for for_a in reversed(range(0, len(flask.session['lastest_document']))):
                 last_page = flask.session['lastest_document'][for_a]
 
-                curs.execute(db_change("select link from back where (title = ? or link = ?) and type = 'redirect' limit 1"), [last_page, last_page])
-                if curs.fetchall():
+                if backlinks.redirect_exists_for_title_or_link(last_page):
                     break
 
             if last_page != name:
@@ -312,9 +302,7 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         if down:
             menu += [['down/' + url_pas(name), await get_lang('sub')]]
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'last_edit'"), [name])
-        r_date = curs.fetchall()
-        r_date = r_date[0][0] if r_date else 0
+        r_date = document_meta.get(name, 'last_edit') or 0
 
         div = file_data + user_doc + end_data + category_total
         
@@ -333,13 +321,11 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         bottom_body = wiki_settings.get(SettingKey.BOTTOM_BODY)
         div += bottom_body if bottom_body != '' else ''
 
-        curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'document_top'"), [name])
-        body = curs.fetchall()
-        div = (body[0][0] + div) if body else div
+        body = document_meta.get(name, 'document_top')
+        div = (body + div) if body != '' else div
 
         if ip_or_user(ip) == 0:
-            curs.execute(db_change("select data from user_set where id = ? and data = ?"), [ip, name])
-            watch_list = 2 if curs.fetchall() else 1
+            watch_list = 2 if user_settings.user_data_exists(ip, name) else 1
             menu += [['star_doc_from/' + url_pas(name), ('☆' if watch_list == 1 else '★'), watch_list - 1]]
         else:
             watch_list = 0

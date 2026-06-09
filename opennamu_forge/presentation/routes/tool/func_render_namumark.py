@@ -1,6 +1,12 @@
 from .func_tool import *
+from .func_tool import _get_current_db_set
 
+from opennamu_forge.infrastructure.document_meta_repository import DocumentMetaRepository
+from opennamu_forge.infrastructure.history_repository import HistoryRepository
+from opennamu_forge.infrastructure.html_filter_repository import HtmlFilterRepository
 from opennamu_forge.infrastructure.logging import get_logger
+from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
+from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
 
 from typing import Any
 
@@ -22,7 +28,11 @@ class class_do_render_namumark:
         parent = None
     ):
         self.conn = conn
-        self.curs = self.conn.cursor()
+        self.document_meta = DocumentMetaRepository(_get_current_db_set())
+        self.history = HistoryRepository(_get_current_db_set())
+        self.html_filters = HtmlFilterRepository(_get_current_db_set())
+        self.other_settings = OtherSettingRepository(_get_current_db_set())
+        self.wiki_documents = WikiDocumentRepository(_get_current_db_set())
 
         self.doc_data = doc_data.replace('\r', '')
         self.doc_name = doc_name
@@ -75,15 +85,19 @@ class class_do_render_namumark:
         self.render_data = '<back_br>\n' + self.render_data + '\n<front_br>'
         self.render_data_js = ''
 
-        self.curs.execute(db_change('select data from other where name = "link_case_insensitive"'))
-        db_data = self.curs.fetchall()
-        self.link_case_insensitive = ' collate nocase' if db_data and db_data[0][0] != '' else ''
+        self.link_case_insensitive = self.other_settings.get('link_case_insensitive') != ''
 
     def get_tool_lang(self, name):
         if name in self.lang_data:
             return self.lang_data[name]
         else:
             return name + ' (RENDER LANG)'
+
+    def get_tool_existing_title(self, name):
+        if self.link_case_insensitive:
+            return self.wiki_documents.find_title_case_insensitive(name)
+        else:
+            return self.wiki_documents.find_title(name)
 
     def get_tool_js_safe(self, data):
         data = data.replace('\n', '\\\\n')
@@ -829,10 +843,8 @@ class class_do_render_namumark:
                 link_main = self.get_tool_data_restore(link_main, do_type = 'slash')
                 link_main = html.unescape(link_main)
 
-                self.curs.execute(db_change("select set_data from data_set where doc_name = ? and set_name = 'last_edit'"), [link_main])
-                db_data = self.curs.fetchall()
-                if db_data:
-                    date_data = db_data[0][0]
+                date_data = self.document_meta.get(link_main, 'last_edit')
+                if date_data != '':
                     if data_view != '1':
                         date_data = date_data.split()[0]
 
@@ -867,12 +879,7 @@ class class_do_render_namumark:
             elif match in ('목차', 'toc', 'tableofcontents'):
                 return '<toc_need_part>'
             elif match == 'pagecount':
-                self.curs.execute(db_change('select data from other where name = "count_all_title"'))
-                db_data = self.curs.fetchall()
-                if db_data:
-                    return db_data[0][0]
-                else:
-                    return '0'
+                return self.other_settings.get('count_all_title', default='0')
             else:
                 return '<macro>' + match_org.group(1) + '</macro>'
 
@@ -1002,17 +1009,13 @@ class class_do_render_namumark:
                         if not ('file:' + link_main) in self.data_backlink:
                             self.data_backlink['file:' + link_main] = {}
 
-                        self.curs.execute(db_change("select title from data where title = ?"), ['file:' + link_main])
-                        db_data = self.curs.fetchall()
-                        if db_data:
+                        if self.wiki_documents.exists_title('file:' + link_main):
                             link_exist = ''
                         else:
                             link_exist = 'opennamu_forge_not_exist_link'
                             self.data_backlink['file:' + link_main]['no'] = ''
 
-                        self.curs.execute(db_change('select id from history where title = ? order by date desc limit 1'), ['file:' + link_main])
-                        db_data = self.curs.fetchall()
-                        rev = db_data[0][0] if db_data else '1' 
+                        rev = self.history.latest_revision_id('file:' + link_main) or '1'
 
                         self.data_backlink['file:' + link_main]['file'] = ''
 
@@ -1117,9 +1120,7 @@ class class_do_render_namumark:
                         if not ('category:' + link_main) in self.data_backlink:
                             self.data_backlink['category:' + link_main] = {}
 
-                        self.curs.execute(db_change("select title from data where title = ?"), ['category:' + link_main])
-                        db_data = self.curs.fetchall()
-                        if db_data:
+                        if self.wiki_documents.exists_title('category:' + link_main):
                             link_exist = ''
                         else:
                             link_exist = 'opennamu_forge_not_exist_link'
@@ -1182,10 +1183,9 @@ class class_do_render_namumark:
                     
                     link_main = url_pas(link_main)
 
-                    self.curs.execute(db_change("select plus, plus_t from html_filter where kind = 'inter_wiki' and html = ?"), [link_inter_name])
-                    db_data = self.curs.fetchall()
+                    db_data = self.html_filters.get(link_inter_name, 'inter_wiki')
                     if db_data:
-                        link_main = db_data[0][0] + link_main
+                        link_main = db_data.plus + link_main
 
                         # sub not exist -> sub = main
                         if link_data[1]:
@@ -1197,14 +1197,12 @@ class class_do_render_namumark:
                             link_sub_storage = re.sub(link_inter_regex, '', link_sub_storage)
 
                         link_inter_icon = link_inter_name + ':'
-                        if db_data[0][1] != '':
-                            link_inter_icon = db_data[0][1]
+                        if db_data.plus_t != '':
+                            link_inter_icon = db_data.plus_t
 
                         link_sub_storage = link_inter_icon + link_sub_storage
 
-                        self.curs.execute(db_change("select plus_t from html_filter where kind = 'inter_wiki_sub' and html = ?"), [link_inter_name])
-                        db_data = self.curs.fetchall()
-                        if db_data and db_data[0][0] == 'under_bar':
+                        if self.html_filters.get_plus_t(link_inter_name, 'inter_wiki_sub') == 'under_bar':
                             link_main = link_main.replace('%20', '_')
 
                         data_name = self.get_tool_data_storage('<a class="opennamu_forge_link_inter" title="' + link_title + '" href="' + link_main + link_data_sharp + '">' + link_sub_storage, '</a>', link_data_full)
@@ -1243,19 +1241,18 @@ class class_do_render_namumark:
                     link_inter_icon = ''
                     link_class = 'opennamu_forge_link_out'
 
-                    self.curs.execute(db_change("select html, plus_t from html_filter where kind = 'outer_link' and plus = ?"), [domain])
-                    db_data = self.curs.fetchall()
+                    db_data = self.html_filters.get_by_kind_plus('outer_link', domain)
                     if db_data:
-                        if db_data[0][1] != '':
-                            if re.search(r'<|>', db_data[0][1]):
-                                link_inter_icon = db_data[0][1]
+                        if db_data.plus_t != '':
+                            if re.search(r'<|>', db_data.plus_t):
+                                link_inter_icon = db_data.plus_t
                                 link_class = 'opennamu_forge_link_inter'
                             else:
-                                if self.get_tool_data_restore(link_sub).find('"' + db_data[0][1] + '"') != -1:
+                                if self.get_tool_data_restore(link_sub).find('"' + db_data.plus_t + '"') != -1:
                                     link_inter_icon = ''
                                     link_class = 'opennamu_forge_link_inter'
                                 else:
-                                    link_inter_icon = '<img src="' + db_data[0][1] + '">'
+                                    link_inter_icon = '<img src="' + db_data.plus_t + '">'
                                     link_class = 'opennamu_forge_link_inter'
                         else:
                             link_inter_icon = db_data[0][0] + ':'
@@ -1296,8 +1293,7 @@ class class_do_render_namumark:
 
                     link_exist = ''
                     if link_main != '':
-                        self.curs.execute(db_change("select title from data where title = ?" + self.link_case_insensitive), [link_main])
-                        db_data = self.curs.fetchall()
+                        db_data = self.get_tool_existing_title(link_main)
                         if not db_data:
                             if not link_main in self.data_backlink:
                                 self.data_backlink[link_main] = {}
@@ -1305,7 +1301,7 @@ class class_do_render_namumark:
                             self.data_backlink[link_main]['no'] = ''
                             link_exist = 'opennamu_forge_not_exist_link'
                         else:
-                            link_main = db_data[0][0]
+                            link_main = db_data
                             if not link_main in self.data_backlink:
                                 self.data_backlink[link_main] = {}
                         
@@ -1432,9 +1428,8 @@ class class_do_render_namumark:
                     self.data_backlink[include_name]['include'] = ''
 
                     # load include db data
-                    self.curs.execute(db_change("select data from data where title = ?"), [include_name])
-                    db_data = self.curs.fetchall()
-                    if db_data:
+                    include_doc_data = self.wiki_documents.get_data(include_name)
+                    if self.wiki_documents.exists_title(include_name):
                         # include link func
                         include_link = ''
                         if include_set_data == 'use':
@@ -1444,7 +1439,7 @@ class class_do_render_namumark:
                         if self.parent:
                             include_data_tmp = await self.parent(self.conn,
                                 doc_name = include_name,
-                                doc_data = db_data[0][0], 
+                                doc_data = include_doc_data,
                                 data_type = 'api_include',
                                 parameter = include_change_list
                             )
@@ -1620,15 +1615,14 @@ class class_do_render_namumark:
                     link_main = self.get_tool_data_restore(link_main, do_type = 'slash')
                     link_main = html.unescape(link_main)
 
-                    self.curs.execute(db_change("select title from data where title = ?" + self.link_case_insensitive), [link_main])
-                    db_data = self.curs.fetchall()
+                    db_data = self.get_tool_existing_title(link_main)
                     if not db_data:
                         if not link_main in self.data_backlink:
                             self.data_backlink[link_main] = {}
 
                         self.data_backlink[link_main]['no'] = ''
                     else:
-                        link_main = db_data[0][0]
+                        link_main = db_data
                         if not link_main in self.data_backlink:
                             self.data_backlink[link_main] = {}
 
@@ -1643,24 +1637,21 @@ class class_do_render_namumark:
 
                     self.render_data = '<' + data_name + '></' + data_name + '>'
                 else:
-                    self.curs.execute(db_change("select plus, plus_t from html_filter where kind = 'inter_wiki' and html = ?"), [link_inter_name])
-                    db_data = self.curs.fetchall()
+                    db_data = self.html_filters.get(link_inter_name, 'inter_wiki')
                     if db_data:
                         link_main = url_pas(link_main)
-                        link_main = db_data[0][0] + link_main
+                        link_main = db_data.plus + link_main
 
                         link_sub_storage = match.group(1)
                         link_sub_storage = re.sub(link_inter_regex, '', link_sub_storage)
 
                         link_inter_icon = link_inter_name + ':'
-                        if db_data[0][1] != '':
-                            link_inter_icon = db_data[0][1]
+                        if db_data.plus_t != '':
+                            link_inter_icon = db_data.plus_t
 
                         link_sub_storage = link_inter_icon + link_sub_storage
 
-                        self.curs.execute(db_change("select plus_t from html_filter where kind = 'inter_wiki_sub' and html = ?"), [link_inter_name])
-                        db_data = self.curs.fetchall()
-                        if db_data and db_data[0][0] == 'under_bar':
+                        if self.html_filters.get_plus_t(link_inter_name, 'inter_wiki_sub') == 'under_bar':
                             link_main = link_main.replace('%20', '_')
 
                         self.data_redirect = 1

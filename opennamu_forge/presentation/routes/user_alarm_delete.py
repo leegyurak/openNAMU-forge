@@ -2,11 +2,12 @@ from .tool.func import *
 
 async def user_alarm_delete(id = ''):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        user_notices = get_user_notice_repository()
+        ip = ip_check()
     
         if id != '':
-            curs.execute(db_change("delete from user_notice where name = ? and id = ?"), [ip_check(), str(id)])
+            user_notices.delete(ip, str(id))
         else:
-            curs.execute(db_change("delete from user_notice where name = ?"), [ip_check()])
+            user_notices.delete_all(ip)
 
         return redirect(conn, '/alarm')

@@ -12,3 +12,13 @@ class TopicCommentDTO:
     author: str
     block: str
     top: str
+
+
+@dataclass(frozen=True)
+class RecentDiscussDTO:
+    title: str
+    subtitle: str
+    code: str
+    stop: str
+    agree: str
+    acl: str

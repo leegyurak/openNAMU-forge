@@ -2,7 +2,7 @@ from .tool.func import *
 
 async def give_admin_groups(name = 'test'):
     with get_db_connect() as conn:
-        curs = conn.cursor()
+        admin = get_admin_repository()
 
         acl_name_list = [
             [1, 'owner', await get_lang('owner_authority')],
@@ -75,20 +75,14 @@ async def give_admin_groups(name = 'test'):
             if await acl_check(tool = 'owner_auth', memo = 'auth list add (' + name + ')') == 1:
                 return await re_error(conn, 3)
 
-            curs.execute(db_change("delete from alist where name = ?"), [name])
-            for for_a in acl_name_list:
-                if flask.request.form.get(for_a[1], 0) != 0:
-                    curs.execute(db_change("insert into alist (name, acl) values (?, ?)"), [name, for_a[1]])
-
-            curs.execute(db_change("insert into alist (name, acl) values (?, 'nothing')"), [name])
+            acl_values = tuple([for_a[1] for for_a in acl_name_list if flask.request.form.get(for_a[1], 0) != 0] + ['nothing'])
+            admin.set_group_acls(name, acl_values)
 
             return redirect(conn, '/auth/list/add/' + url_pas(name))
         else:
             state = 'disabled' if await acl_check('', 'owner_auth', '', '') == 1 else ''
 
-            curs.execute(db_change('select acl from alist where name = ?'), [name])
-            acl_list = curs.fetchall()
-            acl_list = [for_b[0] for for_b in acl_list]
+            acl_list = admin.list_group_acls(name)
 
             data = '<ul>'
             for for_a in acl_name_list:                
