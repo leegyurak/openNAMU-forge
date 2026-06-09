@@ -1,29 +1,31 @@
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    html,
-    re,
-    re_error,
-    wiki_set,
-)
-from opennamu_forge.presentation.email_helpers import send_email
-from opennamu_forge.presentation.text_helpers import load_random_key
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.dependencies import (
     get_html_filter_repository,
     get_user_setting_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.email_helpers import send_email
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import re
+from opennamu_forge.presentation.skin_helpers import wiki_set
+from opennamu_forge.presentation.text_helpers import load_random_key
+
+
 async def login_register_email():
     html_filters = get_html_filter_repository()
     user_settings = get_user_setting_repository()
     wiki_settings = get_wiki_settings_service()
 
-    if not 'reg_id' in flask.session:
+    if 'reg_id' not in flask.session:
         return redirect('/register')
 
     if flask.request.method == 'POST':

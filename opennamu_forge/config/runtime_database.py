@@ -5,20 +5,20 @@ from typing import Any
 from opennamu_forge.application.runtime_context import get_runtime_value, set_runtime_value
 
 
-def apply_database_runtime_config(db_set: dict[str, str]) -> None:
-    for name, value in db_set.items():
+def apply_database_runtime_config(database_options: dict[str, str]) -> None:
+    for name, value in database_options.items():
         set_runtime_value("db_" + name, value)
 
 
-def get_current_db_set() -> dict[str, Any]:
+def get_current_database_runtime_options() -> dict[str, Any]:
     db_type = get_runtime_value("db_type")
-    db_set = {
+    database_options = {
         "type": db_type,
         "name": get_runtime_value("db_name"),
     }
 
     if db_type == "mysql":
-        db_set.update(
+        database_options.update(
             {
                 "mysql_host": get_runtime_value("db_mysql_host"),
                 "mysql_user": get_runtime_value("db_mysql_user"),
@@ -27,7 +27,7 @@ def get_current_db_set() -> dict[str, Any]:
             }
         )
     elif db_type == "postgresql":
-        db_set.update(
+        database_options.update(
             {
                 "postgresql_host": get_runtime_value("db_postgresql_host"),
                 "postgresql_user": get_runtime_value("db_postgresql_user"),
@@ -36,4 +36,4 @@ def get_current_db_set() -> dict[str, Any]:
             }
         )
 
-    return db_set
+    return database_options

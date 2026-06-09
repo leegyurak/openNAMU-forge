@@ -1,18 +1,18 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    do_add_thread,
-    do_reload_recent_thread,
-    flask,
-    get_time,
-    html,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_discussion_service, get_topic_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_topic_repository
+from opennamu_forge.presentation.shared.sql_dialect import get_time
+
+
 async def topic_tool_change(topic_num = 1):
     topics = get_topic_repository()
 
@@ -34,8 +34,8 @@ async def topic_tool_change(topic_num = 1):
 
         topics.update_recent_discuss_title_subtitle(topic_num, title_d, sub_d)
 
-        do_add_thread(topic_num, await get_lang('topic_name_change') + ' : ' + rd_d.subtitle + ' (' + rd_d.title + ') → ' + sub_d + ' (' + title_d + ')', '1')
-        do_reload_recent_thread(topic_num, time)
+        get_discussion_service().add_thread_comment(topic_num, await get_lang('topic_name_change') + ' : ' + rd_d.subtitle + ' (' + rd_d.title + ') → ' + sub_d + ' (' + title_d + ')', '1')
+        get_discussion_service().reload_recent_thread(topic_num, time)
 
         return redirect('/thread/' + topic_num)
     else:

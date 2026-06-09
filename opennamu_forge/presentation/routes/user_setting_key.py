@@ -1,10 +1,9 @@
-from opennamu_forge.presentation.shared.func import (
-    ip_check,
-    ip_or_user,
-)
-from opennamu_forge.presentation.text_helpers import load_random_key
-from opennamu_forge.presentation.response_helpers import redirect
 from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.response_helpers import redirect
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.text_helpers import load_random_key
+
+
 async def user_setting_key():
     user_settings = get_user_setting_repository()
 

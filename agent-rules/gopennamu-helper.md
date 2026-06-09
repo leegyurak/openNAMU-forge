@@ -15,6 +15,27 @@ The call boundary is split by layer:
 - `opennamu_forge/infrastructure/gopennamu_client.py`: aiohttp client adapter. It must not import Flask or presentation helpers.
 - `opennamu_forge/presentation/gopennamu_gateway.py`: Flask request/header/form extraction and runtime port lookup.
 
+## Current Delegation Matrix
+
+Python-owned behavior:
+
+- Runtime process lifecycle: binary selection, startup, readiness wait, termination, signal/atexit registration.
+- Flask route registration, URL converters, Prometheus route exposure, dynamic theme CSS, and app-level request hooks.
+- Repository-backed writes that have been migrated to application services, including user registration, history mutation, discussion comment/recent-thread mutation, challenge progress refresh, and main settings form persistence.
+- SQLModel repository access, migration execution, and runtime database config selection.
+
+GopenNAMU-delegated behavior:
+
+- Compatibility API calls whose behavior is still helper-owned: ACL evaluation, level lookup, ban checks, language lookup, skin name lookup, wiki custom/settings lookup, alarm posting, page view counters, and helper-backed JSON endpoints.
+- Template rendering through `python_to_golang("post", path="template")` until the template bridge is replaced by a Python presenter/template path.
+- Whole-route compatibility delegation through `golang_view()` and `python_to_golang("same")` for routes not yet represented as Python route modules.
+- Rendering fallbacks that are not yet handled by the Python NamuMark renderer.
+
+Migration rule:
+
+- New Python-owned behavior must enter through an application service or a presentation helper with tests before removing a GopenNAMU call.
+- Removing a helper-owned endpoint requires a compatibility test that preserves the HTTP/status/body contract currently returned through GopenNAMU.
+
 When changing startup, routing, metrics, or DB config:
 
 - Preserve the helper process lifecycle.

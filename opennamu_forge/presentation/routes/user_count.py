@@ -1,22 +1,22 @@
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    datetime,
-    get_time,
-    ip_check,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    render_template,
-)
+import datetime
+
 from opennamu_forge.presentation.dependencies import (
     get_history_repository,
     get_topic_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+
+
 async def user_count(name = None):
     histories = get_history_repository()
     topics = get_topic_repository()
 
-    if name == None:
+    if name is None:
         that = ip_check()
     else:
         that = name

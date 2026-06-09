@@ -1,14 +1,15 @@
+import html
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_html_filter_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    html,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_html_filter_repository
+
+
 async def filter_all(tool):
     html_filters = get_html_filter_repository()
 

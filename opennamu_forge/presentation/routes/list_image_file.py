@@ -1,14 +1,15 @@
+import html
+
+from opennamu_forge.presentation.dependencies import get_wiki_document_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    get_next_page_bottom,
-    html,
-    render_set,
-)
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
+from opennamu_forge.presentation.rendering.render_helpers import render_set
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_wiki_document_repository
+
+
 async def list_image_file(arg_num = 1, do_type = 0):
     sql_num = (arg_num * 50 - 50) if arg_num * 50 > 0 else 0
     wiki_documents = get_wiki_document_repository()

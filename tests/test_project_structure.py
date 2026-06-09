@@ -19,6 +19,30 @@ def test_presentation_shared에는_gopennamu_client와_runtime_state를_두지_�
     assert Path("opennamu_forge/application/runtime_context.py").exists()
 
 
+def test_shared_func_축소_수치_baseline은_유지한다():
+    shared_func_source = Path("opennamu_forge/presentation/shared/func.py").read_text()
+    route_imports = subprocess.run(
+        ["rg", "-n", "from opennamu_forge\\.presentation\\.shared\\.func import", "opennamu_forge/presentation/routes"],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert len(shared_func_source.splitlines()) <= 224
+    assert len(route_imports.stdout.splitlines()) == 0
+
+
+def test_project_code는_shared_func를_내부_호출처로_재사용하지_않는다():
+    result = subprocess.run(
+        ["rg", "-n", "opennamu_forge\\.presentation\\.shared\\.func|presentation\\.shared import func|shared\\.func", "opennamu_forge"],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 1, result.stdout
+
+
 def test_runtime_프로세스와_scheduler는_runtime_package에_둔다():
     runtime_app_source = Path("opennamu_forge/presentation/runtime_app.py").read_text()
     restart_route_source = Path("opennamu_forge/presentation/routes/main_sys_restart.py").read_text()
@@ -36,6 +60,8 @@ def test_runtime_프로세스와_scheduler는_runtime_package에_둔다():
     assert "threading.Thread" not in restart_route_source
     assert "os._exit" not in restart_route_source
     assert "sys.exit" not in shutdown_route_source
+    assert "requests.get" not in runtime_app_source
+    assert "urllib.request" not in runtime_app_source
 
 
 def test_runtime_app은_route_등록을_route_registry에_위임한다():
@@ -49,6 +75,7 @@ def test_runtime_app은_route_등록을_route_registry에_위임한다():
 
 
 def test_runtime_config는_settings_명칭을_사용하지_않는다():
+    startup_source = Path("opennamu_forge/application/startup.py").read_text()
     database_config_source = Path("opennamu_forge/config/database.py").read_text()
     monitoring_config_source = Path("opennamu_forge/config/monitoring.py").read_text()
 
@@ -59,6 +86,7 @@ def test_runtime_config는_settings_명칭을_사용하지_않는다():
     assert not Path("opennamu_forge/infrastructure/database_config.py").exists()
     assert not Path("opennamu_forge/infrastructure/env.py").exists()
     assert not Path("opennamu_forge/presentation/shared/db_connection.py").exists()
+    assert "RuntimeSettings" not in startup_source
     assert "build_database_settings_from_env" not in database_config_source
     assert "MonitoringSettings" not in monitoring_config_source
 

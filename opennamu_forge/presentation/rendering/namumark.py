@@ -15,7 +15,7 @@ from opennamu_forge.presentation.shared.sql_dialect import (
     urllib,
 )
 
-from opennamu_forge.config.runtime_database import get_current_db_set
+from opennamu_forge.config.runtime_database import get_current_database_runtime_options
 from opennamu_forge.infrastructure.document_meta_repository import DocumentMetaRepository
 from opennamu_forge.infrastructure.history_repository import HistoryRepository
 from opennamu_forge.infrastructure.html_filter_repository import HtmlFilterRepository
@@ -41,11 +41,11 @@ class class_do_render_namumark:
         parameter = {},
         parent = None
     ):
-        self.document_meta = DocumentMetaRepository(get_current_db_set())
-        self.history = HistoryRepository(get_current_db_set())
-        self.html_filters = HtmlFilterRepository(get_current_db_set())
-        self.other_settings = OtherSettingRepository(get_current_db_set())
-        self.wiki_documents = WikiDocumentRepository(get_current_db_set())
+        self.document_meta = DocumentMetaRepository(get_current_database_runtime_options())
+        self.history = HistoryRepository(get_current_database_runtime_options())
+        self.html_filters = HtmlFilterRepository(get_current_database_runtime_options())
+        self.other_settings = OtherSettingRepository(get_current_database_runtime_options())
+        self.wiki_documents = WikiDocumentRepository(get_current_database_runtime_options())
 
         self.doc_data = doc_data.replace('\r', '')
         self.doc_name = doc_name

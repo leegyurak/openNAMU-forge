@@ -1,16 +1,17 @@
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    get_next_page_bottom,
-    html,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    render_template,
-)
+import html
+
 from opennamu_forge.presentation.dependencies import (
     get_admin_repository,
     get_document_meta_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_template,
+)
+
+
 async def list_acl(arg_num = 1):
     admin = get_admin_repository()
     document_meta = get_document_meta_repository()

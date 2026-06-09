@@ -1,7 +1,7 @@
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re,
-)
+import flask
+
+from opennamu_forge.presentation.shared.sql_dialect import re
+
 
 async def main_view(name = ''):
     file_name = re.search(r'([^/]+)$', name)

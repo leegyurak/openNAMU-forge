@@ -1,14 +1,15 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-)
+from opennamu_forge.presentation.dependencies import get_bbs_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
+
+
 async def bbs_w_hide(bbs_num = '', post_num = ''):
     bbs = get_bbs_repository()
 

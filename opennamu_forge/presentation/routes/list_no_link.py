@@ -1,13 +1,14 @@
+import html
+
+from opennamu_forge.presentation.dependencies import get_document_meta_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    get_next_page_bottom,
-    html,
-)
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_document_meta_repository
+
+
 async def list_no_link(num = 1):
     sql_num = (num * 50 - 50) if num * 50 > 0 else 0
     document_meta = get_document_meta_repository()

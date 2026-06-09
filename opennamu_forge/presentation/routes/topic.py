@@ -1,35 +1,33 @@
-from opennamu_forge.presentation.captcha_helpers import captcha_post
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    add_alarm,
-    do_add_thread,
-    do_edit_filter,
-    do_edit_slow_check,
-    do_reload_recent_thread,
-    do_title_length_check,
-    flask,
-    get_time,
-    html,
-    ip_check,
-    ip_or_user,
-    re,
-    re_error,
-)
-from opennamu_forge.presentation.text_helpers import cache_v
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+from opennamu_forge.presentation.captcha_helpers import captcha_post
 from opennamu_forge.presentation.dependencies import (
+    get_discussion_service,
     get_history_repository,
     get_topic_repository,
     get_user_setting_repository,
 )
-from .go_api_topic import api_topic_thread_pre_render
+from opennamu_forge.presentation.edit_validation_helpers import (
+    do_edit_filter,
+    do_edit_slow_check,
+    do_title_length_check,
+)
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check, ip_or_user, re
+from opennamu_forge.presentation.text_helpers import cache_v
 
 from .edit import edit_editor
+from .go_api_topic import api_topic_thread_pre_render
+
 
 async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
     history = get_history_repository()
@@ -117,21 +115,21 @@ async def topic(topic_num = 0, do_type = '', doc_name = 'Test'):
                     y_check = 1
 
             if y_check == 1:
-                await add_alarm(match, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+                await get_discussion_service().add_alarm(match, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
         
         ip_data = topics.first_comment_author(topic_num)
         if ip_data and ip_or_user(ip_data) == 0:
-            await add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+            await get_discussion_service().add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
 
         data = await api_topic_thread_pre_render(data, num, ip, topic_num, name, sub)
 
-        do_add_thread(
+        get_discussion_service().add_thread_comment(
             topic_num,
             data,
             '',
             num
         )
-        do_reload_recent_thread(
+        get_discussion_service().reload_recent_thread(
             topic_num, 
             today, 
             name, 

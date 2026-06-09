@@ -1,38 +1,56 @@
 from opennamu_forge.presentation.routes.api_image_view import api_image_view
 from opennamu_forge.presentation.routes.api_skin_info import api_skin_info
 from opennamu_forge.presentation.routes.api_version import api_version
-
-from opennamu_forge.presentation.routes.bbs_w_edit import bbs_w_edit
+from opennamu_forge.presentation.routes.bbs_delete import bbs_delete
 from opennamu_forge.presentation.routes.bbs_make import bbs_make
+from opennamu_forge.presentation.routes.bbs_w import bbs_w
+from opennamu_forge.presentation.routes.bbs_w_comment_tool import bbs_w_comment_tool
+from opennamu_forge.presentation.routes.bbs_w_delete import bbs_w_delete
+from opennamu_forge.presentation.routes.bbs_w_edit import bbs_w_edit
+
 # from opennamu_forge.presentation.routes.bbs_w_hide import bbs_w_hide
 from opennamu_forge.presentation.routes.bbs_w_pinned import bbs_w_pinned
-from opennamu_forge.presentation.routes.bbs_w_delete import bbs_w_delete
-from opennamu_forge.presentation.routes.bbs_w import bbs_w
-from opennamu_forge.presentation.routes.bbs_delete import bbs_delete
+
 # from opennamu_forge.presentation.routes.bbs_hide import bbs_hide
 from opennamu_forge.presentation.routes.bbs_w_post import bbs_w_post
-from opennamu_forge.presentation.routes.bbs_w_comment_tool import bbs_w_comment_tool
 from opennamu_forge.presentation.routes.bbs_w_tool import bbs_w_tool
-
 from opennamu_forge.presentation.routes.edit import edit
 from opennamu_forge.presentation.routes.edit_backlink_reset import edit_backlink_reset
 from opennamu_forge.presentation.routes.edit_delete import edit_delete
 from opennamu_forge.presentation.routes.edit_delete_file import edit_delete_file
 from opennamu_forge.presentation.routes.edit_delete_multiple import edit_delete_multiple
 from opennamu_forge.presentation.routes.edit_move import edit_move
+from opennamu_forge.presentation.routes.edit_request import edit_request
 from opennamu_forge.presentation.routes.edit_revert import edit_revert
 from opennamu_forge.presentation.routes.edit_upload import edit_upload
-from opennamu_forge.presentation.routes.edit_request import edit_request
-
 from opennamu_forge.presentation.routes.filter_all import filter_all
 from opennamu_forge.presentation.routes.filter_all_add import filter_all_add
 from opennamu_forge.presentation.routes.filter_all_delete import filter_all_delete
-
 from opennamu_forge.presentation.routes.give_admin_groups import give_admin_groups
 from opennamu_forge.presentation.routes.give_delete_admin_group import give_delete_admin_group
 from opennamu_forge.presentation.routes.give_user_ban import give_user_ban
 from opennamu_forge.presentation.routes.give_user_fix import give_user_fix
-
+from opennamu_forge.presentation.routes.go_api_bbs_w import api_bbs_w
+from opennamu_forge.presentation.routes.go_api_bbs_w_comment import api_bbs_w_comment, api_bbs_w_comment_exter
+from opennamu_forge.presentation.routes.go_api_bbs_w_comment_one import (
+    api_bbs_w_comment_one,
+    api_bbs_w_comment_one_exter,
+)
+from opennamu_forge.presentation.routes.go_api_bbs_w_set import api_bbs_w_set
+from opennamu_forge.presentation.routes.go_api_func_auth import api_func_auth, api_func_auth_exter
+from opennamu_forge.presentation.routes.go_api_func_email import api_func_email, api_func_email_exter
+from opennamu_forge.presentation.routes.go_api_func_ip import api_func_ip
+from opennamu_forge.presentation.routes.go_api_func_ip_menu import api_func_ip_menu
+from opennamu_forge.presentation.routes.go_api_func_language import api_func_language, api_func_language_exter
+from opennamu_forge.presentation.routes.go_api_list_acl import api_list_acl
+from opennamu_forge.presentation.routes.go_api_list_recent_edit_request import (
+    api_list_recent_edit_request,
+    api_list_recent_edit_request_exter,
+)
+from opennamu_forge.presentation.routes.go_api_setting import api_setting, api_setting_exter
+from opennamu_forge.presentation.routes.go_api_topic import api_topic
+from opennamu_forge.presentation.routes.go_api_w_raw import api_w_raw, api_w_raw_exter
+from opennamu_forge.presentation.routes.go_api_w_render import api_w_render, api_w_render_exter
 from opennamu_forge.presentation.routes.list_acl import list_acl
 from opennamu_forge.presentation.routes.list_admin import list_admin
 from opennamu_forge.presentation.routes.list_admin_auth_use import list_admin_auth_use
@@ -44,7 +62,6 @@ from opennamu_forge.presentation.routes.list_title_index import list_title_index
 from opennamu_forge.presentation.routes.list_user import list_user
 from opennamu_forge.presentation.routes.list_user_check import list_user_check
 from opennamu_forge.presentation.routes.list_user_check_delete import list_user_check_delete
-
 from opennamu_forge.presentation.routes.login_find import login_find
 from opennamu_forge.presentation.routes.login_find_email import login_find_email
 from opennamu_forge.presentation.routes.login_find_email_check import login_find_email_check
@@ -53,13 +70,13 @@ from opennamu_forge.presentation.routes.login_login import login_login
 from opennamu_forge.presentation.routes.login_login_2fa import login_login_2fa
 from opennamu_forge.presentation.routes.login_login_2fa_email import login_login_2fa_email
 from opennamu_forge.presentation.routes.login_logout import login_logout
-
 from opennamu_forge.presentation.routes.login_register import login_register
 from opennamu_forge.presentation.routes.login_register_email import login_register_email
 from opennamu_forge.presentation.routes.login_register_email_check import login_register_email_check
 from opennamu_forge.presentation.routes.login_register_submit import login_register_submit
-
 from opennamu_forge.presentation.routes.main_setting import main_setting
+from opennamu_forge.presentation.routes.main_setting_404_page import main_setting_404_page
+from opennamu_forge.presentation.routes.main_setting_email_test import main_setting_email_test
 from opennamu_forge.presentation.routes.main_setting_external import main_setting_external
 from opennamu_forge.presentation.routes.main_setting_head import main_setting_head
 from opennamu_forge.presentation.routes.main_setting_main import main_setting_main
@@ -70,22 +87,19 @@ from opennamu_forge.presentation.routes.main_setting_sitemap import main_setting
 from opennamu_forge.presentation.routes.main_setting_sitemap_set import main_setting_sitemap_set
 from opennamu_forge.presentation.routes.main_setting_skin_set import main_setting_skin_set
 from opennamu_forge.presentation.routes.main_setting_top_menu import main_setting_top_menu
-from opennamu_forge.presentation.routes.main_setting_email_test import main_setting_email_test
-from opennamu_forge.presentation.routes.main_setting_404_page import main_setting_404_page
-
 from opennamu_forge.presentation.routes.main_sys_restart import main_sys_restart
 from opennamu_forge.presentation.routes.main_sys_shutdown import main_sys_shutdown
-
 from opennamu_forge.presentation.routes.main_tool_admin import main_tool_admin
 from opennamu_forge.presentation.routes.main_tool_other import main_tool_other
 from opennamu_forge.presentation.routes.main_tool_redirect import main_tool_redirect
-
 from opennamu_forge.presentation.routes.main_view import main_view
 from opennamu_forge.presentation.routes.main_view_file import main_view_file
 from opennamu_forge.presentation.routes.main_view_image import main_view_image
-
+from opennamu_forge.presentation.routes.n_bbs_w_set import bbs_w_set
+from opennamu_forge.presentation.routes.n_edit_move_all import edit_move_all
+from opennamu_forge.presentation.routes.n_give_auth import give_auth
+from opennamu_forge.presentation.routes.n_list_user_check_submit import list_user_check_submit
 from opennamu_forge.presentation.routes.recent_app_submit import recent_app_submit
-
 from opennamu_forge.presentation.routes.recent_change import recent_change
 from opennamu_forge.presentation.routes.recent_edit_request import recent_edit_request
 from opennamu_forge.presentation.routes.recent_history_add import recent_history_add
@@ -96,7 +110,6 @@ from opennamu_forge.presentation.routes.recent_history_send import recent_histor
 from opennamu_forge.presentation.routes.recent_history_tool import recent_history_tool
 from opennamu_forge.presentation.routes.recent_record_reset import recent_record_reset
 from opennamu_forge.presentation.routes.recent_record_topic import recent_record_topic
-
 from opennamu_forge.presentation.routes.topic import topic
 from opennamu_forge.presentation.routes.topic_comment_blind import topic_comment_blind
 from opennamu_forge.presentation.routes.topic_comment_delete import topic_comment_delete
@@ -107,13 +120,11 @@ from opennamu_forge.presentation.routes.topic_tool_acl import topic_tool_acl
 from opennamu_forge.presentation.routes.topic_tool_change import topic_tool_change
 from opennamu_forge.presentation.routes.topic_tool_delete import topic_tool_delete
 from opennamu_forge.presentation.routes.topic_tool_setting import topic_tool_setting
-
 from opennamu_forge.presentation.routes.user_alarm import user_alarm
 from opennamu_forge.presentation.routes.user_alarm_delete import user_alarm_delete
 from opennamu_forge.presentation.routes.user_challenge import user_challenge
 from opennamu_forge.presentation.routes.user_count import user_count
 from opennamu_forge.presentation.routes.user_edit_filter import user_edit_filter
-
 from opennamu_forge.presentation.routes.user_setting import user_setting
 from opennamu_forge.presentation.routes.user_setting_email import user_setting_email
 from opennamu_forge.presentation.routes.user_setting_email_check import user_setting_email_check
@@ -127,46 +138,14 @@ from opennamu_forge.presentation.routes.user_setting_skin_set import user_settin
 from opennamu_forge.presentation.routes.user_setting_skin_set_main import user_setting_skin_set_main
 from opennamu_forge.presentation.routes.user_setting_top_menu import user_setting_top_menu
 from opennamu_forge.presentation.routes.user_setting_user_name import user_setting_user_name
-
 from opennamu_forge.presentation.routes.user_watch_list_name import user_watch_list_name
-
-from opennamu_forge.presentation.routes.view_set import view_set
 from opennamu_forge.presentation.routes.view_diff import view_diff
-from opennamu_forge.presentation.routes.view_w import view_w
 from opennamu_forge.presentation.routes.view_raw import view_raw
+from opennamu_forge.presentation.routes.view_set import view_set
+from opennamu_forge.presentation.routes.view_w import view_w
 from opennamu_forge.presentation.routes.view_xref import view_xref
-
 from opennamu_forge.presentation.routes.vote_add import vote_add
 from opennamu_forge.presentation.routes.vote_close import vote_close
 from opennamu_forge.presentation.routes.vote_end import vote_end
 from opennamu_forge.presentation.routes.vote_list import vote_list
 from opennamu_forge.presentation.routes.vote_select import vote_select
-
-from opennamu_forge.presentation.routes.n_list_user_check_submit import list_user_check_submit
-
-from opennamu_forge.presentation.routes.n_give_auth import give_auth
-
-from opennamu_forge.presentation.routes.n_bbs_w_set import bbs_w_set
-
-from opennamu_forge.presentation.routes.n_edit_move_all import edit_move_all
-
-from opennamu_forge.presentation.routes.go_api_func_language import api_func_language, api_func_language_exter
-from opennamu_forge.presentation.routes.go_api_func_ip import api_func_ip
-from opennamu_forge.presentation.routes.go_api_func_ip_menu import api_func_ip_menu
-from opennamu_forge.presentation.routes.go_api_func_auth import api_func_auth, api_func_auth_exter
-from opennamu_forge.presentation.routes.go_api_func_email import api_func_email, api_func_email_exter
-
-from opennamu_forge.presentation.routes.go_api_list_recent_edit_request import api_list_recent_edit_request, api_list_recent_edit_request_exter
-from opennamu_forge.presentation.routes.go_api_list_acl import api_list_acl
-
-from opennamu_forge.presentation.routes.go_api_bbs_w import api_bbs_w
-from opennamu_forge.presentation.routes.go_api_bbs_w_set import api_bbs_w_set
-from opennamu_forge.presentation.routes.go_api_bbs_w_comment import api_bbs_w_comment, api_bbs_w_comment_exter
-from opennamu_forge.presentation.routes.go_api_bbs_w_comment_one import api_bbs_w_comment_one, api_bbs_w_comment_one_exter
-
-from opennamu_forge.presentation.routes.go_api_setting import api_setting, api_setting_exter
-
-from opennamu_forge.presentation.routes.go_api_topic import api_topic
-
-from opennamu_forge.presentation.routes.go_api_w_raw import api_w_raw, api_w_raw_exter
-from opennamu_forge.presentation.routes.go_api_w_render import api_w_render, api_w_render_exter

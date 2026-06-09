@@ -1,15 +1,17 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_other_setting_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_other_setting_repository
+
+
 async def main_setting_robot():
     other_settings = get_other_setting_repository()
 

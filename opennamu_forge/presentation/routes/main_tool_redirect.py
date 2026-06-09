@@ -1,15 +1,17 @@
+import html
+
+import flask
+
+from opennamu_forge.presentation.dependencies import get_html_filter_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-)
-from opennamu_forge.presentation.text_helpers import get_tool_js_safe
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_html_filter_repository
+from opennamu_forge.presentation.text_helpers import get_tool_js_safe
+
+
 async def main_tool_redirect(num = 1, add_2 = ''):
     html_filters = get_html_filter_repository()
 
@@ -37,7 +39,7 @@ async def main_tool_redirect(num = 1, add_2 = ''):
     
     # 이전 버전 잔재로 -2부터 시작
     num -= 2
-    if not num in title_list:
+    if num not in title_list:
         return redirect()
 
     add_1 = flask.request.form.get('name', 'test')

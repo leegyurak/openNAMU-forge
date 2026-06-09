@@ -9,6 +9,7 @@ def read_all_text(paths):
 
 JS_TEXT = read_all_text(Path("views/main_css/js").rglob("*.js"))
 ROUTE_TEXT = read_all_text(Path("opennamu_forge/presentation/routes").rglob("*.py"))
+RINGO_JS_TEXT = read_all_text(Path("views/ringo/js").rglob("*.js"))
 RINGO_TEMPLATE_TEXT = Path("views/ringo/index.html").read_text(encoding="utf-8")
 RINGO_CSS_TEXT = Path("views/ringo/css/main.css").read_text(encoding="utf-8")
 
@@ -44,6 +45,19 @@ def test_route_markup은_forge_frontend_functions를_호출한다(function_name)
 
 def test_ringo_skin은_dynamic_theme_css를_로드한다():
     assert "/forge/theme.css.cache_v1" in RINGO_TEMPLATE_TEXT
+
+
+@pytest.mark.parametrize(
+    "legacy_text",
+    (
+        "function opennamu_",
+        "function namu_",
+        "2du.pythonanywhere.com",
+    ),
+)
+def test_ringo_skin은_legacy_namespace와_문구를_사용하지_않는다(legacy_text):
+    assert legacy_text not in RINGO_TEMPLATE_TEXT
+    assert legacy_text not in RINGO_JS_TEXT
 
 
 @pytest.mark.parametrize(

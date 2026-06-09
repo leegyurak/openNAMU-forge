@@ -1,17 +1,19 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    pw_encode,
-    re_error,
-)
+from opennamu_forge.presentation.password_helpers import pw_encode
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+
+
 async def give_user_fix(user_name = ''):
     user_settings = get_user_setting_repository()
 

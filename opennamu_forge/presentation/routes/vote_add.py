@@ -1,17 +1,17 @@
+import flask
+
+from opennamu_forge.presentation.admin_ui_helpers import get_acl_list
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_acl_list,
-    ip_check,
-    re,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_vote_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_vote_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, re
+
+
 async def vote_add():
     votes = get_vote_repository()
 

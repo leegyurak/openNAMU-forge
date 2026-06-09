@@ -2,6 +2,8 @@ from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
+
+
 async def main_setting():
     li_list = [
         ['main', await get_lang('main_setting')],

@@ -1,7 +1,9 @@
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import render_set
-from opennamu_forge.presentation.response_helpers import redirect
 from opennamu_forge.presentation.dependencies import get_wiki_document_repository
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.rendering.render_helpers import render_set
+from opennamu_forge.presentation.response_helpers import redirect
+
+
 async def edit_backlink_reset(name = 'Test'):
     wiki_documents = get_wiki_document_repository()
 

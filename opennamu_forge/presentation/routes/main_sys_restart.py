@@ -1,14 +1,14 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.runtime.go_process import terminate_go_process
-from opennamu_forge.presentation.runtime.process_control import schedule_restart
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     render_template,
 )
+from opennamu_forge.presentation.runtime.go_process import terminate_go_process
+from opennamu_forge.presentation.runtime.process_control import schedule_restart
+
 
 async def main_sys_restart(golang_process):
     if await acl_check('', 'owner_auth', '', '') == 1:

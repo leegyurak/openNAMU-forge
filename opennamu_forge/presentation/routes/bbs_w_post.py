@@ -1,31 +1,27 @@
-from opennamu_forge.presentation.captcha_helpers import captcha_post
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.captcha_helpers import captcha_post
+from opennamu_forge.presentation.dependencies import get_bbs_repository, get_discussion_service
 from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.golang_gateway import python_to_golang
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    add_alarm,
-    flask,
-    get_time,
-    html,
-    ip_check,
-    python_to_golang,
-    re,
-    re_error,
-    render_set,
-)
-from opennamu_forge.presentation.text_helpers import cache_v
+from opennamu_forge.presentation.rendering.render_helpers import render_set
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
-from .go_api_bbs_w import api_bbs_w
-from .go_api_bbs_w_comment import api_bbs_w_comment
-
-from .go_api_topic import api_topic_thread_make, api_topic_thread_pre_render
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check, re
+from opennamu_forge.presentation.text_helpers import cache_v
 
 from .edit import edit_editor
+from .go_api_bbs_w import api_bbs_w
+from .go_api_topic import api_topic_thread_pre_render
+
 
 async def bbs_w_post(bbs_num = '', post_num = ''):
     bbs = get_bbs_repository()
@@ -74,7 +70,7 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
                 bbs.add_data(set_id, 'comment_date', id_data, date)
                 bbs.add_data(set_id, 'comment_user_id', id_data, ip)
 
-                await add_alarm(temp_dict['user_id'], ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + id_data + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + id_data + '</a>')
+                await get_discussion_service().add_alarm(temp_dict['user_id'], ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + id_data + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + id_data + '</a>')
 
                 return redirect('/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + id_data)
             else:
@@ -132,9 +128,9 @@ async def bbs_w_post(bbs_num = '', post_num = ''):
                     set_id += '-' if set_id != '' else ''
                     end_id = set_id + id_data
 
-                await add_alarm(temp_dict['user_id'], ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + end_id + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + end_id + '</a>')
+                await get_discussion_service().add_alarm(temp_dict['user_id'], ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + end_id + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + end_id + '</a>')
                 if comment_user_name != '':
-                    await add_alarm(comment_user_name, ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + end_id + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + end_id + '</a>')
+                    await get_discussion_service().add_alarm(comment_user_name, ip, 'BBS <a href="/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + end_id + '">' + html.escape(bbs_name) + ' - ' + html.escape(temp_dict['title']) + '#' + end_id + '</a>')
 
                 return redirect('/bbs/w/' + bbs_num_str + '/' + post_num_str + '#' + end_id)
         else:

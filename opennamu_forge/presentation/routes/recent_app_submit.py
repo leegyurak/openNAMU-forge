@@ -1,20 +1,22 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import json_loads
-from opennamu_forge.presentation.shared.func import (
-    add_user,
-    flask,
-    html,
-    re_error,
+from opennamu_forge.presentation.dependencies import (
+    get_other_setting_repository,
+    get_user_registration_service,
+    get_user_setting_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import json_loads
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_other_setting_repository,
-    get_user_setting_repository,
-)
+
+
 async def recent_app_submit():
     div = ''
     other_settings = get_other_setting_repository()
@@ -113,7 +115,7 @@ async def recent_app_submit():
             else:
                 application = json_loads(application_data)
 
-            add_user(application['id'], application['pw'], application['email'], application['encode'])
+            get_user_registration_service().add_user(application['id'], application['pw'], application['email'], application['encode'])
 
             user_settings.upsert(application['id'], 'approval_question', application['question'])
             user_settings.upsert(application['id'], 'approval_question_answer', application['answer'])

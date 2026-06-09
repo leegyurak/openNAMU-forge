@@ -1,17 +1,19 @@
+import html
+
+from diff_match_patch import diff_match_patch
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_history_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    diff_match_patch,
-    html,
-    re,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_history_repository
+from opennamu_forge.presentation.shared.sql_dialect import re
+
+
 def view_diff_do(first_raw_data, second_raw_data, first, second):
     if first_raw_data == second_raw_data:
         result = ''

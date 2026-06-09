@@ -1,29 +1,10 @@
+import datetime
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.file_helpers import load_image_url
-from opennamu_forge.presentation.encoding_helpers import (
-    sha224_replace,
-    url_pas,
-)
-from opennamu_forge.presentation.shared.func import (
-    Image,
-    SettingKey,
-    datetime,
-    flask,
-    get_main_skin_set,
-    get_time,
-    html,
-    ip_check,
-    ip_or_user,
-    os,
-    python_to_golang,
-    re,
-)
-from opennamu_forge.presentation.text_helpers import number_check
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_backlink_repository,
     get_document_meta_repository,
@@ -33,8 +14,30 @@ from opennamu_forge.presentation.dependencies import (
     get_wiki_document_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.golang_gateway import python_to_golang
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_main_skin_set, get_time, ip_check, ip_or_user, re
+from opennamu_forge.presentation.text_helpers import number_check
+from opennamu_forge.presentation.view_document_presenter import (
+    build_category_view,
+    build_file_view,
+    build_redirect_notice,
+    build_trace_view,
+)
+from opennamu_forge.presentation.view_session_helpers import (
+    find_last_redirect_source,
+    normalize_recent_documents,
+    remember_recent_document,
+)
+
 from .go_api_w_raw import api_w_raw
 from .go_api_w_render import api_w_render
+
 
 async def view_w(name = 'Test', do_type = '', doc_rev = ''):
     backlinks = get_backlink_repository()
@@ -70,53 +73,7 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         name_view = name
         doc_type = 'category'
 
-        category_doc = ''
-        category_sub = ''
-
-        count_sub_category = 0
-        count_category = 0
-
-        category_sql = backlinks.list_distinct_links_by_title_type(name, 'cat')
-        for data in category_sql:
-            link_view = data
-            if get_main_skin_set(flask.session, 'main_css_category_change_title', ip) != 'off':
-                db_data = backlinks.get_data(name, data, 'cat_view')
-                if db_data != '':
-                    link_view = db_data
-                    
-            link_blur = ''
-            if backlinks.exists(name, data, 'cat_blur'):
-                link_blur = 'opennamu_forge_category_blur'
-
-            if data.startswith('category:'):
-                category_sub += '<li><a class="' + link_blur + '" href="/w/' + url_pas(data) + '">' + html.escape(link_view) + '</a></li>'
-                count_sub_category += 1
-            else:
-                category_doc += '' + \
-                    '<li>' + \
-                        '<a class="' + link_blur + '" href="/w/' + url_pas(data) + '">' + html.escape(link_view) + '</a> ' + \
-                        '<a class="opennamu_forge_link_inter" href="/xref/' + url_pas(data) + '">(' + await get_lang('backlink') + ')</a>' + \
-                    '</li>' + \
-                ''
-                count_category += 1
-
-        if category_sub != '':
-            category_total += '' + \
-                '<h2 id="cate_under">' + await get_lang('under_category') + '</h2>' + \
-                '<ul>' + \
-                    '<li>' + await get_lang('all') + ' : ' + str(count_sub_category) + '</li>' + \
-                    category_sub + \
-                '</ul>' + \
-            ''
-
-        if category_doc != '':
-            category_total += '' + \
-                '<h2 id="cate_normal">' + await get_lang('category_title') + '</h2>' + \
-                '<ul>' + \
-                    '<li>' + await get_lang('all') + ' : ' + str(count_category) + '</li>' + \
-                    category_doc + \
-                '</ul>' + \
-            ''
+        category_total = await build_category_view(name, backlinks, flask.session, ip)
     elif re.search(r"^user:([^/]*)", name):
         name_view = name
         doc_type = 'user'
@@ -156,41 +113,8 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         name_view = name
         doc_type = 'file'
 
-        mime_type = re.search(r'([^.]+)$', name)
-        if mime_type:
-            mime_type = mime_type.group(1)
-        else:
-            mime_type = 'jpg'
-
-        file_name = re.sub(r'\.([^.]+)$', '', name)
-        file_name = re.sub(r'^file:', '', file_name)
-
-        file_all_name = sha224_replace(file_name) + '.' + mime_type
-        file_path_name = os.path.join(load_image_url(), file_all_name)
-        if os.path.exists(file_path_name):
-            try:
-                img = Image.open(file_path_name)
-                width, height = img.size
-                file_res = str(width) + 'x' + str(height)
-            except:
-                file_res = 'Vector'
-            
-            file_size = str(round(os.path.getsize(file_path_name) / 1000, 1))
-            
-            file_data = '''
-                <img src="/image/''' + url_pas(file_all_name) + '''.cache_v''' + rev + '''">
-                <h2>''' + await get_lang('data') + '''</h2>
-                <table>
-                    <tr><td>''' + await get_lang('url') + '''</td><td><a href="/image/''' + url_pas(file_all_name) + '''">''' + await get_lang('link') + '''</a></td></tr>
-                    <tr><td>''' + await get_lang('volume') + '''</td><td>''' + file_size + '''KB</td></tr>
-                    <tr><td>''' + await get_lang('resolution') + '''</td><td>''' + file_res + '''</td></tr>
-                </table>
-                <h2>''' + await get_lang('content') + '''</h2>
-            '''
-
-            menu += [['delete_file/' + url_pas(name), await get_lang('file_delete')]]
-        else:
-            file_data = ''
+        file_data, file_menu = await build_file_view(name, rev)
+        menu += file_menu
     else:
         doc_type = 'include' if backlinks.has_include_title(name) else doc_type
 
@@ -264,67 +188,31 @@ async def view_w(name = 'Test', do_type = '', doc_rev = ''):
         ['acl/' + url_pas(name), await get_lang('setting'), acl],
     ]
 
-    if flask.session and 'lastest_document' in flask.session:
-        if type(flask.session['lastest_document']) != type([]):
-            flask.session['lastest_document'] = []
-    else:
-        flask.session['lastest_document'] = []
+    recent_documents = normalize_recent_documents(flask.session.get('lastest_document'))
+    flask.session['lastest_document'] = recent_documents
 
     if do_type == 'from':
         menu += [['w/' + url_pas(name), await get_lang('pass')]]
         
-        last_page = ''
-        for for_a in reversed(range(0, len(flask.session['lastest_document']))):
-            last_page = flask.session['lastest_document'][for_a]
-
-            if backlinks.redirect_exists_for_title_or_link(last_page):
-                break
+        last_page = find_last_redirect_source(recent_documents, backlinks.redirect_exists_for_title_or_link)
 
         if last_page != name:
-            redirect_text = '{0} ➤ {1}'
-
-            redirect_text_raw = wiki_settings.get(SettingKey.REDIRECT_TEXT)
-            if redirect_text_raw != '':
-                redirect_text = redirect_text_raw
-
-            try:
-                redirect_text = redirect_text.format('<a href="/w_from/' + url_pas(last_page) + '">' + html.escape(last_page) + '</a>', '<b>' + html.escape(name) + '</b>')
-            except:
-                redirect_text = '{0} ➤ {1}'
-                redirect_text = redirect_text.format('<a href="/w_from/' + url_pas(last_page) + '">' + html.escape(last_page) + '</a>', '<b>' + html.escape(name) + '</b>')
-
-            end_data = '''
-                <div class="opennamu_forge_redirect" id="redirect">
-                    ''' + redirect_text + '''
-                </div>
-                <hr class="main_hr">
-            ''' + end_data
+            end_data = build_redirect_notice(
+                last_page,
+                name,
+                wiki_settings.get(SettingKey.REDIRECT_TEXT),
+                end_data,
+            )
             
-    if len(flask.session['lastest_document']) >= 10:
-        flask.session['lastest_document'] = flask.session['lastest_document'][-9:] + [name]
-    else:
-        flask.session['lastest_document'] += [name]
-    
-    flask.session['lastest_document'] = list(reversed(dict.fromkeys(reversed(flask.session['lastest_document']))))
+    recent_documents = remember_recent_document(recent_documents, name)
+    flask.session['lastest_document'] = recent_documents
 
     if redirect_to and do_type != 'from':
         return redirect('/w_from/' + redirect_to)
 
     view_history_on = get_main_skin_set(flask.session, 'main_css_view_history', ip)
     if view_history_on == 'on':
-        end_data = '' + \
-            '<div class="opennamu_forge_trace">' + \
-                '<a class="opennamu_forge_trace_button" href="javascript:opennamu_forge_do_trace_spread();"> (+)</a>' + \
-                await get_lang('trace') + ' : ' + \
-                ' ← '.join(
-                    [
-                        '<a href="/w/' + url_pas(for_a) + '">' + html.escape(for_a) + '</a>'
-                        for for_a in reversed(flask.session['lastest_document'])
-                    ]
-                ) + \
-            '</div>' + \
-            '<hr class="main_hr">' + \
-        '' + end_data
+        end_data = await build_trace_view(recent_documents, end_data)
 
     if uppage != 0:
         menu += [['w/' + url_pas(uppage), await get_lang('upper')]]

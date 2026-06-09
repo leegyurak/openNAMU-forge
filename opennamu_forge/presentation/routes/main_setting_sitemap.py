@@ -1,19 +1,20 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    load_domain,
-    redirect,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_other_setting_repository,
     get_wiki_document_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    load_domain,
+    re_error,
+    redirect,
+    render_template,
+)
+
+
 async def main_setting_sitemap(do_type = 0):
     if not do_type == 1:
         if await acl_check('', 'owner_auth', '', '') == 1:
@@ -44,7 +45,6 @@ async def main_setting_sitemap(do_type = 0):
 
         len_all_data = len(all_data)
         count = int(len_all_data / 30000)
-        other_count = len_all_data % 30000
 
         for i in range(count + 1):
             data += '<sitemap><loc>' + domain + '/sitemap_' + str(i) + '.xml</loc></sitemap>\n'

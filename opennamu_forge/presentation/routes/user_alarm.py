@@ -1,16 +1,17 @@
+import flask
+
+from opennamu_forge.presentation.dependencies import get_user_notice_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_next_page_bottom,
-    ip_check,
-)
-from opennamu_forge.presentation.text_helpers import number_check
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_notice_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check
+from opennamu_forge.presentation.text_helpers import number_check
+
+
 async def user_alarm():
     user_notices = get_user_notice_repository()
 

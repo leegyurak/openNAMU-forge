@@ -1,17 +1,18 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import ban_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    ip_check,
-    ip_or_user,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+
+
 async def user_setting_top_menu():
     user_settings = get_user_setting_repository()
 

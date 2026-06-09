@@ -1,7 +1,7 @@
 import pytest
 
 from opennamu_forge.application.runtime_context import clear_runtime_context, get_runtime_value
-from opennamu_forge.config.runtime_database import apply_database_runtime_config, get_current_db_set
+from opennamu_forge.config.runtime_database import apply_database_runtime_config, get_current_database_runtime_options
 from opennamu_forge.config.startup_options import get_init_set_list
 
 
@@ -13,7 +13,7 @@ def test_runtime_context를_초기화한다():
 
 
 @pytest.mark.parametrize(
-    ("db_set", "expected"),
+    ("database_options", "expected"),
     [
         (
             {"type": "sqlite", "name": "data"},
@@ -57,10 +57,10 @@ def test_runtime_context를_초기화한다():
         ),
     ],
 )
-def test_database_runtime_config는_runtime_context에_저장된다(db_set, expected):
-    apply_database_runtime_config(db_set)
+def test_database_runtime_config는_runtime_context에_저장된다(database_options, expected):
+    apply_database_runtime_config(database_options)
 
-    assert get_current_db_set() == expected
+    assert get_current_database_runtime_options() == expected
 
 
 def test_database_runtime_config는_db_prefix로_저장된다():

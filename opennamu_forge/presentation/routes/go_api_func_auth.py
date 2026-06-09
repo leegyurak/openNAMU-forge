@@ -1,9 +1,10 @@
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    ip_check,
-    python_to_golang,
-    sys,
-)
+import sys
+
+import flask
+
+from opennamu_forge.presentation.golang_gateway import python_to_golang
+from opennamu_forge.presentation.shared.sql_dialect import ip_check
+
 
 async def api_func_auth(user_name = ''):
     other_set = {}

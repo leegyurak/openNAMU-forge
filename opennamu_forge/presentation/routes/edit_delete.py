@@ -1,28 +1,29 @@
+import flask
+
+from opennamu_forge.presentation.authorization_helpers import acl_check
 from opennamu_forge.presentation.captcha_helpers import (
     captcha_get,
     captcha_post,
 )
-from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
+from opennamu_forge.presentation.dependencies import get_history_mutation_service, get_wiki_document_repository
+from opennamu_forge.presentation.edit_toolbar_helpers import ip_warning
+from opennamu_forge.presentation.edit_validation_helpers import (
     do_edit_send_check,
     do_edit_slow_check,
     do_edit_text_bottom_check_box_check,
-    flask,
     get_edit_text_bottom,
     get_edit_text_bottom_check_box,
-    get_time,
-    history_plus,
-    ip_check,
-    ip_warning,
-    re_error,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_wiki_document_repository
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+
+
 async def edit_delete(name):
     wiki_documents = get_wiki_document_repository()
 
@@ -53,7 +54,7 @@ async def edit_delete(name):
         today = get_time()
         leng = '-' + str(len(data))
 
-        history_plus(
+        get_history_mutation_service().add_history(
             name,
             '',
             today,

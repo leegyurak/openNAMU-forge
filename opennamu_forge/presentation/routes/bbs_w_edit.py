@@ -1,26 +1,26 @@
-from opennamu_forge.presentation.captcha_helpers import captcha_post
+import html
+
+import flask
+
+from opennamu_forge.presentation.admin_ui_helpers import get_acl_list
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.captcha_helpers import captcha_post
+from opennamu_forge.presentation.dependencies import get_bbs_repository
+from opennamu_forge.presentation.edit_validation_helpers import do_edit_filter
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    do_edit_filter,
-    flask,
-    get_acl_list,
-    get_time,
-    html,
-    ip_check,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+
+from .edit import edit_editor
 from .go_api_bbs_w import api_bbs_w
 from .go_api_bbs_w_comment_one import api_bbs_w_comment_one
 
-from .edit import edit_editor
 
 async def bbs_w_edit(bbs_num = '', post_num = '', comment_num = ''):
     bbs = get_bbs_repository()

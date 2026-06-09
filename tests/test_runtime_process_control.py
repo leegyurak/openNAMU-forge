@@ -93,3 +93,36 @@ def test_shutdown_current_process는_exit_process를_호출한다():
     process_control.shutdown_current_process(exit_process=lambda: calls.append("exit"))
 
     assert calls == ["exit"]
+
+
+def test_register_termination_handlers는_signal과_atexit을_등록한다():
+    signal_calls = []
+    atexit_calls = []
+    runtime_calls = []
+    process = object()
+
+    def fake_signal(signal_number, handler):
+        signal_calls.append((signal_number, handler))
+
+    def fake_atexit_register(func, registered_process):
+        atexit_calls.append((func, registered_process))
+
+    def fake_terminate(registered_process):
+        runtime_calls.append(("terminate", registered_process))
+
+    def fake_exit(code):
+        runtime_calls.append(("exit", code))
+
+    process_control.register_termination_handlers(
+        process,
+        fake_terminate,
+        signal_func=fake_signal,
+        atexit_register=fake_atexit_register,
+        exit_process=fake_exit,
+    )
+    signal_calls[0][1](process_control.signal.SIGTERM, None)
+
+    assert signal_calls[0][0] == process_control.signal.SIGTERM
+    assert signal_calls[1][0] == process_control.signal.SIGINT
+    assert atexit_calls == [(fake_terminate, process)]
+    assert runtime_calls == [("terminate", process), ("exit", 0)]

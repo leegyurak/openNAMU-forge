@@ -1,18 +1,19 @@
+import flask
+
+from opennamu_forge.presentation.admin_ui_helpers import get_default_admin_group
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_default_admin_group,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_admin_repository,
     get_user_setting_repository,
 )
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+
+
 async def give_delete_admin_group(name = 'test'):
     admin = get_admin_repository()
     user_settings = get_user_setting_repository()

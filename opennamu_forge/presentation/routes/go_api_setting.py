@@ -1,8 +1,9 @@
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    python_to_golang,
-    sys,
-)
+import sys
+
+import flask
+
+from opennamu_forge.presentation.golang_gateway import python_to_golang
+
 
 async def api_setting(name = 'Test', method = '', data = ''):
     other_set = {}

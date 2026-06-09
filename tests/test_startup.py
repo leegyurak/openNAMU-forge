@@ -2,7 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from opennamu_forge.application.startup import RuntimeSettings, normalize_run_mode
+from opennamu_forge.application.startup import RuntimeStartupOptions, normalize_run_mode
 
 
 def test_run_mode는_dev만_허용한다():
@@ -12,11 +12,11 @@ def test_run_mode는_dev만_허용한다():
     assert normalize_run_mode("") == ""
 
 
-def test_runtime_settings는_불변이다():
-    settings = RuntimeSettings(run_mode="dev", host="0.0.0.0", port="3000", golang_port="3001")
+def test_runtime_options는_불변이다():
+    options = RuntimeStartupOptions(run_mode="dev", host="0.0.0.0", port="3000", golang_port="3001")
 
-    assert settings.run_mode == "dev"
-    assert settings.host == "0.0.0.0"
+    assert options.run_mode == "dev"
+    assert options.host == "0.0.0.0"
 
     with pytest.raises(FrozenInstanceError):
-        setattr(settings, "run_mode", "")
+        setattr(options, "run_mode", "")

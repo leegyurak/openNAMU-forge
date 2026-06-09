@@ -24,10 +24,10 @@ class GopenNamuProcess(Protocol):
 
     def wait(self, timeout: float | None = None): ...
 
-async def wait_for_gopennamu(data_db_set: Mapping[str, str], golang_port: str) -> None:
+async def wait_for_gopennamu(database_runtime_options: Mapping[str, str], golang_port: str) -> None:
     while True:
         try:
-            db_payload = {("db_" + key): value for key, value in data_db_set.items()}
+            db_payload = {("db_" + key): value for key, value in database_runtime_options.items()}
             payload = {
                 "url": "test",
                 "data": json_dumps(db_payload),
@@ -91,14 +91,14 @@ def start_gopennamu_process(
     cmd = [str(exe_path), golang_port, run_mode, "api"]
     return subprocess.Popen(cmd, cwd=str(bin_dir))
 
-def wait_for_gopennamu_startup(data_db_set: Mapping[str, str], golang_port: str) -> None:
+def wait_for_gopennamu_startup(database_runtime_options: Mapping[str, str], golang_port: str) -> None:
     try:
         loop = asyncio.get_running_loop()
-        loop.create_task(wait_for_gopennamu(data_db_set, golang_port))
+        loop.create_task(wait_for_gopennamu(database_runtime_options, golang_port))
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(wait_for_gopennamu(data_db_set, golang_port))
+        loop.run_until_complete(wait_for_gopennamu(database_runtime_options, golang_port))
 
 def terminate_gopennamu_process(golang_process: GopenNamuProcess) -> None:
     if golang_process.poll() is None:

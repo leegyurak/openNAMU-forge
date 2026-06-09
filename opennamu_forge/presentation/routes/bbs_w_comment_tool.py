@@ -4,6 +4,8 @@ from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
+
+
 async def bbs_w_comment_tool(bbs_num = '', post_num = '', comment_num = ''):
     data = ''
     

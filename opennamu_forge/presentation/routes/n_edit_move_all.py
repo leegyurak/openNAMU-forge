@@ -1,8 +1,10 @@
-from opennamu_forge.presentation.text_helpers import cache_v
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
+from opennamu_forge.presentation.text_helpers import cache_v
+
+
 async def edit_move_all():
     return await render_template(
         await get_lang('multiple_move'),

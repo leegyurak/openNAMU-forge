@@ -1,10 +1,12 @@
-from opennamu_forge.presentation.file_helpers import get_default_robots_txt
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    os,
-    re,
-)
+import os
+
+import flask
+
 from opennamu_forge.presentation.dependencies import get_other_setting_repository
+from opennamu_forge.presentation.file_helpers import get_default_robots_txt
+from opennamu_forge.presentation.shared.sql_dialect import re
+
+
 async def main_view_file(data = ''):
     if data == 'robots.txt':
         other_settings = get_other_setting_repository()

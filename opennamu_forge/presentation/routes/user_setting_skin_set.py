@@ -1,12 +1,13 @@
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    ip_check,
-    re_error,
-)
+import flask
+
 from opennamu_forge.presentation.dependencies import (
     get_other_setting_repository,
     get_user_setting_repository,
 )
+from opennamu_forge.presentation.response_helpers import re_error
+from opennamu_forge.presentation.shared.sql_dialect import ip_check
+
+
 async def user_setting_skin_set():
     data = flask.make_response(await re_error(5))
 

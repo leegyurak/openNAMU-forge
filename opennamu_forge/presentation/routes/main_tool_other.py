@@ -3,6 +3,8 @@ from opennamu_forge.presentation.response_helpers import (
     render_simple_set,
     render_template,
 )
+
+
 async def main_tool_other():
     return await render_template(
         await get_lang('other_tool'),

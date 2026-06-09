@@ -1,28 +1,27 @@
-from opennamu_forge.presentation.captcha_helpers import (
-    captcha_get,
-    captcha_post,
-)
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.authorization_helpers import (
     acl_check,
     ban_check,
 )
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    add_user,
-    flask,
-    ip_check,
-    ip_or_user,
-    re_error,
+from opennamu_forge.presentation.captcha_helpers import (
+    captcha_get,
+    captcha_post,
 )
-from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
-from opennamu_forge.presentation.text_helpers import number_check
+from opennamu_forge.presentation.dependencies import get_user_registration_service, get_wiki_settings_service
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     http_warning,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_wiki_settings_service
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.text_helpers import number_check
+from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
+
+
 async def login_register():
     wiki_settings = get_wiki_settings_service()
 
@@ -87,7 +86,7 @@ async def login_register():
                 return redirect('/register/submit')
 
         # 전부 아니면 바로 가입 후 /login으로 발송
-        add_user(user_id, user_pw)
+        get_user_registration_service().add_user(user_id, user_pw)
 
         return redirect('/login')
     else:

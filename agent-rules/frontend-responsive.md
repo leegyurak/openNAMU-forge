@@ -21,3 +21,9 @@ Responsive behavior is non-negotiable for all HTML/CSS/JS changes.
   - mobile: 390 x 844
 - Capture screenshots or DOM/layout metrics for frontend layout changes when browser tooling is available.
 - If browser tooling is unavailable, state that explicitly and rely on static tests, but do not skip adding responsive regression tests.
+
+## Theme Color
+
+- `NAMU_THEME_COLOR` controls the primary Forge theme color exposed through `/forge/theme.css.cache_v1`.
+- Keep `.env.example`, README, Docker docs, and frontend smoke/theme tests in sync when changing the environment variable name, default, validation, or CSS route.
+- Ringo must load `/forge/theme.css.cache_v1` and use `--forge-theme-color` variables instead of hardcoding the primary color in component styles.

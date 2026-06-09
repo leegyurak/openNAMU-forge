@@ -1,16 +1,17 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_other_setting_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_other_setting_repository
+
 from .user_setting_skin_set_main import user_setting_skin_set_main_set_list
+
 
 async def main_setting_skin_set():
     if await acl_check('', 'owner_auth', '', '') == 1:

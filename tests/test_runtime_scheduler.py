@@ -185,7 +185,7 @@ def test_back_up은_기존_백업을_정리하고_새_백업을_만든다(monkey
 def test_auto_do_something은_sqlite에서_backup과_scheduler를_시작한다(monkeypatch):
     calls = []
 
-    monkeypatch.setattr(scheduler, "back_up", lambda data_db_set: calls.append(("backup", data_db_set["type"])))
+    monkeypatch.setattr(scheduler, "back_up", lambda database_runtime_options: calls.append(("backup", database_runtime_options["type"])))
     monkeypatch.setattr(scheduler, "start_daily_scheduler", lambda: calls.append(("daily", "")))
 
     scheduler.auto_do_something({"type": "sqlite"})

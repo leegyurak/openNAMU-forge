@@ -1,22 +1,22 @@
-from opennamu_forge.presentation.encoding_helpers import json_dumps
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    get_time,
-    ip_check,
-    pw_encode,
-    re_error,
-    ua_plus,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.dependencies import (
     get_user_setting_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.encoding_helpers import json_dumps
+from opennamu_forge.presentation.password_helpers import pw_encode
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+from opennamu_forge.presentation.user_agent_helpers import ua_plus
+
+
 # 개편 필요
 async def login_find_email_check(tool):
     wiki_settings = get_wiki_settings_service()

@@ -1,10 +1,12 @@
-from opennamu_forge.presentation.text_helpers import cache_v
+from opennamu_forge.presentation.dependencies import get_bbs_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
+from opennamu_forge.presentation.text_helpers import cache_v
+
+
 async def bbs_w_set(bbs_num = ''):
     bbs = get_bbs_repository()
 

@@ -1,15 +1,16 @@
+import html
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_bbs_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    html,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
+
+
 async def bbs_w(bbs_num = '', tool = 'bbs', page = 1, name = ''):
     bbs = get_bbs_repository()
     

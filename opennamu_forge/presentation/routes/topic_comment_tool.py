@@ -1,15 +1,15 @@
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_topic_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_topic_repository
+
+
 async def topic_comment_tool(topic_num = 1, num = 1):
     topics = get_topic_repository()
     

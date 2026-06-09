@@ -31,7 +31,7 @@ class DatabaseConfig:
     postgresql_pw: str
     postgresql_port: str
 
-    def to_db_set(self) -> dict[str, str]:
+    def to_runtime_options(self) -> dict[str, str]:
         return {
             "type": self.type,
             "name": self.name,
@@ -73,36 +73,36 @@ def build_database_config_from_env(environ: Mapping[str, str] | None = None) -> 
 
 
 def build_sqlmodel_database_url(db_config: DatabaseConfigLike) -> str:
-    db_set = _db_mapping(db_config)
-    db_type = db_set["type"]
+    database_options = _database_options(db_config)
+    db_type = database_options["type"]
     if db_type == "sqlite":
-        return "sqlite:///" + db_set["name"] + ".db"
+        return "sqlite:///" + database_options["name"] + ".db"
     if db_type == "mysql":
         return (
             "mysql+pymysql://"
-            + quote_plus(db_set["mysql_user"])
+            + quote_plus(database_options["mysql_user"])
             + ":"
-            + quote_plus(db_set["mysql_pw"])
+            + quote_plus(database_options["mysql_pw"])
             + "@"
-            + db_set["mysql_host"]
+            + database_options["mysql_host"]
             + ":"
-            + str(db_set["mysql_port"])
+            + str(database_options["mysql_port"])
             + "/"
-            + db_set["name"]
+            + database_options["name"]
             + "?charset=utf8mb4"
         )
     if db_type == "postgresql":
         return (
             "postgresql+psycopg://"
-            + quote_plus(db_set["postgresql_user"])
+            + quote_plus(database_options["postgresql_user"])
             + ":"
-            + quote_plus(db_set["postgresql_pw"])
+            + quote_plus(database_options["postgresql_pw"])
             + "@"
-            + db_set["postgresql_host"]
+            + database_options["postgresql_host"]
             + ":"
-            + str(db_set["postgresql_port"])
+            + str(database_options["postgresql_port"])
             + "/"
-            + db_set["name"]
+            + database_options["name"]
         )
 
     raise ValueError("Unsupported database type: " + str(db_type))
@@ -127,11 +127,11 @@ def _env_int(name: str, *, default: int) -> int:
     return int(os.getenv(name, str(default)))
 
 
-def _db_mapping(db_config: DatabaseConfigLike) -> Mapping[str, Any]:
+def _database_options(db_config: DatabaseConfigLike) -> Mapping[str, Any]:
     if isinstance(db_config, DatabaseConfig):
-        return db_config.to_db_set()
+        return db_config.to_runtime_options()
     return db_config
 
 
 def _db_value(db_config: DatabaseConfigLike, key: str) -> Any:
-    return _db_mapping(db_config)[key]
+    return _database_options(db_config)[key]

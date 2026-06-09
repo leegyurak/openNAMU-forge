@@ -2,7 +2,7 @@ import html
 import random
 import string
 
-from opennamu_forge.config.runtime_database import get_current_db_set
+from opennamu_forge.config.runtime_database import get_current_database_runtime_options
 
 from opennamu_forge.presentation.shared.sql_dialect import re
 
@@ -33,9 +33,9 @@ class class_do_render:
         return random_string
 
     async def do_render(self, doc_name, doc_data, data_type):
-        backlinks = BacklinkRepository(get_current_db_set())
-        document_meta = DocumentMetaRepository(get_current_db_set())
-        other_settings = OtherSettingRepository(get_current_db_set())
+        backlinks = BacklinkRepository(get_current_database_runtime_options())
+        document_meta = DocumentMetaRepository(get_current_database_runtime_options())
+        other_settings = OtherSettingRepository(get_current_database_runtime_options())
 
         doc_set = {}
         if data_type == 'from':

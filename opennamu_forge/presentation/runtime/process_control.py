@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import atexit
 import os
+import signal
 import subprocess
 import sys
 import threading
 import time
 from collections.abc import Callable, Sequence
+from types import FrameType
+from typing import TypeVar
 
 from opennamu_forge.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
+ProcessT = TypeVar("ProcessT")
 
 
 def build_python_restart_candidates(
@@ -58,3 +63,21 @@ def schedule_restart() -> threading.Thread:
 def shutdown_current_process(exit_process: Callable[[], object] = sys.exit) -> None:
     logger.info("Shutdown")
     exit_process()
+
+
+def register_termination_handlers(
+    process: ProcessT,
+    terminate_process: Callable[[ProcessT], object],
+    *,
+    signal_func: Callable[..., object] = signal.signal,
+    atexit_register: Callable[..., object] = atexit.register,
+    exit_process: Callable[[int], object] = os._exit,
+) -> None:
+    def signal_handler(signal_number: int, frame: FrameType | None) -> None:
+        logger.info("EXIT SIGNAL RECEIVED")
+        terminate_process(process)
+        exit_process(0)
+
+    signal_func(signal.SIGTERM, signal_handler)
+    signal_func(signal.SIGINT, signal_handler)
+    atexit_register(terminate_process, process)

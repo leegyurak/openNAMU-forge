@@ -1,17 +1,18 @@
+import html
+
+import flask
+
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    ip_check,
-    ip_or_user,
-    load_skin,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.skin_helpers import load_skin
+
+
 async def user_setting_head(skin_name = ''):
     user_settings = get_user_setting_repository()
 

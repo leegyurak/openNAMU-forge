@@ -1,20 +1,21 @@
+import html
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    html,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_history_repository,
     get_topic_repository,
     get_wiki_document_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    render_template,
+)
+
 from .go_api_bbs_w import api_bbs_w
 from .go_api_bbs_w_comment_one import api_bbs_w_comment_one
+
 
 async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '', post_num = '', comment_num = ''):
     history = get_history_repository()

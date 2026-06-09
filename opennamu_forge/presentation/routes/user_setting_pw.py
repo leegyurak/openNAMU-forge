@@ -1,24 +1,26 @@
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.authorization_helpers import ban_check
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    ip_check,
-    ip_or_user,
-    pw_check,
-    pw_encode,
-    re_error,
-)
-from opennamu_forge.presentation.text_helpers import number_check
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    http_warning,
-    redirect,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_user_setting_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.password_helpers import (
+    pw_check,
+    pw_encode,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    http_warning,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.text_helpers import number_check
+
+
 async def user_setting_pw():
     wiki_settings = get_wiki_settings_service()
     user_settings = get_user_setting_repository()

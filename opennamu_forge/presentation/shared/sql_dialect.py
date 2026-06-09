@@ -1,33 +1,33 @@
 import datetime
 import hashlib
+import importlib
+import importlib.util
 import json
+import re as stdlib_re
 import urllib.parse
+from typing import Any
 
 import flask
 
 from opennamu_forge.application.runtime_context import get_runtime_value
-from opennamu_forge.config.runtime_database import get_current_db_set
+from opennamu_forge.config.runtime_database import get_current_database_runtime_options
 from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
 
-try:
-    import orjson
+orjson_module: Any | None = importlib.import_module("orjson") if importlib.util.find_spec("orjson") else None
+re: Any = importlib.import_module("regex") if importlib.util.find_spec("regex") else stdlib_re
 
-    def json_dumps(obj):
-        return orjson.dumps(obj).decode("utf-8")
 
-    def json_loads(s):
-        return orjson.loads(s if isinstance(s, bytes) else s.encode("utf-8"))
-except ImportError:
-    import json
+def json_dumps(obj: Any) -> str:
+    if orjson_module is not None:
+        return orjson_module.dumps(obj).decode("utf-8")
+    return json.dumps(obj)
 
-    json_dumps = json.dumps
-    json_loads = json.loads
 
-try:
-    import regex as re
-except:
-    import re
+def json_loads(s: str | bytes) -> Any:
+    if orjson_module is not None:
+        return orjson_module.loads(s if isinstance(s, bytes) else s.encode("utf-8"))
+    return json.loads(s)
 
 def get_time():
     return str(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S"))
@@ -97,8 +97,8 @@ def md5_replace(data):
     return hashlib.md5(data.encode()).hexdigest()
 
 def get_main_skin_set(flask_session, set_name, ip):
-    other_settings = OtherSettingRepository(get_current_db_set())
-    user_settings = UserSettingRepository(get_current_db_set())
+    other_settings = OtherSettingRepository(get_current_database_runtime_options())
+    user_settings = UserSettingRepository(get_current_database_runtime_options())
 
     if ip_or_user(ip) == 0:
         set_data = user_settings.get(ip, set_name) or "default"

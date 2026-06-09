@@ -1,13 +1,14 @@
+import html
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    get_next_page_bottom,
-    html,
-)
+from opennamu_forge.presentation.dependencies import get_vote_repository
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_vote_repository
+
+
 async def vote_list(list_type = 'normal', num = 1):    
     votes = get_vote_repository()
 

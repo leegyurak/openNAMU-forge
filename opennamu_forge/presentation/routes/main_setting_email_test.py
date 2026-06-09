@@ -1,13 +1,14 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     render_template,
 )
+
 from .go_api_func_email import api_func_email
+
 
 async def main_setting_email_test():
     if await acl_check('', 'owner_auth', '', '') == 1:

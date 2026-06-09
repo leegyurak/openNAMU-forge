@@ -1,20 +1,20 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import ban_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    ip_check,
-    ip_or_user,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_simple_set,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
     get_user_setting_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_simple_set,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+
+
 async def user_setting_skin_set_main_set_list():
     set_list = {
         'main_css_strike' : [

@@ -1,31 +1,30 @@
-from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.config.startup_options import get_init_set_list
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    get_acl_list,
-    get_time,
-    history_plus,
-    html,
-    ip_check,
-    ip_or_user,
-    re,
-    re_error,
-    render_set,
+from opennamu_forge.presentation.admin_ui_helpers import get_acl_list
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import (
+    get_document_meta_repository,
+    get_history_mutation_service,
+    get_wiki_document_repository,
+    get_wiki_settings_service,
 )
-from opennamu_forge.presentation.text_helpers import cache_v
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.rendering.render_helpers import render_set
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_document_meta_repository,
-    get_wiki_document_repository,
-    get_wiki_settings_service,
-)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check, ip_or_user, re
+from opennamu_forge.presentation.text_helpers import cache_v
+
+
 def view_set_markup(document_name = '', markup = '', addon = '', disable = ''):
     document_meta = get_document_meta_repository()
     wiki_settings = get_wiki_settings_service()
@@ -148,7 +147,7 @@ async def view_set(name = 'Test', multiple = False):
         if need_admin:
             await acl_check(tool = 'acl_auth', memo = check_data)
 
-        history_plus(
+        get_history_mutation_service().add_history(
             name,
             acl_text,
             time,
@@ -243,7 +242,7 @@ async def view_set(name = 'Test', multiple = False):
         data += '<hr class="main_hr">'
 
         text_area = ''
-        if multiple == True:
+        if multiple:
             text_area = '<textarea class="opennamu_forge_textarea_500 __ON_TEXTAREA__" placeholder="' + await get_lang('many_delete_help') + '" name="title_name"></textarea><hr class="main_hr">'
             menu = [
                 ['manager', await get_lang('admin')]

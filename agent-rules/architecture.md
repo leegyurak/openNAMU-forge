@@ -7,7 +7,7 @@ Use a 3-layer architecture for new code and for refactors:
 - Infrastructure layer: database models/sessions, logging, metrics, filesystem, subprocesses, network clients, external services.
 
 `opennamu_forge/config/` is a cross-cutting runtime config boundary, not a domain layer. It may parse `.env`, normalize runtime values, and expose typed config objects. It must not contain domain behavior, persistence adapters, Flask routes, SQLModel sessions, or external-process lifecycle code.
-Runtime config builders must return typed config objects such as `DatabaseConfig` and `MonitoringConfig`. When legacy bootstrap code still needs the historical `db_set` dictionary shape, convert explicitly at the boundary with a named method such as `DatabaseConfig.to_db_set()`.
+Runtime config builders must return typed config objects such as `DatabaseConfig` and `MonitoringConfig`. When legacy bootstrap code still needs the historical `database_options` dictionary shape, convert explicitly at the boundary with a named method such as `DatabaseConfig.to_database_options()`.
 
 ## Current Layout
 

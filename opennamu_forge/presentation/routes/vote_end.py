@@ -1,13 +1,13 @@
+from opennamu_forge.presentation.dependencies import get_vote_repository
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    re,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_vote_repository
+from opennamu_forge.presentation.shared.sql_dialect import re
+
+
 async def vote_end(num = 1):
     num = str(num)
     

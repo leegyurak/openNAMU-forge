@@ -1,21 +1,24 @@
-from opennamu_forge.presentation.captcha_helpers import captcha_get
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
+from opennamu_forge.presentation.captcha_helpers import captcha_get
+from opennamu_forge.presentation.edit_toolbar_helpers import ip_warning
+from opennamu_forge.presentation.edit_validation_helpers import (
     do_edit_send_check,
     do_edit_text_bottom_check_box_check,
-    flask,
     get_edit_text_bottom,
     get_edit_text_bottom_check_box,
-    ip_warning,
-    re,
-    re_error,
 )
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
+from opennamu_forge.presentation.shared.sql_dialect import re
+
 from .edit_delete import edit_delete
+
 
 async def edit_delete_multiple():
     if await acl_check('', 'acl_auth', '', '') == 1:

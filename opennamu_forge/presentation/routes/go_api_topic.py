@@ -1,18 +1,19 @@
+import html
+import sys
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    add_alarm,
-    flask,
-    html,
-    ip_or_user,
-    python_to_golang,
-    re,
-    sys,
-)
 from opennamu_forge.presentation.dependencies import (
     get_bbs_repository,
+    get_discussion_service,
     get_history_repository,
     get_topic_repository,
 )
+from opennamu_forge.presentation.golang_gateway import python_to_golang
+from opennamu_forge.presentation.shared.sql_dialect import ip_or_user, re
+
+
 def api_topic_thread_make(user_id, date, data, code, color = '', blind = '', add_style = '', admin_check = 1, topic_num = ''):
     if blind == 'O':
         if data == '':
@@ -94,12 +95,12 @@ async def api_topic_thread_pre_render(data, num, ip, topic_num = '', name = '', 
 
             if ip_data != '' and ip_or_user(ip_data) == 0:
                 if do_type == 'thread':
-                    await add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+                    await get_discussion_service().add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
                 else:
                     set_id = topic_num.split('-')
                     set_id = ['', ''] if len(set_id) < 2 else set_id
 
-                    await add_alarm(ip_data, ip, 'BBS <a href="/bbs/w/' + set_id[0] + '/' + set_id[1] + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+                    await get_discussion_service().add_alarm(ip_data, ip, 'BBS <a href="/bbs/w/' + set_id[0] + '/' + set_id[1] + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
 
             data = re.sub(call_thread_regex, rd_data[0] + '<topic_a_' + do_type + '>#' + view_data + '</topic_a_' + do_type + '>' + rd_data[3], data, 1)
 
@@ -120,10 +121,10 @@ async def api_topic_thread_pre_render(data, num, ip, topic_num = '', name = '', 
 
             if ip_data != '' and ip_or_user(ip_data) == 0:
                 if do_type == 'thread':
-                    await add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+                    await get_discussion_service().add_alarm(ip_data, ip, '<a href="/thread/' + topic_num + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
                 else:
                     set_id = topic_num.split('-')
-                    await add_alarm(ip_data, ip, 'BBS <a href="/bbs/w/' + set_id[0] + '/' + set_id[1] + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
+                    await get_discussion_service().add_alarm(ip_data, ip, 'BBS <a href="/bbs/w/' + set_id[0] + '/' + set_id[1] + '#' + num + '">' + html.escape(name) + ' - ' + html.escape(sub) + '#' + num + '</a>')
 
             data = re.sub(call_user_regex, rd_data[0] + '<topic_call>@' + rd_data[1] + '</topic_call>' + rd_data[2], data, 1)
 

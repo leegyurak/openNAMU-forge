@@ -1,24 +1,25 @@
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    html,
-    ip_check,
-    re,
-    re_error,
-    wiki_set,
-)
-from opennamu_forge.presentation.email_helpers import send_email
-from opennamu_forge.presentation.text_helpers import load_random_key
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.dependencies import (
     get_html_filter_repository,
     get_user_setting_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.email_helpers import send_email
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, re
+from opennamu_forge.presentation.skin_helpers import wiki_set
+from opennamu_forge.presentation.text_helpers import load_random_key
+
+
 # 개편 필요
 async def login_find_email(tool):
     html_filters = get_html_filter_repository()
@@ -40,7 +41,7 @@ async def login_find_email(tool):
             flask.session['c_id'] = user_id
             flask.session['c_type'] = 'pass_find'
         else:
-            if not 'c_type' in flask.session:
+            if 'c_type' not in flask.session:
                 return redirect('/register')
     
         if tool != 'pass_find':
@@ -108,7 +109,7 @@ async def login_find_email(tool):
                 [['user', await get_lang('return')]]
             )
         else:
-            if tool == 'need_email' and not 'c_type' in flask.session:
+            if tool == 'need_email' and 'c_type' not in flask.session:
                 return redirect('/register')
     
             email_insert_text = wiki_settings.get(SettingKey.EMAIL_INSERT_TEXT)

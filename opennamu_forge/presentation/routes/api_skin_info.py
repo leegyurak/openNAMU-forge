@@ -1,12 +1,10 @@
-from opennamu_forge.presentation.encoding_helpers import json_loads
-from opennamu_forge.presentation.dependencies import get_skin_info_client
+import flask
 
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    load_skin,
-    re,
-    skin_check,
-)
+from opennamu_forge.presentation.dependencies import get_skin_info_client
+from opennamu_forge.presentation.encoding_helpers import json_loads
+from opennamu_forge.presentation.shared.sql_dialect import re
+from opennamu_forge.presentation.skin_helpers import load_skin, skin_check
+
 
 async def api_skin_info(name = ''):
     name = await skin_check() if name == '' else './views/' + name + '/index.html'

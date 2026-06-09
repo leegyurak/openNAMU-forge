@@ -1,15 +1,16 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-)
+from opennamu_forge.presentation.dependencies import get_bbs_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_bbs_repository
+
 from .go_api_bbs_w import api_bbs_w
+
 
 async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
     bbs = get_bbs_repository()
@@ -25,7 +26,7 @@ async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
         return redirect('/bbs/in/' + bbs_num_str)
     
     temp_dict = await api_bbs_w(bbs_num_str + '-' + post_num_str)
-    if not 'user_id' in temp_dict:
+    if 'user_id' not in temp_dict:
         return redirect('/bbs/main')
     
     if flask.request.method == 'POST':

@@ -13,7 +13,7 @@
 - Project/runtime values from `.env`, CLI flags, DB connections, engine pools, Prometheus, Gunicorn, and process startup are `config`.
 - Use names such as `DatabaseConfig`, `MonitoringConfig`, `*_config`, and `build_*_config_from_env()`.
 - Do not use `settings` for project/runtime config; reserve `settings` for wiki/user/domain behavior.
-- Runtime config builders return typed config objects. Convert to legacy dictionaries only at an explicit boundary such as `DatabaseConfig.to_db_set()`.
+- Runtime config builders return typed config objects. Convert to legacy dictionaries only at an explicit boundary such as `DatabaseConfig.to_database_options()`.
 
 ## uv Workflow
 

@@ -1,12 +1,12 @@
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    get_next_page_bottom,
-)
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+
+
 async def list_user(arg_num = 1):
     user_settings = get_user_setting_repository()
 

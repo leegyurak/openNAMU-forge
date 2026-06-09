@@ -1,13 +1,14 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.runtime.process_control import shutdown_current_process
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     render_template,
 )
+from opennamu_forge.presentation.runtime.process_control import shutdown_current_process
+
+
 async def main_sys_shutdown():
     if await acl_check('', 'owner_auth', '', '') == 1:
         return await re_error(3)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class RuntimeSettings:
+class RuntimeStartupOptions:
     run_mode: str
     host: str
     port: str

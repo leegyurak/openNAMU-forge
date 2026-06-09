@@ -1,11 +1,9 @@
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    ip_check,
-    ip_or_user,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import redirect
 from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.response_helpers import re_error, redirect
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+
+
 async def user_watch_list_name(tool, name = 'Test'):
     user_settings = get_user_setting_repository()
 

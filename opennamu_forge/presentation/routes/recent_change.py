@@ -1,44 +1,24 @@
+import html
+from typing import cast
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_recent_change_service
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_next_page_bottom,
-    html,
-    ip_check,
-    re,
-)
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
+from opennamu_forge.presentation.recent_change_presenter import recent_change_send_render
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_history_repository
-def recent_change_send_render(data):
-    def send_render_href_replace(match):
-        match = match.group(1)
-        data_unescape = html.unescape(match)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, re
 
-        return '<a href="/w/' + url_pas(data_unescape) + '">' + match + '</a>'
-    
-    def send_render_link(match):
-        link_main = match[2]
-        link_main = link_main.replace('"', '&quot;')
-
-        return match[1] + '<a href="' + link_main + '">' + link_main + '</a>'
-
-    if data == '&lt;br&gt;' or data == '' or re.search(r'^ +$', data):
-        data = '<br>'
-    else:
-        data = data.replace('javascript:', '')
-
-        data = re.sub(r'( |^)(https?:\/\/(?:[^ ]+))', send_render_link, data)
-        data = re.sub(r'&lt;a(?:(?:(?!&gt;).)*)&gt;((?:(?!&lt;\/a&gt;).)+)&lt;\/a&gt;', send_render_href_replace, data)
-
-    return data
 
 async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
-    history = get_history_repository()
+    recent_changes = get_recent_change_service()
 
     ip = ip_check()
     
@@ -75,7 +55,9 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                     <tr id="main_table_top_tr">
         '''
 
-        sql_num = (num * 50 - 50) if num * 50 > 0 else 0
+        result = recent_changes.list_records(name, tool, num, set_type, can_page_all=all_admin == 1)
+        data_list = result.records
+        set_type = result.normalized_set_type
 
         if tool == 'history':
             div += '''
@@ -84,12 +66,6 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                 <td id="main_table_width">''' + await get_lang('time') + '''</td>
             '''
             sub = '(' + await get_lang('history') + ')'
-
-            set_type = '' if set_type == 'edit' else set_type
-            if set_type != 'normal':
-                data_list = history.list_records_by_title_type(name, set_type, offset=sql_num)
-            else:
-                data_list = history.list_records_by_title(name, offset=sql_num)
         elif tool == 'record':
             div +=  '''
                 <td id="main_table_width">''' + await get_lang('document_name') + '''</td>
@@ -97,12 +73,6 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                 <td id="main_table_width">''' + await get_lang('time') + '''</td>
             '''
             sub = '(' + await get_lang('edit_record') + ')'
-            set_type = '' if set_type == 'edit' else set_type
-
-            if set_type != 'normal':
-                data_list = history.list_records_by_ip_type(name, set_type, offset=sql_num)
-            else:
-                data_list = history.list_records_by_ip(name, offset=sql_num)
         else:
             div +=  '''
                 <td id="main_table_width">''' + await get_lang('document_name') + '''</td>
@@ -110,21 +80,10 @@ async def recent_change(name = '', tool = '', num = 1, set_type = 'normal'):
                 <td id="main_table_width">''' + await get_lang('time') + '''</td>
             '''
             sub = ''
-            set_type = '' if set_type == 'edit' else set_type
-
-            data_list = []
-
-            if num == 1 or all_admin != 1:
-                data_list = history.list_recent_change_records_by_type(set_type)
-            else:
-                if set_type != 'normal':
-                    data_list = history.list_records_by_type(set_type, offset=sql_num)
-                else:
-                    data_list = history.list_records(offset=sql_num)
 
         div += '</tr>'
 
-        all_ip = await ip_pas([i.author for i in data_list])
+        all_ip = cast(dict[str, str], await ip_pas([i.author for i in data_list]))
         for data in data_list:
             select += '<option value="' + data.revision_id + '">' + data.revision_id + '</option>'
             send = data.send

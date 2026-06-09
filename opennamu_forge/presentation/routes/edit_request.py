@@ -1,24 +1,26 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    add_alarm,
-    flask,
-    history_plus,
-    html,
-    render_set,
+from opennamu_forge.presentation.dependencies import (
+    get_discussion_service,
+    get_document_meta_repository,
+    get_history_mutation_service,
+    get_history_repository,
+    get_user_setting_repository,
+    get_wiki_document_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.rendering.render_helpers import render_set
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_document_meta_repository,
-    get_history_repository,
-    get_user_setting_repository,
-    get_wiki_document_repository,
-)
+
 from .view_diff import view_diff_do
+
 
 async def edit_request(name = 'Test', do_type = ''):
     document_meta = get_document_meta_repository()
@@ -54,12 +56,12 @@ async def edit_request(name = 'Test', do_type = ''):
             return redirect('/w/' + url_pas(name))
         
         for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
-            await add_alarm(scan_user, edit_request_user, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
+            await get_discussion_service().add_alarm(scan_user, edit_request_user, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
 
         if flask.request.form.get('check', '') == 'Y':
             wiki_documents.upsert_title(name, edit_request_data)
                     
-            history_plus(
+            get_history_mutation_service().add_history(
                 name,
                 edit_request_data,
                 edit_request_date,
@@ -75,7 +77,7 @@ async def edit_request(name = 'Test', do_type = ''):
                 data_type = 'backlink'
             )
         else:
-            history_plus(
+            get_history_mutation_service().add_history(
                 name,
                 edit_request_data,
                 edit_request_date,

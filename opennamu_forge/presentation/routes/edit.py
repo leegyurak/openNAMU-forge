@@ -1,155 +1,70 @@
-from opennamu_forge.presentation.captcha_helpers import (
-    captcha_get,
-    captcha_post,
-)
-from opennamu_forge.presentation.authorization_helpers import acl_check
-import multiprocessing
+import html
 import platform
 
-from opennamu_forge.presentation.encoding_helpers import url_pas
+import flask
 
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    add_alarm,
-    asyncio,
-    do_edit_filter,
-    do_edit_send_check,
-    do_edit_slow_check,
-    do_edit_text_bottom_check_box_check,
-    do_title_length_check,
-    edit_button,
-    flask,
-    get_edit_text_bottom,
-    get_edit_text_bottom_check_box,
-    get_main_skin_set,
-    get_time,
-    history_plus,
-    html,
-    ip_check,
-    ip_warning,
-    re,
-    re_error,
-    render_set,
-)
-from opennamu_forge.presentation.text_helpers import (
-    leng_check,
-    number_check,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+from opennamu_forge.application.dto.settings import SettingKey
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.captcha_helpers import captcha_post
 from opennamu_forge.presentation.dependencies import (
+    get_discussion_service,
     get_document_meta_repository,
+    get_history_mutation_service,
     get_history_repository,
     get_user_setting_repository,
     get_wiki_document_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.edit_presenter import edit_editor as render_edit_editor
+from opennamu_forge.presentation.edit_presenter import edit_timeout
+from opennamu_forge.presentation.edit_section_helpers import (
+    apply_section_edit_content,
+    resolve_section_edit_data,
+)
+from opennamu_forge.presentation.edit_validation_helpers import (
+    do_edit_filter,
+    do_edit_send_check,
+    do_edit_slow_check,
+    do_edit_text_bottom_check_box_check,
+    do_title_length_check,
+    get_edit_text_bottom,
+    get_edit_text_bottom_check_box,
+)
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.rendering.render_helpers import render_set
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+from opennamu_forge.presentation.text_helpers import (
+    leng_check,
+    number_check,
+)
+
 from .view_set import view_set_markup
 
-async def edit_timeout(name, content, timeout = 3):
-    try:
-        await asyncio.wait_for(
-            render_set(
-                doc_name = name,
-                doc_data = content
-            ),
-            timeout = timeout
-        )
 
-        return 0
-    except asyncio.TimeoutError:
-        return 1
-        
-async def edit_editor(ip, data_main = '', do_type = 'edit', addon = '', name = ''):
-    document_meta = get_document_meta_repository()
-    wiki_settings = get_wiki_settings_service()
-
-    monaco_editor_top = ''
-    div = ''
-
+def build_editor_markup_selector(name='', do_type='edit'):
+    markup_selector_addon = 'id="opennamu_forge_editor_markup" onclick="opennamu_forge_do_sync_monaco_markup();"'
     if do_type == 'edit':
-        help_text = wiki_settings.get(SettingKey.EDIT_HELP)
+        return view_set_markup(document_name=name, addon=markup_selector_addon)
 
-        div = document_meta.get(name, 'document_top')
-    elif do_type == 'bbs':
-        help_text = wiki_settings.get(SettingKey.BBS_HELP)
-    elif do_type == 'bbs_comment':
-        help_text = wiki_settings.get(SettingKey.BBS_COMMENT_HELP)
-    else:
-        help_text = wiki_settings.get(SettingKey.TOPIC_TEXT)
+    return view_set_markup(addon=markup_selector_addon, disable='disabled')
 
-    if do_type == 'bbs_comment':
-        do_type = 'thread'
-    elif do_type == 'bbs':
-        do_type = 'edit'
-            
-    p_text = html.escape(help_text) if help_text != '' else await get_lang('default_edit_help')
-    
-    monaco_editor_top += '<a href="javascript:opennamu_forge_do_editor_temp_save();">(' + await get_lang('load_temp_save') + ')</a> <a href="javascript:opennamu_forge_do_editor_temp_save_load();">(' + await get_lang('load_temp_save_load') + ')</a>'
-    monaco_editor_top += '<hr class="main_hr">'
-    
-    darkmode = flask.request.cookies.get('main_css_darkmode', '0')
-    monaco_thema = 'vs-dark' if darkmode == '1' else ''
-    
-    monaco_on = get_main_skin_set(flask.session, 'main_css_monaco', ip)
-    editor_display = ['style="display: none;"' for _ in range(3)]
-    if monaco_on == 'use':
-        editor_display[1] = ''
-    else:
-        editor_display[0] = ''
 
-    # 에디터 선택창
-    monaco_editor_top += '<span class="__ON_SELECT_DIV__"><select class="__ON_SELECT__" onclick="do_sync_monaco_and_textarea();" id="opennamu_forge_select_editor" onchange="opennamu_forge_edit_turn_off_monaco();">'
-    monaco_editor_top += '<option value="default" ' + ('selected' if editor_display[0] == '' else '') + '>' + await get_lang('default') + '</option>'
-    monaco_editor_top += '<option value="monaco" ' + ('selected' if editor_display[1] == '' else '') + '>' + await get_lang('monaco_editor') + '</option>'
-    monaco_editor_top += '</select></span> '
+async def edit_editor(ip, data_main='', do_type='edit', addon='', name=''):
+    return await render_edit_editor(
+        ip,
+        data_main,
+        do_type,
+        addon,
+        name,
+        markup_selector_html=build_editor_markup_selector(name, do_type),
+    )
 
-    # 문법 선택창
-    if do_type == 'edit':
-        monaco_editor_top += view_set_markup(document_name = name, addon = 'id="opennamu_forge_editor_markup" onclick="opennamu_forge_do_sync_monaco_markup();"')
-    else:
-        monaco_editor_top += view_set_markup(addon = 'id="opennamu_forge_editor_markup" onclick="opennamu_forge_do_sync_monaco_markup();"', disable = 'disabled')
-
-    textarea_size = 'opennamu_forge_textarea_500' if do_type == 'edit' else 'opennamu_forge_textarea_100'
-
-    out_field = await captcha_get() + await ip_warning() + addon
-    if out_field != '':
-        out_field += '<hr class="main_hr">'
-
-    return '''
-        <textarea class="__ON_TEXTAREA__" style="display: none;" id="opennamu_forge_edit_origin" name="doc_data_org">''' + html.escape(data_main) + '''</textarea>
-        <div>
-            ''' + monaco_editor_top + '''
-            <hr class="main_hr">
-            ''' + await edit_button() + '''
-            <div id="opennamu_forge_editor_user_button"></div>
-        </div>
-        
-        ''' + div + '''
-
-        <div id="opennamu_forge_monaco_editor" class="''' + textarea_size + '''" ''' + editor_display[1] + '''></div>
-        <textarea id="opennamu_forge_edit_textarea" class="''' + textarea_size + ''' __ON_TEXTAREA__" ''' + editor_display[0] + ''' name="content" placeholder="''' + p_text + '''">''' + html.escape(data_main) + '''</textarea>
-        <hr class="main_hr">
-        ''' + out_field + '''
-        
-        <script>
-            window.addEventListener('DOMContentLoaded', function() {
-                do_stop_exit();
-                do_paste_image();
-                do_monaco_init("''' + monaco_thema + '''");
-                opennnamu_do_user_editor();
-            });
-        </script>
-                        
-        <button class="__ON_BUTTON__" id="opennamu_forge_save_button" type="submit" onclick="do_stop_exit_release();">''' + await get_lang('send') + '''</button>
-        <button class="__ON_BUTTON__" id="opennamu_forge_preview_button" type="button" onclick="opennamu_forge_do_editor_preview();">''' + await get_lang('preview') + '''</button>
-        <hr class="main_hr">
-
-        <div id="opennamu_forge_preview_area"></div>
-    '''
 
 async def edit(name = 'Test', section = 0, do_type = ''):
     document_meta = get_document_meta_repository()
@@ -213,23 +128,12 @@ async def edit(name = 'Test', section = 0, do_type = ''):
             o_data = wiki_documents.get_data(name).replace('\r', '')
 
             if section != '':
-                if flask.request.form.get('doc_section_edit_apply', 'X') != 'X':
-                    if flask.request.form.get('doc_section_data_where', '') != '':
-                        data_match_where = flask.request.form.get('doc_section_data_where', '').split(',')
-                        if len(data_match_where) == 2:
-                            data_match_a = int(number_check(data_match_where[0]))
-                            if data_match_where[1] != 'inf':
-                                data_match_b = int(number_check(data_match_where[1]))
-                            else:
-                                data_match_b = 'inf'
-
-                            try:
-                                if data_match_b != 'inf':
-                                    content = o_data[ : data_match_a] + content + o_data[data_match_b : ]
-                                else:
-                                    content = o_data[ : data_match_a] + content
-                            except:
-                                pass
+                content = apply_section_edit_content(
+                    original_content=o_data,
+                    section_content=content,
+                    section_where=flask.request.form.get('doc_section_data_where', ''),
+                    section_apply=flask.request.form.get('doc_section_edit_apply', 'X'),
+                )
 
             leng = leng_check(len(o_data), len(content))
         else:
@@ -255,9 +159,9 @@ async def edit(name = 'Test', section = 0, do_type = ''):
             wiki_documents.upsert_title(name, content)
     
             for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
-                await add_alarm(scan_user, ip, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
+                await get_discussion_service().add_alarm(scan_user, ip, '<a href="/w/' + url_pas(name) + '">' + html.escape(name) + '</a>')
                     
-            history_plus(
+            get_history_mutation_service().add_history(
                 name,
                 content,
                 today,
@@ -283,7 +187,7 @@ async def edit(name = 'Test', section = 0, do_type = ''):
             document_meta.upsert(name, 'edit_request_doing', today, doc_rev=doc_ver)
 
             for scan_user in user_settings.list_ids_by_name_data('watchlist', name):
-                await add_alarm(scan_user, ip, '<a href="/edit_request/' + url_pas(name) + '">' + html.escape(name) + '</a> edit_request')
+                await get_discussion_service().add_alarm(scan_user, ip, '<a href="/edit_request/' + url_pas(name) + '">' + html.escape(name) + '</a> edit_request')
         
             return redirect('/edit_request_from/' + url_pas(name))
     else:
@@ -313,41 +217,10 @@ async def edit(name = 'Test', section = 0, do_type = ''):
 
             if section != '':
                 markup = wiki_settings.get(SettingKey.MARKUP, default='namumark')
-                if markup in ('namumark', 'namumark_beta'):
-                    count = 1
-                    data_section = '\n' + data + '\n'
-                    
-                    while 1:
-                        data_match_re = r'\n((={1,6})(#?) ?([^\n]+)=)\n'
-                        data_match = re.search(data_match_re, data_section)
-                        if not data_match:
-                            data_section = ''
-
-                            break
-                        elif count > section:
-                            data_section = ''
-
-                            break
-
-                        if section == count:
-                            data_section_sub = data_section
-                            data_section_sub = re.sub(data_match_re, ('.' * (len(data_match.group(0)) - 1)) + '\n', data_section_sub, 1)
-
-                            data_match_plus = re.search(data_match_re, data_section_sub)
-                            if data_match_plus:
-                                data_section = data[data_match.span()[0] : data_match_plus.span()[0] - 1]
-                                data_section_where = str(data_match.span()[0]) + ',' + str(data_match_plus.span()[0] - 1)
-                            else:
-                                data_section = data[data_match.span()[0] : ]
-                                data_section_where = str(data_match.span()[0]) + ',inf'
-
-                            doc_section_edit_apply = 'O'
-
-                            break
-                        else:
-                            data_section = re.sub(data_match_re, ('.' * (len(data_match.group(0)) - 1)) + '\n', data_section, 1)
-
-                        count += 1
+                section_edit_data = resolve_section_edit_data(data, section, markup)
+                data_section = section_edit_data.content
+                data_section_where = section_edit_data.where
+                doc_section_edit_apply = section_edit_data.apply
         else:
             data = flask.request.form.get('content', '')
             data = data.replace('\r', '')
@@ -395,7 +268,12 @@ async def edit(name = 'Test', section = 0, do_type = ''):
                     <input class="__ON_INPUT__" placeholder="''' + await get_lang('why') + '''" name="send">
                     <hr class="main_hr">
                     
-                    ''' + await edit_editor(ip, data_section, addon = get_edit_text_bottom_check_box() + get_edit_text_bottom('edit') , name = name) + '''
+                    ''' + await edit_editor(
+                        ip,
+                        data_section,
+                        addon=get_edit_text_bottom_check_box() + get_edit_text_bottom('edit'),
+                        name=name,
+                    ) + '''
                 </form>
             ''',
             sub_title + sub_menu,

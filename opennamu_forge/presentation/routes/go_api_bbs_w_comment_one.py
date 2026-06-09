@@ -1,8 +1,9 @@
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    python_to_golang,
-    sys,
-)
+import sys
+
+import flask
+
+from opennamu_forge.presentation.golang_gateway import python_to_golang
+
 
 async def api_bbs_w_comment_one(sub_code = '', tool = ''):
     other_set = {}

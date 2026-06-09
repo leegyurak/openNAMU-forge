@@ -1,16 +1,18 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
+
 from .go_api_func_language import api_func_language
 from .go_api_setting import api_setting
+
 
 async def main_setting_404_page():
     if await acl_check('', 'owner_auth', '', '') == 1:

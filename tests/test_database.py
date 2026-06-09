@@ -41,8 +41,8 @@ def test_env_database_config는_sqlite를_default로_사용한다():
     assert db_config.name == "data"
 
 
-def test_database_config는_legacy_db_set으로_명시_변환된다():
+def test_database_config는_runtime_options로_명시_변환된다():
     db_config = build_database_config_from_env({"NAMU_DB_TYPE": "postgresql", "NAMU_DB": "wiki"})
 
-    assert db_config.to_db_set()["type"] == "postgresql"
-    assert db_config.to_db_set()["name"] == "wiki"
+    assert db_config.to_runtime_options()["type"] == "postgresql"
+    assert db_config.to_runtime_options()["name"] == "wiki"

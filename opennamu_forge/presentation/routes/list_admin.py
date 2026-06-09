@@ -1,10 +1,12 @@
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+
+
 async def list_admin():
     user_settings = get_user_setting_repository()
 

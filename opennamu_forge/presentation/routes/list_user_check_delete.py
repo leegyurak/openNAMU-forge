@@ -1,15 +1,16 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_user_agent_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_agent_repository
+
+
 async def list_user_check_delete(name = None, ip = None, time = None, do_type = 1):
     user_agents = get_user_agent_repository()
 

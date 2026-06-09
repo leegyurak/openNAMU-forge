@@ -1,10 +1,9 @@
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    ip_check,
-    re_error,
-)
-from opennamu_forge.presentation.response_helpers import redirect
 from opennamu_forge.presentation.dependencies import get_vote_repository
+from opennamu_forge.presentation.response_helpers import re_error, redirect
+from opennamu_forge.presentation.shared.sql_dialect import ip_check
+
+
 async def vote_close(num = 1):
     num = str(num)
     

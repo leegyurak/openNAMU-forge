@@ -1,19 +1,20 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    ip_check,
-    ip_or_user,
-    re_error,
-)
-from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
+
+
 async def user_setting_user_name(user_name = ''):
     user_settings = get_user_setting_repository()
 

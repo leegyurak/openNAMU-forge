@@ -1,16 +1,18 @@
+import html
+
+import flask
+
+from opennamu_forge.presentation.dependencies import get_topic_repository
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_next_page_bottom,
-    html,
-)
-from opennamu_forge.presentation.text_helpers import number_check
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_topic_repository
+from opennamu_forge.presentation.text_helpers import number_check
+
+
 async def recent_record_topic(name = 'Test'):
     topics = get_topic_repository()
 

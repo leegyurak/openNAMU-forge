@@ -1,15 +1,15 @@
+import html
+
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    html,
-    re,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from .recent_change import recent_change_send_render
+from opennamu_forge.presentation.shared.sql_dialect import re
 
 from .go_api_list_recent_edit_request import api_list_recent_edit_request
+from .recent_change import recent_change_send_render
+
 
 async def recent_edit_request():
     div = ''

@@ -45,7 +45,7 @@ def run_migrate() -> int:
         logger.info("Alembic migrations are not enabled for DB type: %s", db_config.type)
         return 0
 
-    result = run_schema_migrations(db_config.to_db_set())
+    result = run_schema_migrations(db_config.to_runtime_options())
     logger.info("Alembic migration completed. table_count=%d", len(result.table_names))
     result.engine.dispose()
     return 0

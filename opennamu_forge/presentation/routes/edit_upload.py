@@ -1,38 +1,40 @@
+import html
+import os
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
+from opennamu_forge.presentation.authorization_helpers import acl_check
 from opennamu_forge.presentation.captcha_helpers import (
     captcha_get,
     captcha_post,
 )
-from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.file_helpers import load_image_url
-from opennamu_forge.presentation.encoding_helpers import sha224_replace
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    get_time,
-    history_plus,
-    html,
-    ip_check,
-    os,
-    re,
-    re_error,
-    render_set,
+from opennamu_forge.presentation.dependencies import (
+    get_history_mutation_service,
+    get_html_filter_repository,
+    get_upload_policy_service,
+    get_wiki_document_repository,
+    get_wiki_settings_service,
 )
+from opennamu_forge.presentation.encoding_helpers import sha224_replace
+from opennamu_forge.presentation.file_helpers import load_image_url
+from opennamu_forge.presentation.rendering.render_helpers import render_set
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check, re
 from opennamu_forge.presentation.text_helpers import (
     cache_v,
     number_check,
 )
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
-from opennamu_forge.presentation.dependencies import (
-    get_html_filter_repository,
-    get_wiki_document_repository,
-    get_wiki_settings_service,
-)
+
+
 async def edit_upload():
     html_filters = get_html_filter_repository()
+    upload_policy = get_upload_policy_service()
     wiki_documents = get_wiki_document_repository()
     wiki_settings = get_wiki_settings_service()
 
@@ -50,20 +52,19 @@ async def edit_upload():
         file_data = flask.request.files.getlist("f_data[]")
         file_len = len(file_data)
 
-        file_size_all = flask.request.content_length
-        if file_size_all == None:
-            file_size_all = 0
+        file_size_all = upload_policy.normalize_content_length(flask.request.content_length)
 
-        if (file_max * 1000 * 1000 * file_len) < file_size_all or file_size_all == 0:
+        if upload_policy.is_size_invalid(file_max, file_len, file_size_all):
             return await re_error(17)
 
-        if file_len == 1:
-            file_num = None
-        else:
+        can_many_upload = True
+        if file_len != 1:
             if await acl_check('', 'many_upload') == 1:
-                return await re_error(0)
+                can_many_upload = False
 
-            file_num = 1
+        file_num = upload_policy.initial_file_number(file_len, can_many_upload=can_many_upload)
+        if file_num == 0:
+            return await re_error(0)
 
         for data in file_data:
             file_name = data.filename if data.filename else ''
@@ -76,14 +77,10 @@ async def edit_upload():
                 value = value_tmp[1]
 
             extension = [i.html.lower() for i in html_filters.list_by_kind('extension')]
-            if not re.sub(r'^\.', '', value).lower() in extension:
+            if re.sub(r'^\.', '', value).lower() not in extension:
                 return await re_error(14)
 
-            name = ''
-            if flask.request.form.get('f_name', None):
-                name = flask.request.form.get('f_name', '') + (' ' + str(file_num) if file_num else '') + value
-            else:
-                name = file_name
+            name = upload_policy.build_upload_title(file_name, flask.request.form.get('f_name', ''), file_num, value)
 
             piece = os.path.splitext(name)
             if re.search(r'\.', piece[0]):
@@ -111,17 +108,11 @@ async def edit_upload():
             file_size = os.stat(os.path.join(data_url_image, e_data)).st_size
             file_size = str(round(file_size / 1000, 1))
 
-            if wiki_settings.get(SettingKey.MARKUP) == 'namumark':
-                file_d = '' + \
-                    flask.request.form.get('f_lice_sel', 'direct_input') + '\n' + \
-                    '[[category:' + re.sub(r'\]', '_', flask.request.form.get('f_lice_sel', '')) + ']]\n' + \
-                    (g_lice if g_lice != '' else '') + \
-                ''
-            else:
-                file_d = '' + \
-                    flask.request.form.get('f_lice_sel', 'direct_input') + '\n' + \
-                    (g_lice if g_lice != '' else '') + \
-                ''
+            file_d = upload_policy.build_file_document_text(
+                wiki_settings.get(SettingKey.MARKUP),
+                flask.request.form.get('f_lice_sel', 'direct_input'),
+                g_lice if g_lice != '' else '',
+            )
 
             wiki_documents.upsert_title('file:' + name, file_d)
 
@@ -131,7 +122,7 @@ async def edit_upload():
                 data_type = 'backlink'
             )
 
-            history_plus(
+            get_history_mutation_service().add_history(
                 'file:' + name,
                 file_d,
                 get_time(),

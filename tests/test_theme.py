@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from opennamu_forge.presentation.theme import DEFAULT_THEME_COLOR, build_theme_css, normalize_theme_color
@@ -23,3 +25,16 @@ def test_theme_css는_css_variable을_생성한다():
 
     assert "--forge-theme-color: #123456;" in css
     assert "--forge-theme-color-strong:" in css
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        ".env.example",
+        "README.md",
+        "docs/docker.md",
+        "agent-rules/frontend-responsive.md",
+    ),
+)
+def test_theme_color_env는_문서화되어_있다(path):
+    assert "NAMU_THEME_COLOR" in Path(path).read_text(encoding="utf-8")

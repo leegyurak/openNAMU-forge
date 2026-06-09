@@ -1,22 +1,24 @@
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import (
+    get_admin_repository,
+    get_wiki_settings_service,
+)
 from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.identity_helpers import ip_pas
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    get_next_page_bottom,
-    html,
-    ip_or_user,
-)
+from opennamu_forge.presentation.pagination_helpers import get_next_page_bottom
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_admin_repository,
-    get_wiki_settings_service,
-)
+from opennamu_forge.presentation.shared.sql_dialect import ip_or_user
+
+
 async def list_admin_auth_use(arg_num = 1, arg_search = 'normal'):
     admin = get_admin_repository()
     wiki_settings = get_wiki_settings_service()

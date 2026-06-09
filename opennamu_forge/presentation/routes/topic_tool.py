@@ -1,9 +1,11 @@
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_topic_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_topic_repository
+
+
 async def topic_tool(topic_num = 1):
     topics = get_topic_repository()
 

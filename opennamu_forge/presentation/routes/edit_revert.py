@@ -1,40 +1,43 @@
+import html
+
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
+from opennamu_forge.presentation.authorization_helpers import acl_check
 from opennamu_forge.presentation.captcha_helpers import (
     captcha_get,
     captcha_post,
 )
-from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    do_edit_filter,
-    do_edit_send_check,
-    do_edit_slow_check,
-    do_edit_text_bottom_check_box_check,
-    flask,
-    get_edit_text_bottom,
-    get_edit_text_bottom_check_box,
-    get_time,
-    history_plus,
-    html,
-    ip_check,
-    ip_warning,
-    re_error,
-    render_set,
-)
-from opennamu_forge.presentation.text_helpers import (
-    leng_check,
-    number_check,
-)
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
 from opennamu_forge.presentation.dependencies import (
+    get_history_mutation_service,
     get_history_repository,
     get_wiki_document_repository,
     get_wiki_settings_service,
 )
+from opennamu_forge.presentation.edit_toolbar_helpers import ip_warning
+from opennamu_forge.presentation.edit_validation_helpers import (
+    do_edit_filter,
+    do_edit_send_check,
+    do_edit_slow_check,
+    do_edit_text_bottom_check_box_check,
+    get_edit_text_bottom,
+    get_edit_text_bottom_check_box,
+)
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.rendering.render_helpers import render_set
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+from opennamu_forge.presentation.text_helpers import (
+    leng_check,
+    number_check,
+)
+
+
 async def edit_revert(name, num):
     history = get_history_repository()
     wiki_documents = get_wiki_document_repository()
@@ -82,7 +85,7 @@ async def edit_revert(name, num):
 
         wiki_documents.upsert_title(name, data)
 
-        history_plus(
+        get_history_mutation_service().add_history(
             name,
             data,
             get_time(),

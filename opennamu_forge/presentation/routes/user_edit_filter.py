@@ -1,20 +1,21 @@
+import html
+
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    ip_check,
-    re,
+from opennamu_forge.presentation.dependencies import (
+    get_html_filter_repository,
+    get_user_setting_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import url_pas
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_html_filter_repository,
-    get_user_setting_repository,
-)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, re
+
+
 async def user_edit_filter(name = ''):
     html_filters = get_html_filter_repository()
     user_settings = get_user_setting_repository()

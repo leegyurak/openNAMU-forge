@@ -1,14 +1,15 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    re_error,
-)
+from opennamu_forge.presentation.dependencies import get_topic_repository
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_topic_repository
+
+
 async def topic_comment_delete(topic_num = 1, num = 1):
     if await acl_check(tool = 'owner_auth') == 1:
         return await re_error(3)

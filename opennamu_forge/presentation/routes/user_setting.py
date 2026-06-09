@@ -1,20 +1,21 @@
+import html
+
+import flask
+
 from opennamu_forge.config.startup_options import get_init_set_list
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_user_title_list,
-    html,
-    ip_check,
-    ip_or_user,
-    load_skin,
-    pw_encode,
-)
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.password_helpers import pw_encode
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     http_warning,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_user_setting_repository
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+from opennamu_forge.presentation.skin_helpers import load_skin
+from opennamu_forge.presentation.user_title_helpers import get_user_title_list
+
+
 async def user_setting():
     user_settings = get_user_setting_repository()
 
@@ -30,7 +31,7 @@ async def user_setting():
                 ['user_title', flask.request.form.get('user_title', '')],
                 ['sub_user_name' , flask.request.form.get('sub_user_name', '')]
             ]
-            if not auto_list[2][1] in await get_user_title_list(ip):
+            if auto_list[2][1] not in await get_user_title_list(ip):
                 auto_list[2][1] = ''
 
             twofa_on = flask.request.form.get('2fa', '')
@@ -149,12 +150,12 @@ async def user_setting():
             return redirect('/change')
         else:
             div2 = await load_skin(
-                ('' if not 'skin' in flask.session else flask.session['skin']), 
+                ('' if 'skin' not in flask.session else flask.session['skin']), 
                 0, 
                 1
             )
 
-            data = [['default']] if not 'lang' in flask.session else [[flask.session['lang']]]
+            data = [['default']] if 'lang' not in flask.session else [[flask.session['lang']]]
             div3 = ''
             for lang_data in support_language:
                 see_data = lang_data if lang_data != 'default' else await get_lang('default')

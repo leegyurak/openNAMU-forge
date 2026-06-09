@@ -14,6 +14,7 @@ Repositories are infrastructure adapters. They must stay thin, deterministic, an
 - DTOs live in `opennamu_forge/application/dto/`.
 - Mapper functions live near the concrete adapter under `opennamu_forge/infrastructure/mappers/`.
 - Mapping from SQLModel row to DTO must happen in mapper functions, not in route code.
+- Mapper batch conversion functions may use comprehensions for row-to-DTO or row-to-model conversion only; repository implementations must still avoid explicit loops, comprehensions, generators, and `list()` conversions.
 
 ## Settings
 

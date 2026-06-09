@@ -1,81 +1,35 @@
-from opennamu_forge.presentation.authorization_helpers import acl_check
+import html
+
+import flask
+
 from opennamu_forge.application.runtime_context import get_runtime_value
 from opennamu_forge.config.startup_options import get_init_set_list
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    html,
-    load_skin,
-    re_error,
-)
-from opennamu_forge.presentation.text_helpers import load_random_key
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_main_settings_form_service
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_simple_set,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import get_other_setting_repository
+from opennamu_forge.presentation.skin_helpers import load_skin
+
+
 async def main_setting_main():
     if await acl_check('', 'owner_auth', '', '') == 1:
         return await re_error(0)
 
-    other_settings = get_other_setting_repository()
-    
-    setting_list = {
-        0 : ['name', 'Wiki'],
-        2 : ['frontpage', 'FrontPage'],
-        4 : ['upload', '2'],
-        5 : ['skin', ''],
-        7 : ['reg', ''],
-        8 : ['ip_view', ''],
-        9 : ['back_up', ''],
-        10 : ['port', '3000'],
-        11 : ['key', load_random_key()],
-        15 : ['encode', 'sha3'],
-        16 : ['host', '0.0.0.0'],
-        19 : ['slow_edit', ''],
-        20 : ['requires_approval', ''],
-        21 : ['backup_where', ''],
-        22 : ['domain', ''],
-        23 : ['ua_get', ''],
-        24 : ['enable_comment', ''],
-        26 : ['edit_bottom_compulsion', ''],
-        27 : ['http_select', 'http'],
-        28 : ['title_max_length', ''],
-        29 : ['title_topic_max_length', ''],
-        30 : ['password_min_length', ''],
-        31 : ['wiki_access_password_need', ''],
-        32 : ['wiki_access_password', ''],
-        33 : ['history_recording_off', ''],
-        34 : ['namumark_compatible', ''],
-        35 : ['user_name_view', ''],
-        36 : ['link_case_insensitive', ''],
-        37 : ['move_with_redirect', ''],
-        38 : ['slow_thread', ''],
-        39 : ['edit_timeout', '5'],
-        40 : ['document_content_max_length', ''],
-        41 : ['backup_count', ''],
-        42 : ['ua_expiration_date', ''],
-        43 : ['auth_history_expiration_date', ''],
-        44 : ['auth_history_off', ''],
-        45 : ['user_name_level', ''],
-        46 : ['load_ip_select', ''],
-        47 : ['not_use_view_count', '']
-    }
+    main_settings = get_main_settings_form_service()
 
     if flask.request.method == 'POST':
-        update_values = {}
-        for i in setting_list:
-            update_values[setting_list[i][0]] = flask.request.form.get(setting_list[i][0], setting_list[i][1])
-        other_settings.set_many(update_values)
+        main_settings.update_from_form(flask.request.form.to_dict())
 
         await acl_check(tool = 'owner_auth', memo = 'edit_set (main)')
 
         return redirect('/setting/main')
     else:
-        d_list = {}
-        for i in setting_list:
-            d_list[i] = other_settings.ensure(setting_list[i][0], default=setting_list[i][1])
+        d_list = main_settings.load_form_values()
 
         init_set_list = get_init_set_list()
             
@@ -100,7 +54,7 @@ async def main_setting_main():
         check_box_div = [7, 8, '', 20, 23, 24, '', 26, 31, 33, 34, 35, 36, 37, 44, 45, 47]
         for i in range(0, len(check_box_div)):
             acl_num = check_box_div[i]
-            if acl_num != '' and d_list[acl_num]:
+            if isinstance(acl_num, int) and d_list[acl_num]:
                 check_box_div[i] = 'checked="checked"'
             else:
                 check_box_div[i] = ''

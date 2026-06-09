@@ -1,25 +1,26 @@
-from opennamu_forge.presentation.encoding_helpers import json_dumps
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    pw_encode,
-    re_error,
-)
-from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
-from opennamu_forge.presentation.response_helpers import (
-    get_lang,
-    redirect,
-    render_template,
-)
+import flask
+
 from opennamu_forge.presentation.dependencies import (
     get_other_setting_repository,
     get_user_setting_repository,
 )
+from opennamu_forge.presentation.encoding_helpers import json_dumps
+from opennamu_forge.presentation.password_helpers import pw_encode
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    re_error,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.user_validation_helpers import do_user_name_check
+
+
 async def login_register_submit():
     session_reset_list = ['submit_id', 'submit_pw', 'submit_email']
     other_settings = get_other_setting_repository()
     user_settings = get_user_setting_repository()
 
-    if not 'submit_id' in flask.session:
+    if 'submit_id' not in flask.session:
         for for_a in session_reset_list:
             flask.session.pop(for_a, None)
 

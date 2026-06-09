@@ -1,18 +1,18 @@
-from opennamu_forge.presentation.shared.func import (
-    SettingKey,
-    flask,
-    ip_check,
-    ip_or_user,
+import flask
+
+from opennamu_forge.application.dto.settings import SettingKey
+from opennamu_forge.presentation.dependencies import (
+    get_user_setting_repository,
+    get_wiki_settings_service,
 )
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
     redirect,
     render_template,
 )
-from opennamu_forge.presentation.dependencies import (
-    get_user_setting_repository,
-    get_wiki_settings_service,
-)
+from opennamu_forge.presentation.shared.sql_dialect import ip_check, ip_or_user
+
+
 async def user_setting_email_check():
     user_settings = get_user_setting_repository()
     wiki_settings = get_wiki_settings_service()
@@ -22,15 +22,14 @@ async def user_setting_email_check():
         return redirect('/login')
 
     re_set_list = ['c_key', 'c_email']
-    if  not 'c_key' in flask.session or \
-        not 'c_email' in flask.session:
+    if  'c_key' not in flask.session or \
+        'c_email' not in flask.session:
         for i in re_set_list:
             flask.session.pop(i, None)
 
     if  flask.request.method == 'POST':
         ip = ip_check()
         input_key = flask.request.form.get('key', '')
-        user_agent = flask.request.headers.get('User-Agent', '')
 
         if flask.session['c_key'] == input_key:
             user_settings.upsert(ip, "email", flask.session['c_email'])

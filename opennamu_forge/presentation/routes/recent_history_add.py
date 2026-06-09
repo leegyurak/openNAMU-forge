@@ -1,18 +1,18 @@
+import flask
+
 from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.dependencies import get_history_mutation_service
 from opennamu_forge.presentation.encoding_helpers import url_pas
-from opennamu_forge.presentation.shared.func import (
-    flask,
-    get_time,
-    history_plus,
-    ip_check,
-    re_error,
-)
 from opennamu_forge.presentation.response_helpers import (
     get_lang,
+    re_error,
     redirect,
     render_template,
 )
+from opennamu_forge.presentation.shared.sql_dialect import get_time, ip_check
+
 from .edit import edit_editor
+
 
 async def recent_history_add(name = 'Test', do_type = ''):
 
@@ -27,7 +27,7 @@ async def recent_history_add(name = 'Test', do_type = ''):
         content = flask.request.form.get('content', '')
         leng = '+' + str(len(content))
 
-        history_plus(
+        get_history_mutation_service().add_history(
             name,
             content,
             today,

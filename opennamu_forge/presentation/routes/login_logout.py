@@ -1,5 +1,8 @@
-from opennamu_forge.presentation.shared.func import flask
+import flask
+
 from opennamu_forge.presentation.response_helpers import redirect
+
+
 async def login_logout():
     return_url = flask.request.args.get('return', '')
     if not return_url.startswith('/') or return_url.startswith('//') or '\\' in return_url:

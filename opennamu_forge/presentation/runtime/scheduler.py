@@ -32,7 +32,7 @@ async def make_auto_sitemap() -> None:
 
     await main_setting_sitemap(1)
 
-def back_up(data_db_set: Mapping[str, str]) -> None:
+def back_up(database_runtime_options: Mapping[str, str]) -> None:
     try:
         settings = get_other_setting_repository()
         back_time_data = settings.get("back_up")
@@ -42,7 +42,7 @@ def back_up(data_db_set: Mapping[str, str]) -> None:
         back_up_count = int(number_check(back_up_count_data)) if back_up_count_data != "" else 3
 
         if back_time != 0:
-            back_up_where = settings.get("backup_where") or data_db_set["name"] + ".db"
+            back_up_where = settings.get("backup_where") or database_runtime_options["name"] + ".db"
 
             logger.info("Back up state : %s hours", back_time)
             logger.info("Back up directory : %s", back_up_where)
@@ -67,7 +67,7 @@ def back_up(data_db_set: Mapping[str, str]) -> None:
 
             now_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             new_file_name = re.sub(r"\.db$", "_" + now_time + ".db", back_up_where)
-            shutil.copyfile(data_db_set["name"] + ".db", new_file_name)
+            shutil.copyfile(database_runtime_options["name"] + ".db", new_file_name)
 
             logger.info("Back up : OK (%s)", new_file_name)
         else:
@@ -79,7 +79,7 @@ def back_up(data_db_set: Mapping[str, str]) -> None:
 
         back_time = 1
 
-    threading.Timer(60 * 60 * back_time, back_up, [data_db_set]).start()
+    threading.Timer(60 * 60 * back_time, back_up, [database_runtime_options]).start()
 
 async def do_every_day() -> None:
     time_today = get_time().split()[0]
@@ -161,8 +161,8 @@ def start_daily_scheduler() -> None:
         if _daily_task is None or _daily_task.done():
             _daily_task = loop.create_task(daily_loop())
 
-def auto_do_something(data_db_set: Mapping[str, str]) -> None:
-    if data_db_set["type"] == "sqlite":
-        back_up(data_db_set)
+def auto_do_something(database_runtime_options: Mapping[str, str]) -> None:
+    if database_runtime_options["type"] == "sqlite":
+        back_up(database_runtime_options)
 
     start_daily_scheduler()
