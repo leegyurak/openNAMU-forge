@@ -1,0 +1,63 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    background: var(--forge-bg);
+    color: var(--forge-text);
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic",
+        "Nanum Gothic", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--forge-text);
+    background: var(--forge-bg);
+    min-height: 100vh;
+}
+
+select,
+textarea,
+input,
+button {
+    font: inherit;
+}
+
+textarea {
+    font-family: Consolas, Monaco, "Courier New", Courier, "Lucida Console",
+        monospace;
+}
+
+a {
+    color: var(--forge-link);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--forge-link-hover);
+    text-decoration: underline;
+}
+
+button {
+    cursor: pointer;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.iconify {
+    display: inline-block;
+    vertical-align: -2px;
+}
+
+body.drawer-open {
+    overflow: hidden;
+}

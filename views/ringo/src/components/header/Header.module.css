@@ -1,0 +1,152 @@
+.root {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+    background: var(--namu-header-bg);
+    color: var(--namu-header-text);
+    border-bottom: 2px solid var(--forge-theme-color);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 12px;
+    height: 50px;
+}
+
+.hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--namu-header-text);
+    border-radius: 4px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.hamburger:hover,
+.hamburger:focus-visible {
+    background: var(--namu-hover);
+    outline: none;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    height: 36px;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--namu-header-text);
+    text-decoration: none;
+    border-radius: 4px;
+    max-width: 30vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0;
+}
+
+.logo:hover {
+    background: var(--namu-hover);
+    color: var(--namu-header-text);
+    text-decoration: none;
+}
+
+.searchSlot {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    padding: 0 8px;
+}
+
+.right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+
+.iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--namu-header-text);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    text-decoration: none;
+    transition: background 0.12s ease;
+}
+
+.iconButton:hover {
+    background: var(--namu-hover);
+    color: var(--namu-header-text);
+    text-decoration: none;
+}
+
+.alarmDot {
+    position: relative;
+}
+
+.alarmDot::after {
+    content: "";
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 8px;
+    height: 8px;
+    background: #ff5252;
+    border-radius: 50%;
+    border: 2px solid var(--namu-header-bg);
+}
+
+.mobileSearchBar {
+    display: none;
+    padding: 6px 10px 8px;
+    background: var(--namu-header-bg);
+    border-top: 1px solid var(--namu-border);
+}
+
+@media (max-width: 900px) {
+    .searchSlot {
+        display: none;
+    }
+    .mobileSearchBar {
+        display: flex;
+    }
+}
+
+@media (max-width: 768px) {
+    .inner {
+        padding: 0 8px;
+        height: 48px;
+    }
+    .hamburger,
+    .iconButton {
+        width: 34px;
+        height: 34px;
+    }
+    .logo {
+        font-size: 15px;
+        max-width: 40vw;
+    }
+}

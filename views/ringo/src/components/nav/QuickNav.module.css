@@ -1,0 +1,44 @@
+.root {
+    position: fixed;
+    right: 14px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 950;
+}
+
+.button {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background: var(--namu-panel-bg);
+    color: var(--namu-text-muted);
+    border: 1px solid var(--namu-border-strong);
+    box-shadow: var(--namu-shadow);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 17px;
+    line-height: 1;
+    transition: background 0.12s ease, color 0.12s ease,
+        border-color 0.12s ease;
+}
+
+.button:hover {
+    background: var(--forge-theme-color);
+    color: #ffffff;
+    border-color: var(--forge-theme-color);
+}
+
+@media (max-width: 768px) {
+    .root {
+        right: 10px;
+        bottom: 10px;
+    }
+    .button {
+        width: 34px;
+        height: 34px;
+    }
+}

@@ -1,0 +1,126 @@
+:root {
+    --forge-theme-color: #008275;
+    --forge-theme-color-strong: #015f55;
+    --forge-theme-color-muted: rgba(0, 130, 117, 0.14);
+    --forge-theme-color-surface: #e8f5f2;
+
+    --namu-page-bg: #f7f7f5;
+    --namu-panel-bg: #ffffff;
+    --namu-panel-bg-raised: #ffffff;
+    --namu-header-bg: #ffffff;
+    --namu-header-bg-strong: #f3f4f5;
+    --namu-header-text: #202326;
+    --namu-header-muted: #6c757d;
+    --namu-text: #212529;
+    --namu-text-muted: #6c757d;
+    --namu-border: #e1e4e8;
+    --namu-border-strong: #cfd3d8;
+    --namu-hover: #eef1f3;
+    --namu-info-bg: #f8f9fb;
+    --namu-info-border: #dee1e5;
+    --namu-code-bg: #f3f5f7;
+    --namu-code-text: #2c2f33;
+    --namu-link: var(--forge-theme-color);
+    --namu-link-hover: var(--forge-theme-color-strong);
+    --namu-shadow: 0 1px 0 rgba(22, 28, 36, 0.04),
+        0 2px 8px rgba(22, 28, 36, 0.04);
+    --namu-shadow-strong: 0 8px 28px rgba(22, 28, 36, 0.16);
+    --namu-radius: 4px;
+    --namu-radius-lg: 6px;
+
+    --md-callout-note-bg: #eef5fb;
+    --md-callout-note-border: #4a8ad0;
+    --md-callout-note-text: #1f4870;
+    --md-callout-tip-bg: #ecf7ed;
+    --md-callout-tip-border: #2da44e;
+    --md-callout-tip-text: #1a5e2b;
+    --md-callout-warning-bg: #fff8e1;
+    --md-callout-warning-border: #d4a017;
+    --md-callout-warning-text: #5c4400;
+    --md-callout-danger-bg: #fdecec;
+    --md-callout-danger-border: #d04848;
+    --md-callout-danger-text: #82201f;
+
+    --md-code-toolbar-bg: #eceff3;
+    --md-code-toolbar-text: #6c757d;
+
+    --md-hljs-fg: #24292f;
+    --md-hljs-comment: #6e7781;
+    --md-hljs-keyword: #cf222e;
+    --md-hljs-string: #0a3069;
+    --md-hljs-number: #0550ae;
+    --md-hljs-function: #8250df;
+    --md-hljs-class: #953800;
+    --md-hljs-variable: #24292f;
+    --md-hljs-attr: #0550ae;
+    --md-hljs-meta: #6e7781;
+
+    --forge-bg: var(--namu-page-bg);
+    --forge-surface: var(--namu-panel-bg);
+    --forge-surface-raised: var(--namu-panel-bg-raised);
+    --forge-text: var(--namu-text);
+    --forge-text-muted: var(--namu-text-muted);
+    --forge-line: var(--namu-border);
+    --forge-line-strong: var(--namu-border-strong);
+    --forge-hover: var(--namu-hover);
+    --forge-shadow: var(--namu-shadow);
+    --forge-info-bg: var(--namu-info-bg);
+    --forge-info-line: var(--namu-info-border);
+    --forge-link: var(--namu-link);
+    --forge-link-hover: var(--namu-link-hover);
+    --forge-code-bg: var(--namu-code-bg);
+    --forge-code-text: var(--namu-code-text);
+}
+
+[data-theme="dark"] {
+    --forge-theme-color: #2ec4b6;
+    --forge-theme-color-strong: #6dded2;
+    --forge-theme-color-muted: rgba(46, 196, 182, 0.18);
+    --forge-theme-color-surface: #1c2c2b;
+
+    --namu-page-bg: #1a1b1f;
+    --namu-panel-bg: #25272c;
+    --namu-panel-bg-raised: #2c2f35;
+    --namu-header-bg: #2d2f34;
+    --namu-header-bg-strong: #24262a;
+    --namu-header-text: #f0f2f4;
+    --namu-header-muted: #b9bdc4;
+    --namu-text: #e6e8eb;
+    --namu-text-muted: #9ea3aa;
+    --namu-border: #383b42;
+    --namu-border-strong: #4a4e57;
+    --namu-hover: #2f3239;
+    --namu-info-bg: #2a2c31;
+    --namu-info-border: #3e424a;
+    --namu-code-bg: #1f2126;
+    --namu-code-text: #e6e8eb;
+    --namu-shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.35);
+    --namu-shadow-strong: 0 8px 28px rgba(0, 0, 0, 0.55);
+
+    --md-callout-note-bg: rgba(74, 138, 208, 0.12);
+    --md-callout-note-border: #6aa3df;
+    --md-callout-note-text: #c1d8ee;
+    --md-callout-tip-bg: rgba(45, 164, 78, 0.12);
+    --md-callout-tip-border: #4ec76e;
+    --md-callout-tip-text: #b6e3c0;
+    --md-callout-warning-bg: rgba(212, 160, 23, 0.12);
+    --md-callout-warning-border: #ddb24b;
+    --md-callout-warning-text: #f0d289;
+    --md-callout-danger-bg: rgba(208, 72, 72, 0.12);
+    --md-callout-danger-border: #e26b6b;
+    --md-callout-danger-text: #f1b6b6;
+
+    --md-code-toolbar-bg: #2a2c31;
+    --md-code-toolbar-text: #9ea3aa;
+
+    --md-hljs-fg: #c9d1d9;
+    --md-hljs-comment: #8b949e;
+    --md-hljs-keyword: #ff7b72;
+    --md-hljs-string: #a5d6ff;
+    --md-hljs-number: #79c0ff;
+    --md-hljs-function: #d2a8ff;
+    --md-hljs-class: #ffa657;
+    --md-hljs-variable: #c9d1d9;
+    --md-hljs-attr: #79c0ff;
+    --md-hljs-meta: #8b949e;
+}

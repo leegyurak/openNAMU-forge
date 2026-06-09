@@ -1,0 +1,1098 @@
+/* =============================================================
+   Modern markdown-style rendering for namumark output.
+   Inspired by GitHub Primer markdown + Notion docs.
+   Scoped to .opennamu_forge_main + standalone namumark classes
+   the renderer emits (TOC, footnote, link_inter, list_*, …).
+   ============================================================= */
+
+.opennamu_forge_main {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--namu-text);
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.opennamu_forge_main > *:first-child {
+    margin-top: 0;
+}
+
+.opennamu_forge_main > *:last-child {
+    margin-bottom: 0;
+}
+
+/* ---------- Headings (GitHub-style) ---------- */
+.opennamu_forge_main h1,
+.opennamu_forge_main h2,
+.opennamu_forge_main h3,
+.opennamu_forge_main h4,
+.opennamu_forge_main h5,
+.opennamu_forge_main h6 {
+    margin: 28px 0 14px;
+    padding: 0;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--namu-text);
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+    scroll-margin-top: 80px;
+    letter-spacing: -0.01em;
+}
+
+.opennamu_forge_main h1 {
+    margin-top: 36px;
+    padding-bottom: 10px;
+    font-size: 1.85em;
+    border-bottom: 1px solid var(--namu-border);
+}
+
+.opennamu_forge_main h2 {
+    margin-top: 30px;
+    padding-bottom: 8px;
+    font-size: 1.45em;
+    border-bottom: 1px solid var(--namu-border);
+}
+
+.opennamu_forge_main h3 {
+    font-size: 1.2em;
+}
+
+.opennamu_forge_main h4 {
+    font-size: 1.05em;
+}
+
+.opennamu_forge_main h5 {
+    font-size: 0.95em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--namu-text-muted);
+}
+
+.opennamu_forge_main h6 {
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--namu-text-muted);
+}
+
+.opennamu_forge_main h1.blank,
+.opennamu_forge_main h2.blank,
+.opennamu_forge_main h3.blank,
+.opennamu_forge_main h4.blank,
+.opennamu_forge_main h5.blank,
+.opennamu_forge_main h6.blank {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.opennamu_forge_main h1 a,
+.opennamu_forge_main h2 a,
+.opennamu_forge_main h3 a,
+.opennamu_forge_main h4 a,
+.opennamu_forge_main h5 a,
+.opennamu_forge_main h6 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* ---------- Paragraphs / spacing ---------- */
+.opennamu_forge_main p {
+    margin: 0 0 14px;
+}
+
+.opennamu_forge_main strong,
+.opennamu_forge_main b {
+    font-weight: 700;
+    color: var(--namu-text);
+}
+
+.opennamu_forge_main em,
+.opennamu_forge_main i {
+    font-style: italic;
+}
+
+.opennamu_forge_main del,
+.opennamu_forge_main s {
+    color: var(--namu-text-muted);
+}
+
+/* ---------- Lists ---------- */
+.opennamu_forge_main ul,
+.opennamu_forge_main ol {
+    margin: 0 0 14px;
+    padding-left: 28px;
+}
+
+.opennamu_forge_main ul ul,
+.opennamu_forge_main ul ol,
+.opennamu_forge_main ol ul,
+.opennamu_forge_main ol ol {
+    margin: 2px 0 2px;
+}
+
+.opennamu_forge_main li {
+    margin: 4px 0;
+}
+
+.opennamu_forge_main li > p {
+    margin: 4px 0;
+}
+
+.opennamu_forge_main ul li::marker {
+    color: var(--namu-text-muted);
+}
+
+.opennamu_forge_list_1 {
+    list-style-type: decimal;
+}
+.opennamu_forge_list_2 {
+    list-style-type: lower-alpha;
+}
+.opennamu_forge_list_3 {
+    list-style-type: lower-roman;
+}
+.opennamu_forge_list_4 {
+    list-style-type: upper-alpha;
+}
+.opennamu_forge_list_5 {
+    list-style-type: upper-roman;
+}
+.opennamu_forge_list_none {
+    list-style-type: none;
+}
+
+/* ---------- Links ---------- */
+.opennamu_forge_main a {
+    color: var(--namu-link);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.opennamu_forge_main a:hover {
+    color: var(--namu-link-hover);
+    text-decoration: none;
+    border-bottom-color: currentColor;
+}
+
+.opennamu_forge_link_inter,
+.opennamu_forge_link_out {
+    color: var(--namu-link);
+}
+
+.opennamu_forge_link_out::after {
+    content: "";
+    display: inline-block;
+    width: 0.78em;
+    height: 0.78em;
+    margin-left: 3px;
+    vertical-align: -1px;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M14 3v2h3.59L8.29 14.29l1.42 1.42L19 6.41V10h2V3h-7z'/><path d='M19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z'/></svg>") no-repeat center / contain;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M14 3v2h3.59L8.29 14.29l1.42 1.42L19 6.41V10h2V3h-7z'/><path d='M19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z'/></svg>") no-repeat center / contain;
+    opacity: 0.7;
+}
+
+.opennamu_forge_not_exist_link {
+    color: #d04848;
+    border-bottom-color: transparent;
+}
+
+[data-theme="dark"] .opennamu_forge_not_exist_link {
+    color: #ff7676;
+}
+
+.opennamu_forge_same_link {
+    color: var(--namu-text) !important;
+    font-weight: 700;
+    cursor: default;
+    pointer-events: none;
+    border-bottom: none !important;
+}
+
+/* ---------- Table of Contents ---------- */
+.opennamu_forge_TOC {
+    display: block;
+    max-width: 100%;
+    margin: 18px 0 22px;
+    padding: 14px 18px 16px;
+    background: var(--namu-info-bg);
+    border: 1px solid var(--namu-info-border);
+    border-radius: 8px;
+    color: var(--namu-text);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.opennamu_forge_TOC_title {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    margin: 0 0 8px;
+    color: var(--namu-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.opennamu_forge_TOC_list {
+    display: block;
+}
+
+.opennamu_forge_TOC_list a {
+    color: var(--namu-text);
+    text-decoration: none;
+    border-bottom: none;
+}
+
+.opennamu_forge_TOC_list a:hover {
+    color: var(--namu-link);
+    border-bottom: none;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* ---------- Blockquote (GitHub-style) ---------- */
+.opennamu_forge_main blockquote {
+    margin: 0 0 14px;
+    padding: 0 16px;
+    color: var(--namu-text-muted);
+    border-left: 4px solid var(--namu-border-strong);
+    background: transparent;
+    border-radius: 0;
+}
+
+.opennamu_forge_main blockquote > * {
+    margin: 8px 0;
+}
+
+.opennamu_forge_main blockquote > :first-child {
+    margin-top: 0;
+}
+
+.opennamu_forge_main blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+/* ---------- Horizontal rules ---------- */
+.opennamu_forge_main hr,
+.opennamu_forge_main hr.main_hr {
+    border: none;
+    height: 1px;
+    background: var(--namu-border);
+    margin: 24px 0;
+}
+
+.opennamu_forge_main hr.mini_hr {
+    display: none;
+}
+
+/* ---------- Code (GitHub-style) ---------- */
+.opennamu_forge_main code,
+.opennamu_forge_main pre,
+.opennamu_forge_main kbd,
+.opennamu_forge_main samp {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+        "Liberation Mono", monospace;
+}
+
+.opennamu_forge_main code {
+    padding: 2px 6px;
+    margin: 0;
+    font-size: 0.88em;
+    background: var(--forge-theme-color-muted);
+    color: var(--forge-theme-color-strong);
+    border-radius: 4px;
+    border: none;
+    white-space: break-spaces;
+}
+
+[data-theme="dark"] .opennamu_forge_main code {
+    color: var(--forge-theme-color);
+}
+
+.opennamu_forge_main pre {
+    margin: 0 0 14px;
+    padding: 14px 16px;
+    background: var(--namu-code-bg);
+    color: var(--namu-code-text);
+    border: 1px solid var(--namu-info-border);
+    border-radius: 8px;
+    overflow-x: auto;
+    line-height: 1.5;
+    font-size: 13.5px;
+}
+
+.opennamu_forge_main pre code {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: inherit;
+    border: none;
+    border-radius: 0;
+    font-size: inherit;
+    white-space: pre;
+}
+
+.opennamu_forge_main kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 0.82em;
+    color: var(--namu-text);
+    background: var(--namu-panel-bg);
+    border: 1px solid var(--namu-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    line-height: 1;
+    vertical-align: 1px;
+}
+
+/* ---------- Tables (GitHub-style zebra) ---------- */
+.opennamu_forge_main .table_safe {
+    margin: 0 0 14px;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.opennamu_forge_main table {
+    border-collapse: collapse;
+    margin: 0 0 14px;
+    max-width: 100%;
+    background: var(--namu-panel-bg);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.opennamu_forge_main .table_safe > table {
+    margin: 0;
+}
+
+.opennamu_forge_main table th,
+.opennamu_forge_main table td {
+    border: 1px solid var(--namu-border);
+    padding: 8px 14px;
+    vertical-align: top;
+}
+
+.opennamu_forge_main table th {
+    background: var(--namu-info-bg);
+    font-weight: 600;
+    text-align: left;
+    color: var(--namu-text);
+}
+
+.opennamu_forge_main table tr:nth-child(2n) td {
+    background: var(--namu-info-bg);
+}
+
+/* ---------- Footnote ---------- */
+.opennamu_forge_footnote {
+    margin: 28px 0 8px;
+    padding: 14px 18px;
+    background: transparent;
+    border-top: 1px solid var(--namu-border);
+    border-radius: 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--namu-text-muted);
+}
+
+.opennamu_forge_footnote a {
+    color: var(--namu-link);
+    border-bottom: none;
+}
+
+.opennamu_forge_footnote a:hover {
+    border-bottom: 1px solid currentColor;
+}
+
+.opennamu_forge_popup_footnote,
+.opennamu_forge_spead_footnote {
+    color: var(--namu-text-muted);
+    font-size: 0.88em;
+}
+
+.opennamu_forge_main sup {
+    font-size: 0.75em;
+    line-height: 0;
+    vertical-align: super;
+}
+
+.opennamu_forge_main sup a {
+    padding: 0 2px;
+    color: var(--namu-link);
+    border-bottom: none;
+}
+
+/* ---------- Category ---------- */
+.opennamu_forge_category {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 4px;
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    background: var(--namu-info-bg);
+    border: 1px solid var(--namu-info-border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--namu-text-muted);
+}
+
+.opennamu_forge_category::before {
+    content: "분류";
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--namu-text-muted);
+    background: var(--namu-panel-bg);
+    border: 1px solid var(--namu-border);
+    border-radius: 999px;
+}
+
+.opennamu_forge_category a {
+    margin: 0;
+    padding: 2px 8px;
+    color: var(--namu-link);
+    background: var(--namu-panel-bg);
+    border: 1px solid var(--namu-border);
+    border-radius: 999px;
+    font-size: 12.5px;
+    text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease,
+        border-color 0.12s ease;
+}
+
+.opennamu_forge_category a:hover {
+    background: var(--forge-theme-color);
+    color: #ffffff;
+    border-color: var(--forge-theme-color);
+    text-decoration: none;
+}
+
+.opennamu_forge_category_blur {
+    display: none;
+}
+
+.opennamu_forge_category_button {
+    margin-left: auto !important;
+    padding: 2px 8px !important;
+    color: var(--namu-text-muted) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    font-weight: 700;
+}
+
+/* ---------- Fold / details ---------- */
+.opennamu_forge_main details {
+    margin: 0 0 14px;
+    border: 1px solid var(--namu-border);
+    border-radius: 8px;
+    background: var(--namu-panel-bg);
+    overflow: hidden;
+}
+
+.opennamu_forge_main details > summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    background: var(--namu-info-bg);
+    border-bottom: 1px solid transparent;
+    font-weight: 600;
+    list-style: none;
+    user-select: none;
+    transition: background 0.12s ease;
+}
+
+.opennamu_forge_main details > summary:hover {
+    background: var(--namu-hover);
+}
+
+.opennamu_forge_main details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.opennamu_forge_main details > summary::before {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-right: 8px;
+    vertical-align: 2px;
+    border-style: solid;
+    border-width: 5px 0 5px 7px;
+    border-color: transparent transparent transparent var(--namu-text-muted);
+    transition: transform 0.18s ease;
+    transform-origin: 25% 50%;
+}
+
+.opennamu_forge_main details[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.opennamu_forge_main details[open] > summary {
+    border-bottom-color: var(--namu-border);
+}
+
+.opennamu_forge_folding {
+    padding: 14px 16px;
+}
+
+/* ---------- Images ---------- */
+.opennamu_forge_main img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    vertical-align: middle;
+}
+
+/* ---------- Misc ---------- */
+.opennamu_forge_joke {
+    background: var(--namu-text);
+    color: var(--namu-text);
+    transition: color 0.15s ease;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+
+.opennamu_forge_joke:hover {
+    color: var(--namu-panel-bg);
+}
+
+.opennamu_forge_render_ip {
+    color: var(--namu-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.92em;
+}
+
+#opennamu_forge_http_warning_text {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    background: #fff8e1;
+    border: 1px solid #f3d684;
+    border-left: 4px solid #e0a800;
+    border-radius: 6px;
+    color: #5c4400;
+    font-size: 13.5px;
+}
+
+[data-theme="dark"] #opennamu_forge_http_warning_text {
+    background: #3d2f10;
+    border-color: #836d3a;
+    border-left-color: #c9a23a;
+    color: #f6e2b0;
+}
+
+/* ---------- Forms inside body content ---------- */
+.opennamu_forge_main input[type="text"],
+.opennamu_forge_main input[type="password"],
+.opennamu_forge_main input[type="email"],
+.opennamu_forge_main input[type="url"],
+.opennamu_forge_main input[type="number"],
+.opennamu_forge_main input[type="search"],
+.opennamu_forge_main input[type="tel"],
+.opennamu_forge_main select,
+.opennamu_forge_main textarea {
+    padding: 8px 12px;
+    background: var(--namu-panel-bg);
+    color: var(--namu-text);
+    border: 1px solid var(--namu-border-strong);
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    max-width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.opennamu_forge_main input[type="text"]:focus-visible,
+.opennamu_forge_main input[type="password"]:focus-visible,
+.opennamu_forge_main input[type="email"]:focus-visible,
+.opennamu_forge_main input[type="url"]:focus-visible,
+.opennamu_forge_main input[type="number"]:focus-visible,
+.opennamu_forge_main input[type="search"]:focus-visible,
+.opennamu_forge_main input[type="tel"]:focus-visible,
+.opennamu_forge_main select:focus-visible,
+.opennamu_forge_main textarea:focus-visible {
+    border-color: var(--forge-theme-color);
+    box-shadow: 0 0 0 3px var(--forge-theme-color-muted);
+}
+
+.opennamu_forge_main textarea {
+    width: 100%;
+    min-height: 140px;
+    line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Consolas, Monaco, monospace;
+}
+
+.opennamu_forge_main button:not(.iconify),
+.opennamu_forge_main input[type="submit"],
+.opennamu_forge_main input[type="button"] {
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--forge-theme-color);
+    background: var(--forge-theme-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.12s ease, border-color 0.12s ease,
+        transform 0.06s ease;
+}
+
+.opennamu_forge_main button:not(.iconify):hover,
+.opennamu_forge_main input[type="submit"]:hover,
+.opennamu_forge_main input[type="button"]:hover {
+    background: var(--forge-theme-color-strong);
+    border-color: var(--forge-theme-color-strong);
+}
+
+.opennamu_forge_main button:not(.iconify):active,
+.opennamu_forge_main input[type="submit"]:active,
+.opennamu_forge_main input[type="button"]:active {
+    transform: translateY(1px);
+}
+
+.opennamu_forge_main label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.opennamu_forge_main form {
+    margin: 12px 0;
+}
+
+/* ---------- Editor action controls ---------- */
+.opennamu_forge_edit_actionbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 10px;
+    background: var(--namu-info-bg);
+    border: 1px solid var(--namu-info-border);
+    border-radius: 8px;
+}
+
+.opennamu_forge_main .opennamu_forge_edit_action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    background: var(--namu-panel-bg);
+    color: var(--namu-text);
+    border: 1px solid var(--namu-border-strong);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease,
+        transform 0.06s ease;
+}
+
+.opennamu_forge_main .opennamu_forge_edit_action:hover,
+.opennamu_forge_main .opennamu_forge_edit_action:focus-visible {
+    background: var(--forge-theme-color-muted);
+    color: var(--forge-theme-color-strong);
+    border-color: var(--forge-theme-color);
+    text-decoration: none;
+    outline: none;
+}
+
+.opennamu_forge_main .opennamu_forge_edit_action:active {
+    transform: translateY(1px);
+}
+
+.opennamu_forge_main .opennamu_forge_edit_action_add {
+    background: var(--forge-theme-color);
+    color: #ffffff;
+    border-color: var(--forge-theme-color);
+}
+
+.opennamu_forge_main .opennamu_forge_edit_action_add:hover,
+.opennamu_forge_main .opennamu_forge_edit_action_add:focus-visible {
+    background: var(--forge-theme-color-strong);
+    color: #ffffff;
+    border-color: var(--forge-theme-color-strong);
+}
+
+/* =============================================================
+   markdownize layer
+   Post-render normalization to make namumark output look like
+   modern markdown (GitHub/Notion). JS adds .md-* classes; the
+   rest is CSS-only via attribute selectors.
+   ============================================================= */
+
+/* ---------- Heading anchor (#) on hover ---------- */
+.opennamu_forge_main h1,
+.opennamu_forge_main h2,
+.opennamu_forge_main h3,
+.opennamu_forge_main h4,
+.opennamu_forge_main h5,
+.opennamu_forge_main h6 {
+    position: relative;
+}
+
+.opennamu_forge_main .md-anchor {
+    position: absolute;
+    left: -1.1em;
+    top: 0;
+    width: 1em;
+    line-height: inherit;
+    text-align: right;
+    color: var(--namu-text-muted);
+    text-decoration: none;
+    border-bottom: none !important;
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease;
+    user-select: none;
+    font-weight: 400;
+}
+
+.opennamu_forge_main h1:hover .md-anchor,
+.opennamu_forge_main h2:hover .md-anchor,
+.opennamu_forge_main h3:hover .md-anchor,
+.opennamu_forge_main h4:hover .md-anchor,
+.opennamu_forge_main h5:hover .md-anchor,
+.opennamu_forge_main h6:hover .md-anchor,
+.opennamu_forge_main .md-anchor:focus-visible {
+    opacity: 1;
+}
+
+.opennamu_forge_main .md-anchor:hover {
+    color: var(--namu-link);
+}
+
+/* Heading folding toggle (renderer-emitted ⊖/⊕ in <sub><a>) */
+.opennamu_forge_main h1 > span > sub,
+.opennamu_forge_main h2 > span > sub,
+.opennamu_forge_main h3 > span > sub,
+.opennamu_forge_main h4 > span > sub,
+.opennamu_forge_main h5 > span > sub,
+.opennamu_forge_main h6 > span > sub {
+    font-size: 0.5em;
+    margin-left: 8px;
+    vertical-align: 0.4em;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.opennamu_forge_main h1:hover > span > sub,
+.opennamu_forge_main h2:hover > span > sub,
+.opennamu_forge_main h3:hover > span > sub,
+.opennamu_forge_main h4:hover > span > sub,
+.opennamu_forge_main h5:hover > span > sub,
+.opennamu_forge_main h6:hover > span > sub {
+    opacity: 0.6;
+}
+
+.opennamu_forge_main h1 > span > sub > a,
+.opennamu_forge_main h2 > span > sub > a,
+.opennamu_forge_main h3 > span > sub > a,
+.opennamu_forge_main h4 > span > sub > a,
+.opennamu_forge_main h5 > span > sub > a,
+.opennamu_forge_main h6 > span > sub > a {
+    color: var(--namu-text-muted);
+    border-bottom: none !important;
+    padding: 0 4px;
+}
+
+/* ---------- Code: language label + copy button ---------- */
+.md-code-block {
+    position: relative;
+    margin: 0 0 14px;
+}
+
+.md-code-block > pre {
+    margin: 0 !important;
+}
+
+.md-code-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--md-code-toolbar-bg);
+    color: var(--md-code-toolbar-text);
+    border: 1px solid var(--namu-info-border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+}
+
+.md-code-block > pre {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.md-code-lang {
+    text-transform: lowercase;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.md-code-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: transparent;
+    color: var(--md-code-toolbar-text);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.md-code-copy:hover {
+    background: var(--namu-panel-bg);
+    color: var(--namu-text);
+}
+
+.md-code-copy[data-copied="1"] {
+    color: var(--forge-theme-color);
+}
+
+.md-code-copy::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/></svg>") no-repeat center / contain;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/></svg>") no-repeat center / contain;
+}
+
+.md-code-copy[data-copied="1"]::before {
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>") no-repeat center / contain;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>") no-repeat center / contain;
+}
+
+/* ---------- hljs (GitHub-light/dark token mapping) ---------- */
+.opennamu_forge_main pre code.hljs,
+.opennamu_forge_main .hljs {
+    color: var(--md-hljs-fg);
+    background: transparent;
+}
+
+.opennamu_forge_main .hljs-comment,
+.opennamu_forge_main .hljs-quote,
+.opennamu_forge_main .hljs-meta {
+    color: var(--md-hljs-comment);
+    font-style: italic;
+}
+
+.opennamu_forge_main .hljs-keyword,
+.opennamu_forge_main .hljs-selector-tag,
+.opennamu_forge_main .hljs-literal,
+.opennamu_forge_main .hljs-doctag,
+.opennamu_forge_main .hljs-name {
+    color: var(--md-hljs-keyword);
+}
+
+.opennamu_forge_main .hljs-string,
+.opennamu_forge_main .hljs-regexp,
+.opennamu_forge_main .hljs-template-tag,
+.opennamu_forge_main .hljs-template-variable {
+    color: var(--md-hljs-string);
+}
+
+.opennamu_forge_main .hljs-number,
+.opennamu_forge_main .hljs-symbol,
+.opennamu_forge_main .hljs-bullet,
+.opennamu_forge_main .hljs-link {
+    color: var(--md-hljs-number);
+}
+
+.opennamu_forge_main .hljs-title,
+.opennamu_forge_main .hljs-function .hljs-title,
+.opennamu_forge_main .hljs-section,
+.opennamu_forge_main .hljs-built_in {
+    color: var(--md-hljs-function);
+    font-weight: 600;
+}
+
+.opennamu_forge_main .hljs-class .hljs-title,
+.opennamu_forge_main .hljs-type,
+.opennamu_forge_main .hljs-tag {
+    color: var(--md-hljs-class);
+}
+
+.opennamu_forge_main .hljs-variable,
+.opennamu_forge_main .hljs-params {
+    color: var(--md-hljs-variable);
+}
+
+.opennamu_forge_main .hljs-attribute,
+.opennamu_forge_main .hljs-attr,
+.opennamu_forge_main .hljs-selector-attr,
+.opennamu_forge_main .hljs-selector-pseudo {
+    color: var(--md-hljs-attr);
+}
+
+.opennamu_forge_main .hljs-emphasis {
+    font-style: italic;
+}
+
+.opennamu_forge_main .hljs-strong {
+    font-weight: 700;
+}
+
+/* hljs line numbers plugin */
+.opennamu_forge_main .hljs-ln-numbers {
+    color: var(--namu-text-muted);
+    user-select: none;
+    text-align: right;
+    padding-right: 14px !important;
+    border-right: 1px solid var(--namu-info-border);
+    width: 1%;
+    white-space: nowrap;
+}
+
+.opennamu_forge_main .hljs-ln-code {
+    padding-left: 14px !important;
+}
+
+/* ---------- Tables: promote first row to thead look ---------- */
+.opennamu_forge_main table.md-table > thead > tr > th,
+.opennamu_forge_main table.md-table > thead > tr > td {
+    background: var(--namu-info-bg);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 2px solid var(--namu-border-strong);
+}
+
+.opennamu_forge_main table.md-table tbody tr:nth-child(2n) td {
+    background: var(--namu-info-bg);
+}
+
+/* When inline styles set a background on cells, do NOT zebra-override */
+.opennamu_forge_main table tr td[style*="background"],
+.opennamu_forge_main table tr th[style*="background"] {
+    background: revert;
+}
+
+/* ---------- Responsive iframe wrap ---------- */
+.md-iframe-wrap {
+    position: relative;
+    display: block;
+    margin: 0 0 14px;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--namu-info-border);
+    background: var(--namu-info-bg);
+}
+
+.md-iframe-wrap > iframe {
+    display: block;
+    width: 100% !important;
+    max-width: 100%;
+    border: 0;
+}
+
+/* ---------- Figure (image with caption) ---------- */
+.md-figure {
+    display: block;
+    margin: 0 0 14px;
+    text-align: center;
+}
+
+.md-figure > a,
+.md-figure > img {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.md-figure-caption {
+    display: block;
+    margin-top: 6px;
+    color: var(--namu-text-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+/* ---------- Redirect callout ---------- */
+.md-redirect {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    margin: 0 0 14px;
+    background: var(--md-callout-note-bg);
+    border: 1px solid var(--md-callout-note-border);
+    border-radius: 8px;
+    color: var(--md-callout-note-text);
+    font-size: 13.5px;
+    text-decoration: none;
+}
+
+.md-redirect::before {
+    content: "↪";
+    font-size: 18px;
+    line-height: 1;
+}
+
+.md-redirect:hover {
+    text-decoration: underline;
+    border-bottom: 1px solid var(--md-callout-note-border);
+}
+
+/* ---------- Callouts (admonitions) ---------- */
+.md-callout {
+    margin: 0 0 14px;
+    padding: 12px 14px 12px 16px;
+    border: 1px solid var(--md-callout-note-border);
+    border-left: 4px solid var(--md-callout-note-border);
+    border-radius: 6px;
+    background: var(--md-callout-note-bg);
+    color: var(--md-callout-note-text);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.md-callout > *:first-child {
+    margin-top: 0;
+}
+
+.md-callout > *:last-child {
+    margin-bottom: 0;
+}
+
+.md-callout.md-callout-tip {
+    background: var(--md-callout-tip-bg);
+    border-color: var(--md-callout-tip-border);
+    color: var(--md-callout-tip-text);
+}
+
+.md-callout.md-callout-warning {
+    background: var(--md-callout-warning-bg);
+    border-color: var(--md-callout-warning-border);
+    color: var(--md-callout-warning-text);
+}
+
+.md-callout.md-callout-danger {
+    background: var(--md-callout-danger-bg);
+    border-color: var(--md-callout-danger-border);
+    color: var(--md-callout-danger-text);
+}
+
+/* ---------- Autolink (anchor added by JS) ---------- */
+.md-autolink {
+    color: var(--namu-link);
+    border-bottom: 1px solid transparent;
+}
+
+.md-autolink:hover {
+    border-bottom-color: currentColor;
+}
