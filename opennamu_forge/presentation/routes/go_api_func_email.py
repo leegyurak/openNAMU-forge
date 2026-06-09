@@ -1,4 +1,8 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    python_to_golang,
+    sys,
+)
 
 async def api_func_email():
     if flask.request.method == 'POST':

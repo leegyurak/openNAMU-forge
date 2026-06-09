@@ -1,5 +1,18 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.shared.func import (
+    add_alarm,
+    flask,
+    html,
+    ip_or_user,
+    python_to_golang,
+    re,
+    sys,
+)
+from opennamu_forge.presentation.dependencies import (
+    get_bbs_repository,
+    get_history_repository,
+    get_topic_repository,
+)
 def api_topic_thread_make(user_id, date, data, code, color = '', blind = '', add_style = '', admin_check = 1, topic_num = ''):
     if blind == 'O':
         if data == '':
@@ -38,7 +51,7 @@ def api_topic_thread_make(user_id, date, data, code, color = '', blind = '', add
         </span>
     '''
 
-async def api_topic_thread_pre_render(conn, data, num, ip, topic_num = '', name = '', sub = '', do_type = 'thread'):
+async def api_topic_thread_pre_render(data, num, ip, topic_num = '', name = '', sub = '', do_type = 'thread'):
     bbs = get_bbs_repository()
     history = get_history_repository()
     topics = get_topic_repository()
@@ -119,16 +132,15 @@ async def api_topic_thread_pre_render(conn, data, num, ip, topic_num = '', name 
     return data
 
 async def api_topic(topic_num = 1, tool = 'normal', s_num = '', e_num = ''):
-    with get_db_connect() as conn:
-        topic_num = str(topic_num)
+    topic_num = str(topic_num)
 
-        if await acl_check('', 'topic_view', topic_num) != 1:
-            other_set = {}
-            other_set["topic_num"] = topic_num
-            other_set["tool"] = tool
-            other_set["s_num"] = str(s_num)
-            other_set["e_num"] = str(e_num)
+    if await acl_check('', 'topic_view', topic_num) != 1:
+        other_set = {}
+        other_set["topic_num"] = topic_num
+        other_set["tool"] = tool
+        other_set["s_num"] = str(s_num)
+        other_set["e_num"] = str(e_num)
 
-            return flask.jsonify(await python_to_golang(sys._getframe().f_code.co_name, other_set))
-        else:
-            return flask.jsonify({})
+        return flask.jsonify(await python_to_golang(sys._getframe().f_code.co_name, other_set))
+    else:
+        return flask.jsonify({})

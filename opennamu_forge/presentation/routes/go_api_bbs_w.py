@@ -1,15 +1,19 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    python_to_golang,
+    sys,
+)
 
-async def api_bbs_w(sub_code = '', legacy = 'on'):
+async def api_bbs_w(sub_code = '', include_envelope = False):
     other_set = {}
     other_set['sub_code'] = sub_code
 
     data = await python_to_golang(sys._getframe().f_code.co_name, other_set)
 
-    if legacy == "on":
-        return data["data"]
-    else:
+    if include_envelope:
         return data
+    else:
+        return data["data"]
 
-async def api_bbs_w_exter(sub_code = '', legacy = 'on'):
-    return flask.jsonify(await api_bbs_w(sub_code, legacy))
+async def api_bbs_w_exter(sub_code = '', include_envelope = False):
+    return flask.jsonify(await api_bbs_w(sub_code, include_envelope))

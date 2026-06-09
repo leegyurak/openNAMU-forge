@@ -8,7 +8,7 @@ Supported `NAMU_DB_TYPE` values:
 - `mysql`
 - `postgresql` or `postgres`
 
-Network database settings:
+Network database config:
 
 - `NAMU_DB`
 - `NAMU_DB_HOST`
@@ -16,28 +16,32 @@ Network database settings:
 - `NAMU_DB_USER`
 - `NAMU_DB_PASSWORD`
 
-`app.py` loads `.env` at startup before DB configuration is read. Keep `.env` local-only and update `.env.example` when adding DB environment keys.
+`app.py` loads `.env` at startup before DB config is read. Keep `.env` local-only and update `.env.example` when adding DB environment keys.
+Database selection must come from `.env`/environment through `DatabaseConfig`. Do not reintroduce legacy `data/set.json`, `data/mysql.json`, `data/postgresql.json`, or interactive DB prompts.
 
 ## SQLModel and Raw SQL
 
-SQLModel is the ORM foundation. Existing routes still use the cursor API and SQLite-style `?` placeholders, so route SQL must continue going through `db_change()` until the feature is moved to application/infrastructure services.
+SQLModel is the ORM foundation. Route modules must not issue raw SQL directly; persistence access should go through application ports and infrastructure repositories. SQL dialect translation remains isolated in the shared SQL dialect module while routes move to repositories.
 
 PostgreSQL support depends on:
 
+- `opennamu_forge/config/database.py` for DB config from environment and SQLModel URL/pool config.
 - `opennamu_forge/infrastructure/db_model.py` for SQLModel metadata.
-- `opennamu_forge/infrastructure/database_config.py` for SQLModel engine, session, and pool configuration.
+- `opennamu_forge/infrastructure/database_engine.py` for SQLModel engine and session adapters.
 - `opennamu_forge/infrastructure/migrations.py` for the Alembic migration entrypoint.
 - `migrations/` for Alembic environment and versioned schema revisions.
-- `opennamu_forge/presentation/routes/tool/func_tool.py` for SQL dialect compatibility conversion.
-- `opennamu_forge/presentation/routes/tool/func.py` for DB configuration and connection setup.
+- `opennamu_forge/presentation/shared/sql_dialect.py` for SQL dialect conversion.
+- `opennamu_forge/config/runtime_database.py` for the runtime DB selection state consumed by repository factories.
+
+Do not reintroduce `opennamu_forge/presentation/shared/db_connection.py` or direct sqlite/mysql/psycopg connection classes in presentation code.
 
 ## Migration Guidance
 
 - `run_schema_migrations()` is the explicit runtime migration entrypoint and must run Alembic `upgrade head`.
-- Treat `opennamu_forge/infrastructure/db_model.py` as the SQLModel schema foundation and `get_db_table_list()` as the raw SQL bootstrap path for DB types that are not yet SQLModel-initialized.
+- Treat `opennamu_forge/infrastructure/db_model.py` as the SQLModel schema foundation.
 - New DB schema work must add SQLModel models first, then an Alembic revision under `migrations/versions/`, then migration tests.
-- For PostgreSQL, verify raw SQL through `db_change()` and avoid DB-specific SQL in route files.
+- For PostgreSQL, verify SQL dialect conversion through `db_change()` and avoid DB-specific SQL in route files.
 - Do not add destructive migrations without a backup and rollback plan.
-- Add tests for SQL translation and SQLModel configuration before touching route behavior.
-- Engine and connection pool behavior must be configured through settings/environment, not hardcoded inside models or repositories.
+- Add tests for SQL translation and SQLModel config before touching route behavior.
+- Engine and connection pool behavior must be set through config/environment, not hardcoded inside models or repositories.
 - Follow the FastAPI/SQLModel-style lifecycle: share the engine, scope sessions to a request/use-case boundary, and keep repository methods session-local and side-effect explicit.

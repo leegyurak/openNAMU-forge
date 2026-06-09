@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,8 @@ from alembic.config import Config
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
-from opennamu_forge.infrastructure.db_model import get_sqlmodel_database_url, get_sqlmodel_engine
+from opennamu_forge.config.database import DatabaseConfig, build_sqlmodel_database_url
+from opennamu_forge.infrastructure.database_engine import get_sqlmodel_engine
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ALEMBIC_CONFIG_PATH = PROJECT_ROOT / "alembic.ini"
@@ -29,8 +31,8 @@ def build_alembic_config(database_url: str, config_path: Path = ALEMBIC_CONFIG_P
     return config
 
 
-def run_schema_migrations(db_set: dict[str, Any]) -> SchemaMigrationResult:
-    command.upgrade(build_alembic_config(get_sqlmodel_database_url(db_set)), "head")
+def run_schema_migrations(db_set: DatabaseConfig | Mapping[str, Any]) -> SchemaMigrationResult:
+    command.upgrade(build_alembic_config(build_sqlmodel_database_url(db_set)), "head")
     engine = get_sqlmodel_engine(db_set)
     return SchemaMigrationResult(
         engine=engine,

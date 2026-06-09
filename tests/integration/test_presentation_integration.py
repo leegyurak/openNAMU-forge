@@ -1,5 +1,5 @@
 from opennamu_forge.application.startup import normalize_run_mode
-from opennamu_forge.infrastructure.monitoring import MonitoringSettings, get_monitoring_settings
+from opennamu_forge.config.monitoring import MonitoringConfig, get_monitoring_config
 from opennamu_forge.presentation.flask_factory import create_flask_app
 
 
@@ -24,7 +24,7 @@ def test_flask_factory는_metrics_path를_커스텀한다(tmp_path):
         run_mode="",
         version="test-version",
         db_type="sqlite",
-        monitoring_settings=MonitoringSettings(path="/internal/metrics"),
+        monitoring_config=MonitoringConfig(path="/internal/metrics"),
     )
 
     client = app.test_client()
@@ -39,14 +39,14 @@ def test_flask_factory는_metrics를_비활성화한다(tmp_path):
         run_mode="",
         version="test-version",
         db_type="sqlite",
-        monitoring_settings=MonitoringSettings(enabled=False),
+        monitoring_config=MonitoringConfig(enabled=False),
     )
 
     assert app.test_client().get("/metrics").status_code == 404
 
 
-def test_monitoring_settings는_env에서_생성된다():
-    settings = get_monitoring_settings(
+def test_monitoring_config는_env에서_생성된다():
+    config = get_monitoring_config(
         {
             "NAMU_PROMETHEUS_ENABLED": "off",
             "NAMU_PROMETHEUS_PATH": "internal/metrics",
@@ -54,9 +54,9 @@ def test_monitoring_settings는_env에서_생성된다():
         }
     )
 
-    assert settings.enabled is False
-    assert settings.path == "/internal/metrics"
-    assert settings.group_by == "path"
+    assert config.enabled is False
+    assert config.path == "/internal/metrics"
+    assert config.group_by == "path"
 
 
 def test_flask_factory는_dev_설정을_적용한다(tmp_path):

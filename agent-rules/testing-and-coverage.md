@@ -24,7 +24,7 @@ If a full-app coverage run is not practical because importing `app.py` starts DB
 - Test case matrices must use `pytest.mark.parametrize`.
 - Do not use explicit `for` loops, `while` loops, list/set/dict comprehensions, or generator expressions in test files. If multiple cases are needed, parametrize them.
 - Prefer tests that can run without booting `app.py`, opening a DB, or starting GopenNAMU.
-- For DB compatibility work, test SQL translation and SQLModel configuration separately from full integration tests.
+- For DB dialect work, test SQL translation and SQLModel config separately from full integration tests.
 - Keep tests deterministic and independent of network access.
 - For frontend layout changes, add responsive invariant tests that protect mobile, tablet, and desktop behavior.
 - Clean generated `__pycache__`, coverage databases, and local DB artifacts before finalizing changes.

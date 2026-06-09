@@ -56,5 +56,3 @@ OpenNamu Forge follows the upstream [BSD 3-Clause License](./LICENSE). Please re
  * Owner rights are granted to the first registor.
  * [Test Server](http://2du.pythonanywhere.com)
  * [Contributors](https://github.com/openNAMU/openNAMU/graphs/contributors)
- * [Old History 1](https://github.com/openNAMU/openNAMU-Backup)
- * [Old History 2](https://github.com/openNAMU/Discard-openNAMU-Legacy)

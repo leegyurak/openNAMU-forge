@@ -1,121 +1,133 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.shared.func import (
+    html,
+    re_error,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_template,
+)
+from opennamu_forge.presentation.dependencies import (
+    get_history_repository,
+    get_topic_repository,
+    get_wiki_document_repository,
+)
 from .go_api_bbs_w import api_bbs_w
 from .go_api_bbs_w_comment_one import api_bbs_w_comment_one
 
 async def view_raw(name = '', topic_num = '', num = '', doc_acl = 0, bbs_num = '', post_num = '', comment_num = ''):
-    with get_db_connect() as conn:
-        history = get_history_repository()
-        topics = get_topic_repository()
-        wiki_documents = get_wiki_document_repository()
-        
-        bbs_num_str = str(bbs_num)
-        post_num_str = str(post_num)
+    history = get_history_repository()
+    topics = get_topic_repository()
+    wiki_documents = get_wiki_document_repository()
+    
+    bbs_num_str = str(bbs_num)
+    post_num_str = str(post_num)
 
-        if bbs_num != '' and post_num != '':
-            if await acl_check(bbs_num_str, 'bbs_view') == 1:
-                return await re_error(conn, 0)
-                    
-            name = ''
-        elif topic_num != '':
-            topic_num = str(topic_num)
-            
-            if await acl_check('', 'topic_view', topic_num) == 1:
-                return await re_error(conn, 0)
-        else:
-            if await acl_check(name, 'render') == 1:
-                return await re_error(conn, 0)
-
-        if num:
-            num = str(num)
-
-        v_name = name
-        p_data = ''
-        sub = '(' + await get_lang('raw') + ')'
-
-        if bbs_num != '' and post_num != '':
-            sub += ' (' + await get_lang('bbs') + ')'
-            menu = [['bbs/tool/' + url_pas(bbs_num_str) + '/' + url_pas(post_num_str), await get_lang('return')]]
-            
-            if comment_num != '':
-                sub += ' (' + comment_num + ')'
-        elif topic_num == '' and num != '':
-            if history.is_hidden(name, num) and await acl_check(tool = 'hidel_auth') == 1:
-                return await re_error(conn, 3)
-
-            history_data = history.find_data(name, num)
-            data = [[history_data]] if history_data is not None else None
-
-            sub += ' (r' + num + ')'
-
-            menu = [['history_tool/' + url_pas(num) + '/' + url_pas(name), await get_lang('return')]]
-        elif topic_num != '':
-            comment = topics.get(topic_num, num)
-            data = (
-                [[comment.data]]
-                if comment is not None and (comment.block == '' or await acl_check(tool = 'hidel_auth') != 1)
-                else None
-            )
-
-            v_name = await get_lang('discussion_raw')
-            sub = ' (#' + num + ')'
-
-            menu = [
-                ['thread/' + topic_num + '#' + num, await get_lang('discussion')], 
-                ['thread/' + topic_num + '/comment/' + num + '/tool', await get_lang('return')]
-            ]
-        else:
-            data = [[wiki_documents.get_data(name)]] if wiki_documents.exists_title(name) else None
-
-            menu = [['w/' + url_pas(name), await get_lang('return')]]
-
-        if bbs_num != '' and post_num != '':
-            if comment_num != '':
-                data = await api_bbs_w_comment_one(bbs_num_str + '-' + post_num_str + '-' + comment_num)
-                sub_data = await api_bbs_w(bbs_num_str + '-' + post_num_str)
-            else:
-                data = await api_bbs_w(bbs_num_str + '-' + post_num_str)
+    if bbs_num != '' and post_num != '':
+        if await acl_check(bbs_num_str, 'bbs_view') == 1:
+            return await re_error(0)
                 
-            if 'comment' in data:
-                v_name = sub_data["title"]
-                data = [[data["comment"]]]
-            elif 'data' in data:
-                v_name = data["title"]
-                data = [[data["data"]]]
-            else:
-                data = None
-        else:
-            data = data
-            
-        if data:
-            doc_preview = ''
-            if bbs_num == '' and post_num == '' and topic_num == '':
-                doc_preview = '''
-                    <textarea class="__ON_TEXTAREA__" id="opennamu_forge_editor_doc_name" style="display: none;">''' + html.escape(name) + '''</textarea>
-                    <button class="__ON_BUTTON__" id="opennamu_forge_preview_button" type="button" onclick="opennamu_forge_do_editor_preview('raw');">''' + await get_lang('preview') + '''</button>
-                    <hr class="main_hr">
-                '''
+        name = ''
+    elif topic_num != '':
+        topic_num = str(topic_num)
+        
+        if await acl_check('', 'topic_view', topic_num) == 1:
+            return await re_error(0)
+    else:
+        if await acl_check(name, 'render') == 1:
+            return await re_error(0)
 
-            p_data += '''
-                <div id="opennamu_forge_preview_area">
-                    ''' + doc_preview + '''
-                    <textarea readonly id="opennamu_forge_edit_textarea" class="opennamu_forge_textarea_500 __ON_TEXTAREA__">''' + html.escape(data[0][0]) + '''</textarea>
-                </div>
+    if num:
+        num = str(num)
+
+    v_name = name
+    p_data = ''
+    sub = '(' + await get_lang('raw') + ')'
+
+    if bbs_num != '' and post_num != '':
+        sub += ' (' + await get_lang('bbs') + ')'
+        menu = [['bbs/tool/' + url_pas(bbs_num_str) + '/' + url_pas(post_num_str), await get_lang('return')]]
+        
+        if comment_num != '':
+            sub += ' (' + comment_num + ')'
+    elif topic_num == '' and num != '':
+        if history.is_hidden(name, num) and await acl_check(tool = 'hidel_auth') == 1:
+            return await re_error(3)
+
+        history_data = history.find_data(name, num)
+        data = [[history_data]] if history_data is not None else None
+
+        sub += ' (r' + num + ')'
+
+        menu = [['history_tool/' + url_pas(num) + '/' + url_pas(name), await get_lang('return')]]
+    elif topic_num != '':
+        comment = topics.get(topic_num, num)
+        data = (
+            [[comment.data]]
+            if comment is not None and (comment.block == '' or await acl_check(tool = 'hidel_auth') != 1)
+            else None
+        )
+
+        v_name = await get_lang('discussion_raw')
+        sub = ' (#' + num + ')'
+
+        menu = [
+            ['thread/' + topic_num + '#' + num, await get_lang('discussion')], 
+            ['thread/' + topic_num + '/comment/' + num + '/tool', await get_lang('return')]
+        ]
+    else:
+        data = [[wiki_documents.get_data(name)]] if wiki_documents.exists_title(name) else None
+
+        menu = [['w/' + url_pas(name), await get_lang('return')]]
+
+    if bbs_num != '' and post_num != '':
+        if comment_num != '':
+            data = await api_bbs_w_comment_one(bbs_num_str + '-' + post_num_str + '-' + comment_num)
+            sub_data = await api_bbs_w(bbs_num_str + '-' + post_num_str)
+        else:
+            data = await api_bbs_w(bbs_num_str + '-' + post_num_str)
+            
+        if 'comment' in data:
+            v_name = sub_data["title"]
+            data = [[data["comment"]]]
+        elif 'data' in data:
+            v_name = data["title"]
+            data = [[data["data"]]]
+        else:
+            data = None
+    else:
+        data = data
+        
+    if data:
+        doc_preview = ''
+        if bbs_num == '' and post_num == '' and topic_num == '':
+            doc_preview = '''
+                <textarea class="__ON_TEXTAREA__" id="opennamu_forge_editor_doc_name" style="display: none;">''' + html.escape(name) + '''</textarea>
+                <button class="__ON_BUTTON__" id="opennamu_forge_preview_button" type="button" onclick="opennamu_forge_do_editor_preview('raw');">''' + await get_lang('preview') + '''</button>
+                <hr class="main_hr">
             '''
-            
-            if doc_acl == 1:
-                p_data = '' + \
-                    await get_lang('authority_error') + \
-                    '<hr class="main_hr">' + \
-                    p_data
-                ''
-                sub = ' (' + await get_lang('edit') + ')'
 
-            return await render_template(
-                v_name,
-                p_data,
-                sub,
-                menu
-            )
-        else:
-            return await re_error(conn, 3)
+        p_data += '''
+            <div id="opennamu_forge_preview_area">
+                ''' + doc_preview + '''
+                <textarea readonly id="opennamu_forge_edit_textarea" class="opennamu_forge_textarea_500 __ON_TEXTAREA__">''' + html.escape(data[0][0]) + '''</textarea>
+            </div>
+        '''
+        
+        if doc_acl == 1:
+            p_data = '' + \
+                await get_lang('authority_error') + \
+                '<hr class="main_hr">' + \
+                p_data
+            ''
+            sub = ' (' + await get_lang('edit') + ')'
+
+        return await render_template(
+            v_name,
+            p_data,
+            sub,
+            menu
+        )
+    else:
+        return await re_error(3)

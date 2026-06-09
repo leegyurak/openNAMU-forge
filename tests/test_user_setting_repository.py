@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture()
 def user_setting_db_set(tmp_path):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
     db_set = {"type": "sqlite", "name": str(Path(tmp_path) / "user-setting")}

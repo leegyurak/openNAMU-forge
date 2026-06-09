@@ -1,34 +1,10 @@
 from __future__ import annotations
 
-import os
-from collections.abc import Mapping
-from dataclasses import dataclass
-
 from flask import Flask
 from prometheus_client import CollectorRegistry
 from prometheus_flask_exporter import PrometheusMetrics
 
-from opennamu_forge.infrastructure.env import env_bool
-
-
-@dataclass(frozen=True)
-class MonitoringSettings:
-    enabled: bool = True
-    path: str = "/metrics"
-    group_by: str = "endpoint"
-
-
-def get_monitoring_settings(environ: Mapping[str, str] | None = None) -> MonitoringSettings:
-    environ = os.environ if environ is None else environ
-    path = environ.get("NAMU_PROMETHEUS_PATH", "/metrics").strip() or "/metrics"
-    if not path.startswith("/"):
-        path = "/" + path
-
-    return MonitoringSettings(
-        enabled=env_bool(environ, "NAMU_PROMETHEUS_ENABLED", default=True),
-        path=path,
-        group_by=environ.get("NAMU_PROMETHEUS_GROUP_BY", "endpoint").strip() or "endpoint",
-    )
+from opennamu_forge.config.monitoring import MonitoringConfig, get_monitoring_config
 
 
 def configure_metrics(
@@ -36,16 +12,16 @@ def configure_metrics(
     *,
     version: str,
     db_type: str,
-    settings: MonitoringSettings | None = None,
+    config: MonitoringConfig | None = None,
 ) -> PrometheusMetrics | None:
-    settings = get_monitoring_settings() if settings is None else settings
-    if not settings.enabled:
+    config = get_monitoring_config() if config is None else config
+    if not config.enabled:
         return None
 
     metrics = PrometheusMetrics(
         app,
-        path=settings.path,
-        group_by=settings.group_by,
+        path=config.path,
+        group_by=config.group_by,
         registry=CollectorRegistry(auto_describe=True),
     )
     metrics.info(

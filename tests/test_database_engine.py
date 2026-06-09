@@ -2,7 +2,7 @@ import pytest
 
 
 def test_sqlite_engine_config는_pool_옵션을_비활성화한다(monkeypatch):
-    from opennamu_forge.infrastructure.database_config import build_sqlmodel_create_engine_kwargs
+    from opennamu_forge.infrastructure.database_engine import build_sqlmodel_create_engine_kwargs
 
     monkeypatch.delenv("NAMU_DB_POOL_SIZE", raising=False)
 
@@ -24,7 +24,7 @@ def test_sqlite_engine_config는_pool_옵션을_비활성화한다(monkeypatch):
     ],
 )
 def test_network_db_engine_config는_env_pool_옵션을_반영한다(monkeypatch, env_name, expected_key, expected_value):
-    from opennamu_forge.infrastructure.database_config import build_sqlmodel_create_engine_kwargs
+    from opennamu_forge.infrastructure.database_engine import build_sqlmodel_create_engine_kwargs
 
     monkeypatch.setenv(env_name, str(expected_value))
 
@@ -34,7 +34,7 @@ def test_network_db_engine_config는_env_pool_옵션을_반영한다(monkeypatch
 
 
 def test_network_db_engine_config는_pre_ping을_env로_끌_수_있다(monkeypatch):
-    from opennamu_forge.infrastructure.database_config import build_sqlmodel_create_engine_kwargs
+    from opennamu_forge.infrastructure.database_engine import build_sqlmodel_create_engine_kwargs
 
     monkeypatch.setenv("NAMU_DB_POOL_PRE_PING", "false")
 

@@ -5,6 +5,8 @@ import urllib.parse
 
 import flask
 
+from opennamu_forge.application.runtime_context import get_runtime_value
+from opennamu_forge.config.runtime_database import get_current_db_set
 from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
 
@@ -27,27 +29,11 @@ try:
 except:
     import re
 
-global_func_some_set = {}
-
-
-def global_func_some_set_do(set_name, data=None):
-    global global_func_some_set
-
-    if data is not None:
-        global_func_some_set[set_name] = data
-
-    if set_name in global_func_some_set:
-        return global_func_some_set[set_name]
-    else:
-        return None
-
-
 def get_time():
     return str(datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S"))
 
-
 def db_change(data):
-    set_data = global_func_some_set_do("db_type")
+    set_data = get_runtime_value("db_type")
     if set_data == "mysql":
         data = data.replace("random()", "rand()")
         data = data.replace("%", "%%")
@@ -64,42 +50,12 @@ def db_change(data):
 
     return data
 
-
-def _get_current_db_set():
-    db_type = global_func_some_set_do("db_type")
-    db_set = {
-        "type": db_type,
-        "name": global_func_some_set_do("db_name"),
-    }
-
-    if db_type == "mysql":
-        db_set.update(
-            {
-                "mysql_host": global_func_some_set_do("db_mysql_host"),
-                "mysql_user": global_func_some_set_do("db_mysql_user"),
-                "mysql_pw": global_func_some_set_do("db_mysql_pw"),
-                "mysql_port": global_func_some_set_do("db_mysql_port"),
-            }
-        )
-    elif db_type == "postgresql":
-        db_set.update(
-            {
-                "postgresql_host": global_func_some_set_do("db_postgresql_host"),
-                "postgresql_user": global_func_some_set_do("db_postgresql_user"),
-                "postgresql_pw": global_func_some_set_do("db_postgresql_pw"),
-                "postgresql_port": global_func_some_set_do("db_postgresql_port"),
-            }
-        )
-
-    return db_set
-
-
 def ip_check(d_type=0):
     ip = "::1"
     if d_type == 0 and (flask.session and "id" in flask.session):
         ip = flask.session["id"]
     else:
-        set_data = global_func_some_set_do("load_ip_select")
+        set_data = get_runtime_value("load_ip_select")
         if not set_data or set_data == "default":
             ip = flask.request.environ.get(
                 "HTTP_X_REAL_IP",
@@ -112,7 +68,6 @@ def ip_check(d_type=0):
             ip = "::1"
 
     return ip
-
 
 def ip_or_user(data=""):
     # without_DB
@@ -128,7 +83,6 @@ def ip_or_user(data=""):
     else:
         return 0
 
-
 def url_pas(data):
     data = re.sub(r"^\.", "\\\\.", data)
     data = urllib.parse.quote(data)
@@ -136,18 +90,15 @@ def url_pas(data):
 
     return data
 
-
 def sha224_replace(data):
     return hashlib.sha224(bytes(data, "utf-8")).hexdigest()
-
 
 def md5_replace(data):
     return hashlib.md5(data.encode()).hexdigest()
 
-
-def get_main_skin_set(conn, flask_session, set_name, ip):
-    other_settings = OtherSettingRepository(_get_current_db_set())
-    user_settings = UserSettingRepository(_get_current_db_set())
+def get_main_skin_set(flask_session, set_name, ip):
+    other_settings = OtherSettingRepository(get_current_db_set())
+    user_settings = UserSettingRepository(get_current_db_set())
 
     if ip_or_user(ip) == 0:
         set_data = user_settings.get(ip, set_name) or "default"

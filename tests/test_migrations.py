@@ -6,7 +6,7 @@ import pytest
 def test_schema_migration은_sqlmodel_table을_생성한다(tmp_path):
     pytest.importorskip("sqlmodel")
 
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
     reset_sqlmodel_engine()

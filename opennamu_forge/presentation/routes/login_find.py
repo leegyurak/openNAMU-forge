@@ -1,5 +1,7 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_template,
+)
 async def login_find():
     return await render_template(
         await get_lang('password_search'),

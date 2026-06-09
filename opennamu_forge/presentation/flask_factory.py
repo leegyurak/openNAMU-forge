@@ -4,7 +4,8 @@ from pathlib import Path
 
 import flask
 
-from opennamu_forge.infrastructure.monitoring import MonitoringSettings, configure_metrics
+from opennamu_forge.config.monitoring import MonitoringConfig
+from opennamu_forge.infrastructure.monitoring import configure_metrics
 
 
 def create_flask_app(
@@ -13,10 +14,10 @@ def create_flask_app(
     run_mode: str,
     version: str,
     db_type: str,
-    monitoring_settings: MonitoringSettings | None = None,
+    monitoring_config: MonitoringConfig | None = None,
 ) -> flask.Flask:
     app = flask.Flask(__name__, template_folder=str(Path(base_dir) / "views"))
-    configure_metrics(app, version=version, db_type=db_type, settings=monitoring_settings)
+    configure_metrics(app, version=version, db_type=db_type, config=monitoring_config)
 
     app.config["JSON_AS_ASCII"] = False
     app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False

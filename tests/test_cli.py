@@ -79,7 +79,7 @@ def test_cli_main은_지원하지_않는_command를_거부한다(monkeypatch):
 
 
 def test_cli_migrate는_sqlmodel_미지원_db에서_migration을_건너뛴다(monkeypatch):
-    monkeypatch.setenv("NAMU_DB_TYPE", "legacy")
+    monkeypatch.setenv("NAMU_DB_TYPE", "unsupported")
     monkeypatch.setattr(cli, "load_env_file", lambda: None)
 
     def fail_run_schema_migrations(db_set):

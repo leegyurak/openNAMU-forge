@@ -17,10 +17,13 @@ Repositories are infrastructure adapters. They must stay thin, deterministic, an
 
 ## Settings
 
+- Use `settings` only for wiki/user/domain behavior settings, such as permission options, ACL-adjacent behavior, wiki text, skin choices, and user preferences.
+- Runtime/project values from `.env`, DB connection values, engine pools, Prometheus, Gunicorn, and process startup options are `config`, not `settings`.
 - Setting keys must be represented by `SettingKey` under `opennamu_forge/application/dto/settings.py`.
 - Presentation code should read wiki settings through `WikiSettingsService`, not by hardcoding `other.name` SQL in routes.
 - Dynamic setting names are allowed only when the route validates the name against a local allow-list first, such as skin setting keys; use `WikiSettingsService.get_dynamic()` for those cases.
-- Adding a new runtime/wiki setting requires updating `SettingKey`, `.env.example` when environment-backed, and the related tests/docs.
+- Adding a new wiki/user setting requires updating `SettingKey` and the related tests/docs.
+- Adding new environment-backed project config requires a `*Config` model or `build_*_config_from_env()` helper, `.env.example`, and config-focused tests/docs.
 
 ## Repository Control Flow
 

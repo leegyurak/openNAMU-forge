@@ -1,63 +1,33 @@
-from .tool.func import *
-
-from opennamu_forge.infrastructure.logging import get_logger
-
-logger = get_logger(__name__)
-
-def main_sys_restart_do():
-    logger.info('Restart')
-
-    time.sleep(3)
-
-    python_ver = ''
-    python_ver = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
-
-    run_list = [
-        sys.executable,
-        'python' + python_ver,
-        'python3',
-        'python',
-        'py -' + python_ver
-    ]
-
-    for exe_name in run_list:
-        try:
-            subprocess.Popen([exe_name] + sys.argv)
-            break
-        except:
-            continue
-    
-    os._exit(0)
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.runtime.go_process import terminate_go_process
+from opennamu_forge.presentation.runtime.process_control import schedule_restart
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    re_error,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_template,
+)
 
 async def main_sys_restart(golang_process):
-    with get_db_connect() as conn:
-        if await acl_check('', 'owner_auth', '', '') == 1:
-            return await re_error(conn, 3)
+    if await acl_check('', 'owner_auth', '', '') == 1:
+        return await re_error(3)
 
-        if flask.request.method == 'POST':
-            await acl_check(tool = 'owner_auth', memo = 'restart')
+    if flask.request.method == 'POST':
+        await acl_check(tool = 'owner_auth', memo = 'restart')
 
-            if golang_process.poll() is None:
-                golang_process.terminate()
-                try:
-                    golang_process.wait(timeout = 5)
-                except subprocess.TimeoutExpired:
-                    golang_process.kill()
-                    try:
-                        golang_process.wait(timeout = 5)
-                    except subprocess.TimeoutExpired:
-                        logger.error('Golang process not terminated properly.')
-
-            threading.Thread(target = main_sys_restart_do).start()
-            return flask.Response(await get_lang("warning_restart"), status = 200)
-        else:
-            return await render_template(
-                await get_lang('wiki_restart'),
-                '''
-                    <form method="post">
-                        <button class="__ON_BUTTON__" type="submit">''' + await get_lang('restart') + '''</button>
-                    </form>
-                ''',
-                0,
-                [['manager', await get_lang('return')]]
-            )
+        terminate_go_process(golang_process)
+        schedule_restart()
+        return flask.Response(await get_lang("warning_restart"), status = 200)
+    else:
+        return await render_template(
+            await get_lang('wiki_restart'),
+            '''
+                <form method="post">
+                    <button class="__ON_BUTTON__" type="submit">''' + await get_lang('restart') + '''</button>
+                </form>
+            ''',
+            0,
+            [['manager', await get_lang('return')]]
+        )

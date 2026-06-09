@@ -1,5 +1,8 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    render_simple_set,
+    render_template,
+)
 async def main_tool_admin():
     return await render_template(
         await get_lang('admin_tool'),
@@ -42,7 +45,6 @@ async def main_tool_admin():
             <ul>
                 <li><a href="/restart">''' + await get_lang('wiki_restart') + '''</a></li>
                 <li><a href="/shutdown">''' + await get_lang('wiki_shutdown') + '''</a></li>
-                <li><a href="/update">''' + await get_lang('update') + '''</a></li>
             </ul>
             <h2>''' + await get_lang('version') + '''</h2>
             <ul>

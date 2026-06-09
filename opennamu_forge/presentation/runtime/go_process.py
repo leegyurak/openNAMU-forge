@@ -1,0 +1,5 @@
+from __future__ import annotations
+
+from opennamu_forge.presentation.runtime.gopennamu_process import terminate_gopennamu_process
+
+terminate_go_process = terminate_gopennamu_process

@@ -1,6 +1,6 @@
 import os
 
-from opennamu_forge.infrastructure.env import env_bool, load_env_file, parse_env_line
+from opennamu_forge.config.env import env_bool, load_env_file, parse_env_line
 
 
 def test_env_line은_key_value를_파싱한다():

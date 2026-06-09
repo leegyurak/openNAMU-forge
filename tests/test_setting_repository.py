@@ -9,7 +9,7 @@ def sqlite_db_set(tmp_path):
 
 
 def test_other_setting_repository는_setting을_upsert한다(sqlite_db_set):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
     from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 
@@ -26,7 +26,7 @@ def test_other_setting_repository는_setting을_upsert한다(sqlite_db_set):
 
 
 def test_other_setting_repository는_coverage별_setting을_분리한다(sqlite_db_set):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
     from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 
@@ -44,7 +44,7 @@ def test_other_setting_repository는_coverage별_setting을_분리한다(sqlite_
 
 
 def test_other_setting_repository는_없는_setting을_기본값으로_반환한다(sqlite_db_set):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
     from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 
@@ -58,7 +58,7 @@ def test_other_setting_repository는_없는_setting을_기본값으로_반환한
 
 
 def test_other_setting_repository는_name_data를_목록으로_조회한다(sqlite_db_set):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
     from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 

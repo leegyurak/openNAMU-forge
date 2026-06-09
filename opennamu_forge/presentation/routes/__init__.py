@@ -75,7 +75,6 @@ from opennamu_forge.presentation.routes.main_setting_404_page import main_settin
 
 from opennamu_forge.presentation.routes.main_sys_restart import main_sys_restart
 from opennamu_forge.presentation.routes.main_sys_shutdown import main_sys_shutdown
-from opennamu_forge.presentation.routes.main_sys_update import main_sys_update
 
 from opennamu_forge.presentation.routes.main_tool_admin import main_tool_admin
 from opennamu_forge.presentation.routes.main_tool_other import main_tool_other

@@ -9,10 +9,17 @@ The current Python code delegates these responsibilities to GopenNAMU:
 - ACL, ban, level, language, skin, wiki setting, alarm, page-view, and several API helpers through `/compatible_api/*`.
 - Some markup/rendering fallbacks when the selected markup is not handled by the Python NamuMark renderer.
 
-When changing startup, routing, metrics, or DB settings:
+The call boundary is split by layer:
+
+- `opennamu_forge/application/ports/gopennamu.py`: application-facing protocol.
+- `opennamu_forge/infrastructure/gopennamu_client.py`: aiohttp client adapter. It must not import Flask or presentation helpers.
+- `opennamu_forge/presentation/gopennamu_gateway.py`: Flask request/header/form extraction and runtime port lookup.
+
+When changing startup, routing, metrics, or DB config:
 
 - Preserve the helper process lifecycle.
 - Preserve the `NAMU_GOLANGPORT` contract.
 - Keep `opennamu_forge/application/version.py` aligned with the expected GopenNAMU release.
 - Avoid importing `app.py` from lightweight unit tests, because import starts DB bootstrap and the Go helper path.
 - Treat removal of GopenNAMU as a separate migration project.
+- Do not reintroduce a GopenNAMU client under `opennamu_forge/presentation/shared/`.

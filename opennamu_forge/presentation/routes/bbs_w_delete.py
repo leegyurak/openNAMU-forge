@@ -1,62 +1,70 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.shared.func import (
+    flask,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    redirect,
+    render_simple_set,
+    render_template,
+)
+from opennamu_forge.presentation.dependencies import get_bbs_repository
 from .go_api_bbs_w import api_bbs_w
 
 async def bbs_w_delete(bbs_num = '', post_num = '', comment_num = ''):
-    with get_db_connect() as conn:
-        bbs = get_bbs_repository()
+    bbs = get_bbs_repository()
 
-        bbs_name = bbs.get_setting(str(bbs_num), "bbs_name")
-        if bbs_name == "":
-            return redirect(conn, '/bbs/main')
-        
-        bbs_num_str = str(bbs_num)
-        post_num_str = str(post_num)
+    bbs_name = bbs.get_setting(str(bbs_num), "bbs_name")
+    if bbs_name == "":
+        return redirect('/bbs/main')
+    
+    bbs_num_str = str(bbs_num)
+    post_num_str = str(post_num)
 
-        if await acl_check('', 'owner_auth', '') == 1:
-            return redirect(conn, '/bbs/in/' + bbs_num_str)
-        
-        temp_dict = await api_bbs_w(bbs_num_str + '-' + post_num_str)
-        if not 'user_id' in temp_dict:
-            return redirect(conn, '/bbs/main')
-        
-        if flask.request.method == 'POST':
-            if comment_num == '':
-                bbs.delete_post(bbs_num_str, post_num_str)
-                
-                return redirect(conn, '/bbs/in/' + bbs_num_str)
-            else:
-                comment_num_split = comment_num.split('-')
-                
-                set_id = bbs_num_str + '-' + post_num_str
-                set_id_sub = '-'.join(comment_num_split[:-1])
-                if set_id_sub != '':
-                    set_id += '-' + set_id_sub
-
-                set_code = comment_num_split[len(comment_num_split) - 1]
-
-                bbs.clear_comment(set_id, set_code)
-                
-                return redirect(conn, '/bbs/w/' + bbs_num_str + '/' + post_num_str)
-        else:
-            sub = '(' + bbs_name + ')'
-            sub += ' (' + post_num_str + ')'
+    if await acl_check('', 'owner_auth', '') == 1:
+        return redirect('/bbs/in/' + bbs_num_str)
+    
+    temp_dict = await api_bbs_w(bbs_num_str + '-' + post_num_str)
+    if not 'user_id' in temp_dict:
+        return redirect('/bbs/main')
+    
+    if flask.request.method == 'POST':
+        if comment_num == '':
+            bbs.delete_post(bbs_num_str, post_num_str)
             
-            name = await get_lang('bbs_comment_delete')
-            if comment_num == '':
-                name = await get_lang('bbs_post_delete')
-            else:
-                sub += ' (' + comment_num + ')'
+            return redirect('/bbs/in/' + bbs_num_str)
+        else:
+            comment_num_split = comment_num.split('-')
+            
+            set_id = bbs_num_str + '-' + post_num_str
+            set_id_sub = '-'.join(comment_num_split[:-1])
+            if set_id_sub != '':
+                set_id += '-' + set_id_sub
 
-            return await render_template(
-                name,
-                await render_simple_set('''
-                    <form method="post">
-                        <span>''' + await get_lang('delete_warning') + '''</span>
-                        <hr class="main_hr">
-                        <button class="__ON_BUTTON__" type="submit">''' + await get_lang('delete') + '''</button>
-                    </form>
-                '''),
-                sub,
-                [['bbs/w/' + bbs_num_str + '/' + post_num_str, await get_lang('return')]]
-            )
+            set_code = comment_num_split[len(comment_num_split) - 1]
+
+            bbs.clear_comment(set_id, set_code)
+            
+            return redirect('/bbs/w/' + bbs_num_str + '/' + post_num_str)
+    else:
+        sub = '(' + bbs_name + ')'
+        sub += ' (' + post_num_str + ')'
+        
+        name = await get_lang('bbs_comment_delete')
+        if comment_num == '':
+            name = await get_lang('bbs_post_delete')
+        else:
+            sub += ' (' + comment_num + ')'
+
+        return await render_template(
+            name,
+            await render_simple_set('''
+                <form method="post">
+                    <span>''' + await get_lang('delete_warning') + '''</span>
+                    <hr class="main_hr">
+                    <button class="__ON_BUTTON__" type="submit">''' + await get_lang('delete') + '''</button>
+                </form>
+            '''),
+            sub,
+            [['bbs/w/' + bbs_num_str + '/' + post_num_str, await get_lang('return')]]
+        )

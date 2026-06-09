@@ -1,4 +1,9 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    ip_check,
+    python_to_golang,
+    sys,
+)
 
 async def api_func_auth(user_name = ''):
     other_set = {}

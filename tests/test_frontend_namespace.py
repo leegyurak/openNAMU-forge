@@ -5,9 +5,14 @@ from pathlib import Path
 import pytest
 
 SKIPPED_SUFFIXES = frozenset({".png", ".webp", ".ico", ".svg"})
+SKIPPED_PARTS = frozenset({"__pycache__"})
 FRONTEND_NAMESPACE_FILES = tuple(
     filter(
-        lambda file_path: file_path.is_file() and file_path.suffix not in SKIPPED_SUFFIXES,
+        lambda file_path: (
+            file_path.is_file()
+            and file_path.suffix not in SKIPPED_SUFFIXES
+            and SKIPPED_PARTS.isdisjoint(file_path.parts)
+        ),
         chain((Path("app.py"),), Path("opennamu_forge/presentation/routes").rglob("*"), Path("views").rglob("*")),
     )
 )

@@ -1,6 +1,21 @@
-from .func_tool import *
-from .func_tool import _get_current_db_set
+from opennamu_forge.presentation.encoding_helpers import (
+    sha224_replace,
+    url_pas,
+)
+import html
+import string
 
+from opennamu_forge.presentation.shared.sql_dialect import (
+    datetime,
+    flask,
+    get_main_skin_set,
+    get_time,
+    ip_check,
+    re,
+    urllib,
+)
+
+from opennamu_forge.config.runtime_database import get_current_db_set
 from opennamu_forge.infrastructure.document_meta_repository import DocumentMetaRepository
 from opennamu_forge.infrastructure.history_repository import HistoryRepository
 from opennamu_forge.infrastructure.html_filter_repository import HtmlFilterRepository
@@ -18,7 +33,6 @@ logger = get_logger(__name__)
 class class_do_render_namumark:
     def __init__(
         self,
-        conn,
         doc_name,
         doc_data,
         doc_set,
@@ -27,12 +41,11 @@ class class_do_render_namumark:
         parameter = {},
         parent = None
     ):
-        self.conn = conn
-        self.document_meta = DocumentMetaRepository(_get_current_db_set())
-        self.history = HistoryRepository(_get_current_db_set())
-        self.html_filters = HtmlFilterRepository(_get_current_db_set())
-        self.other_settings = OtherSettingRepository(_get_current_db_set())
-        self.wiki_documents = WikiDocumentRepository(_get_current_db_set())
+        self.document_meta = DocumentMetaRepository(get_current_db_set())
+        self.history = HistoryRepository(get_current_db_set())
+        self.html_filters = HtmlFilterRepository(get_current_db_set())
+        self.other_settings = OtherSettingRepository(get_current_db_set())
+        self.wiki_documents = WikiDocumentRepository(get_current_db_set())
 
         self.doc_data = doc_data.replace('\r', '')
         self.doc_name = doc_name
@@ -293,7 +306,7 @@ class class_do_render_namumark:
         doc_set = dict(self.doc_set)
         doc_set['doc_include'] = doc_include
 
-        data_end = await class_do_render_namumark(self.conn, self.doc_name, data, doc_set, self.lang_data, do_type = 'inter')()
+        data_end = await class_do_render_namumark(self.doc_name, data, doc_set, self.lang_data, do_type = 'inter')()
 
         self.render_data_js += data_end[1]
         self.data_category_list += data_end[2]['category']
@@ -307,7 +320,7 @@ class class_do_render_namumark:
     # Render
     def do_render_text(self):
         # <b> function
-        bold_user_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_bold', self.ip)
+        bold_user_set = get_main_skin_set(self.flask_session, 'main_css_bold', self.ip)
 
         def do_render_text_bold(match):
             data = match.group(1)
@@ -368,7 +381,7 @@ class class_do_render_namumark:
         self.render_data = re.sub(r",,((?:(?!,,).)+),,", do_render_text_sub, self.render_data)
 
         # <s> function
-        strike_user_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_strike', self.ip)
+        strike_user_set = get_main_skin_set(self.flask_session, 'main_css_strike', self.ip)
 
         def do_render_text_strike(match):
             data = match.group(1)
@@ -1052,7 +1065,7 @@ class class_do_render_namumark:
 
                     file_style = file_width + file_height + file_align_style + file_bgcolor + file_radius + file_rendering
 
-                    image_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_image_set', self.ip)
+                    image_set = get_main_skin_set(self.flask_session, 'main_css_image_set', self.ip)
                     if image_set == 'new_click' or image_set == 'click':
                         file_end = '<img style="' + file_style + '" id="opennamu_forge_image_' + str(image_count) + '" alt="' + link_sub + '" src="">'
                     else:
@@ -1376,7 +1389,7 @@ class class_do_render_namumark:
 
     async def do_render_include(self):
         include_num = 0
-        include_set_data = get_main_skin_set(self.conn, self.flask_session, 'main_css_include_link', self.ip)
+        include_set_data = get_main_skin_set(self.flask_session, 'main_css_include_link', self.ip)
         include_regex = re.compile(r'\[include\(((?:(?!\[include\(|\)\]|<\/div>).)+)\)\](\n?)', re.I)
         include_count_max = len(re.findall(include_regex, self.render_data)) * 2
         while 1:
@@ -1437,7 +1450,7 @@ class class_do_render_namumark:
 
                         include_data = ''
                         if self.parent:
-                            include_data_tmp = await self.parent(self.conn,
+                            include_data_tmp = await self.parent(
                                 doc_name = include_name,
                                 doc_data = include_doc_data,
                                 data_type = 'api_include',
@@ -1460,9 +1473,9 @@ class class_do_render_namumark:
     def do_redner_footnote(self):
         footnote_num = 0
 
-        footnote_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_footnote_set', self.ip)
-        footnote_number_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_footnote_number', self.ip)
-        footnote_number_view_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_view_real_footnote_num', self.ip)
+        footnote_set = get_main_skin_set(self.flask_session, 'main_css_footnote_set', self.ip)
+        footnote_number_set = get_main_skin_set(self.flask_session, 'main_css_footnote_number', self.ip)
+        footnote_number_view_set = get_main_skin_set(self.flask_session, 'main_css_view_real_footnote_num', self.ip)
 
         footnote_regex = re.compile(r'(?:\[\*((?:(?!\[\*|\]| ).)+)?(?: ((?:(?!\[\*|\]).)+))?\]|\[(각주|footnote)\])', re.I)
         footnote_count_all = len(re.findall(footnote_regex, self.render_data)) * 4
@@ -2345,7 +2358,7 @@ class class_do_render_namumark:
 
             return end_text
             
-        list_view_set = get_main_skin_set(self.conn, self.flask_session, 'main_css_list_view_change', self.ip)
+        list_view_set = get_main_skin_set(self.flask_session, 'main_css_list_view_change', self.ip)
         
         list_style = {
             1 : 'opennamu_forge_list_1',
@@ -2454,7 +2467,7 @@ class class_do_render_namumark:
             if self.data_category != '':
                 data_name = self.get_tool_data_storage(self.data_category, '</div>', '')
 
-                category_set_data = get_main_skin_set(self.conn, self.flask_session, 'main_css_category_set', self.ip)
+                category_set_data = get_main_skin_set(self.flask_session, 'main_css_category_set', self.ip)
                 if category_set_data == 'bottom':
                     if re.search(r'<footnote_category>', self.render_data):
                         self.render_data = self.render_data.replace('<footnote_category>', '<hr><' + data_name + '></' + data_name + '>', 1)
@@ -2542,7 +2555,7 @@ class class_do_render_namumark:
             self.data_toc = toc_data
             self.data_toc = re.sub(r'<toc_inside>((?:(?!<toc_inside>|<\/toc_inside>).)*)<\/toc_inside>', do_render_last_toc, self.data_toc)
 
-            toc_set_data = get_main_skin_set(self.conn, self.flask_session, 'main_css_toc_set', self.ip)
+            toc_set_data = get_main_skin_set(self.flask_session, 'main_css_toc_set', self.ip)
 
             self.render_data = re.sub(toc_search_regex, '', self.render_data)
             if toc_set_data == 'off':

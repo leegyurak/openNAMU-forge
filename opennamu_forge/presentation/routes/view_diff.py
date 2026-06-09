@@ -1,5 +1,17 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.authorization_helpers import acl_check
+from opennamu_forge.presentation.encoding_helpers import url_pas
+from opennamu_forge.presentation.shared.func import (
+    diff_match_patch,
+    html,
+    re,
+    re_error,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.dependencies import get_history_repository
 def view_diff_do(first_raw_data, second_raw_data, first, second):
     if first_raw_data == second_raw_data:
         result = ''
@@ -67,33 +79,32 @@ def view_diff_do(first_raw_data, second_raw_data, first, second):
     return result
 
 async def view_diff(name = 'Test', num_a = 1, num_b = 1):
-    with get_db_connect() as conn:
-        history = get_history_repository()
+    history = get_history_repository()
 
-        first = str(num_a)
-        second = str(num_b)
+    first = str(num_a)
+    second = str(num_b)
 
-        if await acl_check(name, 'render') == 1:
-            return await re_error(conn, 0)
+    if await acl_check(name, 'render') == 1:
+        return await re_error(0)
 
-        if history.any_hidden(name, (first, second)) and await acl_check(tool = 'hidel_auth') == 1:
-            return await re_error(conn, 3)
+    if history.any_hidden(name, (first, second)) and await acl_check(tool = 'hidel_auth') == 1:
+        return await re_error(3)
 
-        first_raw_data = history.find_data(name, first)
+    first_raw_data = history.find_data(name, first)
 
-        second_raw_data = history.find_data(name, second)
-        
-        if first_raw_data is not None and second_raw_data is not None:
-            first_raw_data = first_raw_data.replace('\r', '')
-            second_raw_data = second_raw_data.replace('\r', '')
+    second_raw_data = history.find_data(name, second)
+    
+    if first_raw_data is not None and second_raw_data is not None:
+        first_raw_data = first_raw_data.replace('\r', '')
+        second_raw_data = second_raw_data.replace('\r', '')
 
-            result = view_diff_do(first_raw_data, second_raw_data, 'r' + first, 'r' + second)
+        result = view_diff_do(first_raw_data, second_raw_data, 'r' + first, 'r' + second)
 
-            return await render_template(
-                name,
-                result,
-                '(' + await get_lang('compare') + ')',
-                [['history/' + url_pas(name), await get_lang('return')]]
-            )
-        else:
-            return redirect(conn, '/history/' + url_pas(name))
+        return await render_template(
+            name,
+            result,
+            '(' + await get_lang('compare') + ')',
+            [['history/' + url_pas(name), await get_lang('return')]]
+        )
+    else:
+        return redirect('/history/' + url_pas(name))

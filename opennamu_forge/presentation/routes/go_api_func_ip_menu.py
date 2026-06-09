@@ -1,4 +1,8 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    python_to_golang,
+    sys,
+)
 
 async def api_func_ip_menu(ip = "Test", option = ""):
     other_set = {}

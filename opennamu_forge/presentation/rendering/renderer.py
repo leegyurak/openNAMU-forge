@@ -1,7 +1,12 @@
-from .func_tool import *
-from .func_tool import _get_current_db_set
+import html
+import random
+import string
 
-from .func_render_namumark import class_do_render_namumark
+from opennamu_forge.config.runtime_database import get_current_db_set
+
+from opennamu_forge.presentation.shared.sql_dialect import re
+
+from opennamu_forge.presentation.rendering.namumark import class_do_render_namumark
 from opennamu_forge.infrastructure.backlink_repository import BacklinkRepository
 from opennamu_forge.infrastructure.document_meta_repository import DocumentMetaRepository
 from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
@@ -9,9 +14,7 @@ from opennamu_forge.infrastructure.setting_repository import OtherSettingReposit
 # 커스텀 마크 언젠간 다시 추가 예정
 
 class class_do_render:
-    def __init__(self, conn, lang_data = {}, markup = '', parameter = {}, parent = None):
-        self.conn = conn
-
+    def __init__(self, lang_data = {}, markup = '', parameter = {}, parent = None):
         if lang_data == '{}':
             lang_data = {
                 'toc' : 'toc',
@@ -30,9 +33,9 @@ class class_do_render:
         return random_string
 
     async def do_render(self, doc_name, doc_data, data_type):
-        backlinks = BacklinkRepository(_get_current_db_set())
-        document_meta = DocumentMetaRepository(_get_current_db_set())
-        other_settings = OtherSettingRepository(_get_current_db_set())
+        backlinks = BacklinkRepository(get_current_db_set())
+        document_meta = DocumentMetaRepository(get_current_db_set())
+        other_settings = OtherSettingRepository(get_current_db_set())
 
         doc_set = {}
         if data_type == 'from':
@@ -59,7 +62,6 @@ class class_do_render:
 
         if rep_data == 'namumark' or rep_data == 'namumark_beta':
             data_end = await class_do_render_namumark(
-                self.conn,
                 doc_name,
                 doc_data,
                 doc_set,

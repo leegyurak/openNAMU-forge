@@ -1,4 +1,8 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    python_to_golang,
+    sys,
+)
 
 async def api_list_recent_edit_request(num = 1, set_type = 'normal', limit = 50):
     other_set = {}

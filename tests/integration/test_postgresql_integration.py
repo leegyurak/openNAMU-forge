@@ -12,7 +12,7 @@ def test_postgresql은_실제_db에_sqlmodel_schema를_생성한다():
     pytest.importorskip("sqlmodel")
     pytest.importorskip("sqlalchemy")
 
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
     reset_sqlmodel_engine()

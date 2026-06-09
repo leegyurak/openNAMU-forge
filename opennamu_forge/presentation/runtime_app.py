@@ -1,26 +1,52 @@
 # Init
+import atexit
 import os
 import signal
-import atexit
 import sys
 from pathlib import Path
 
 if sys.version_info < (3, 10):
     raise RuntimeError('OpenNamu Forge requires Python 3.10 or newer.')
 
-from opennamu_forge.infrastructure.env import load_env_file
+import flask
+import requests
+
+from opennamu_forge.config.env import load_env_file
 
 load_env_file()
 
 from opennamu_forge.application.startup import normalize_run_mode
+from opennamu_forge.application.runtime_context import get_runtime_value
 from opennamu_forge.application.version import VERSION_INFO
-from opennamu_forge.infrastructure.database import should_init_sqlmodel
+from opennamu_forge.config.database import build_database_config_from_env, is_sqlmodel_database_type
+from opennamu_forge.config.runtime_database import apply_database_runtime_config
 from opennamu_forge.infrastructure.logging import get_logger
 from opennamu_forge.infrastructure.migrations import run_schema_migrations
+from opennamu_forge.presentation.encoding_helpers import md5_replace, url_pas
 from opennamu_forge.presentation.flask_factory import create_flask_app
-from opennamu_forge.presentation.theme import build_theme_css
-from opennamu_forge.presentation.routes.tool.func import *
-from opennamu_forge.presentation.routes import *
+from opennamu_forge.presentation.url_converters import register_url_converters
+
+from opennamu_forge.presentation.text_helpers import (
+    cut_100,
+)
+from opennamu_forge.presentation.response_helpers import load_lang
+from opennamu_forge.presentation.dependencies import (
+    get_other_setting_repository,
+)
+from opennamu_forge.presentation.runtime.gopennamu_process import (
+    kill_port,
+    start_gopennamu_process,
+    terminate_gopennamu_process,
+    wait_for_gopennamu_startup,
+)
+from opennamu_forge.presentation.runtime.scheduler import auto_do_something
+from opennamu_forge.presentation.runtime.server_settings import resolve_server_settings
+from opennamu_forge.presentation.runtime.startup_tasks import (
+    ensure_startup_defaults,
+    initialize_seed_data,
+    select_go_helper_executable,
+)
+from opennamu_forge.presentation.route_registry import register_routes
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -41,370 +67,86 @@ if len(args) > 1:
 version_list = VERSION_INFO
 
 # Init-DB
-data_db_set = class_check_json()
-do_db_set(data_db_set)
+data_db_set = build_database_config_from_env().to_db_set()
+apply_database_runtime_config(data_db_set)
 
-with get_db_connect(init_mode = True) as conn:
-    legacy_bootstrap = get_legacy_bootstrap_repository()
+if is_sqlmodel_database_type(data_db_set):
+    run_schema_migrations(data_db_set)
 
-    setup_tool = ''
-    old_ver = ""
-    try:
-        old_ver = get_other_setting_repository().get('ver')
-    except:
+setup_tool = ''
+old_ver = ""
+try:
+    old_ver = get_other_setting_repository().get('ver')
+except:
+    setup_tool = 'init'
+
+if setup_tool != 'init':
+    if old_ver != '':
+        if int(version_list['c_ver']) > int(old_ver):
+            setup_tool = 'update'
+        else:
+            setup_tool = 'normal'
+    else:
         setup_tool = 'init'
 
-    if setup_tool != 'init':
-        if old_ver != '':
-            if int(version_list['c_ver']) > int(old_ver):
-                setup_tool = 'update'
-            else:
-                setup_tool = 'normal'
-        else:
-            setup_tool = 'init'
+logger.info("Run Mode : %s", run_mode)
+logger.info("Setup Tool : %s", setup_tool)
+logger.info("Old Version : %s", old_ver)
 
-    logger.info("Run Mode : %s", run_mode)
-    logger.info("Setup Tool : %s", setup_tool)
-    logger.info("Old Version : %s", old_ver)
+if run_mode != 'dev':
+    file_name = select_go_helper_executable()
+    local_file_path = os.path.join(BIN_DIR, file_name)
 
-    if run_mode != 'dev':
-        file_name = linux_exe_chmod()
-        local_file_path = os.path.join(BIN_DIR, file_name)
+    if not (setup_tool == "normal" and os.path.exists(local_file_path)):
+        if os.path.exists(local_file_path):
+            logger.info('Remove Old Binary')
+            os.remove(local_file_path)
 
-        if not (setup_tool == "normal" and os.path.exists(local_file_path)):
-            if os.path.exists(local_file_path):
-                logger.info('Remove Old Binary')
-                os.remove(local_file_path)
+        download_url = version_list["bin_link"] + file_name
 
-            download_url = version_list["bin_link"] + file_name
+        logger.info('Download New Binary File')
+        response = requests.get(download_url, stream = True)
+        if response.status_code == 200:
+            with open(local_file_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size = 8192):
+                    file.write(chunk)
 
-            logger.info('Download New Binary File')
-            response = requests.get(download_url, stream = True)
-            if response.status_code == 200:
-                with open(local_file_path, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size = 8192):
-                        file.write(chunk)
+            logger.info('Complete Download')
 
-                logger.info('Complete Download')
+if setup_tool == 'init':
+    initialize_seed_data()
 
-    if data_db_set['type'] == 'mysql':
-        legacy_bootstrap.ensure_mysql_database(conn, data_db_set['name'])
+ensure_startup_defaults(version_list['c_ver'], run_mode)
 
-        conn.select_db(data_db_set['name'])
-    elif data_db_set['type'] == 'sqlite':
-        legacy_bootstrap.set_sqlite_wal_journal(conn)
+app = create_flask_app(
+    base_dir = str(PROJECT_ROOT),
+    run_mode = run_mode,
+    version = version_list['r_ver'],
+    db_type = data_db_set['type'],
+)
 
-    if should_init_sqlmodel(data_db_set):
-        run_schema_migrations(data_db_set)
+register_url_converters(app)
 
-    if setup_tool != 'normal':
-        legacy_bootstrap.ensure_legacy_schema(conn, get_db_table_list(), data_db_set['type'])
-        legacy_bootstrap.create_history_index_if_missing(conn)
+settings = get_other_setting_repository()
+app.secret_key = settings.get('key')
 
-        if setup_tool == 'update':
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(update(conn, int(old_ver), data_db_set))
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(update(conn, int(old_ver), data_db_set))
-        else:
-            set_init(conn)
-
-    set_init_always(conn, version_list['c_ver'], run_mode)
-
-    # Init-Route
-    class EverythingConverter(werkzeug.routing.PathConverter):
-        def __init__(self, map):
-            super(EverythingConverter, self).__init__(map)
-            self.regex = r'.*?'
-
-        def to_python(self, value):
-            return re.sub(r'^\\\.', '.', value)
-
-    class RegexConverter(werkzeug.routing.BaseConverter):
-        def __init__(self, url_map, *items):
-            super(RegexConverter, self).__init__(url_map)
-            self.regex = items[0]
-
-    app = create_flask_app(
-        base_dir = str(PROJECT_ROOT),
-        run_mode = run_mode,
-        version = version_list['r_ver'],
-        db_type = data_db_set['type'],
-    )
-
-    app.url_map.converters['everything'] = EverythingConverter
-    app.url_map.converters['regex'] = RegexConverter
-
-    settings = get_other_setting_repository()
-    app.secret_key = settings.get('key')
-
-    # Init-DB_Data
-    server_set = {}
-    server_set_var = get_init_set_list()
-    server_set_env = {
-        'host' : os.getenv('NAMU_HOST'),
-        'golang_port' : os.getenv('NAMU_GOLANGPORT'),
-        'port' : os.getenv('NAMU_PORT'),
-        'language' : os.getenv('NAMU_LANG'),
-        'markup' : os.getenv('NAMU_MARKUP'),
-        'encode' : os.getenv('NAMU_ENCRYPT')
-    }
-    for i in server_set_var:
-        server_set_val = settings.get(i)
-        if server_set_val != '':
-            pass
-        elif server_set_env[i] != None:
-            server_set_val = server_set_env[i]
-
-            settings.upsert(i, server_set_env[i])
-        else:
-            if 'list' in server_set_var[i]:
-                print(server_set_var[i]['display'] + ' (' + server_set_var[i]['default'] + ') [' + ', '.join(server_set_var[i]['list']) + ']' + ' : ', end = '')
-            else:
-                print(server_set_var[i]['display'] + ' (' + server_set_var[i]['default'] + ') : ', end = '')
-
-            server_set_val = input()
-            if server_set_val == '':
-                server_set_val = server_set_var[i]['default']
-            elif server_set_var[i]['require'] == 'select':
-                if not server_set_val in server_set_var[i]['list']:
-                    server_set_val = server_set_var[i]['default']
-
-            settings.upsert(i, server_set_val)
-
-        logger.info("%s : %s", server_set_var[i]['display'], server_set_val)
-
-        server_set[i] = server_set_val
-        
-for for_a in server_set:
-    global_some_set_do('setup_' + for_a, server_set[for_a])
+# Init-DB_Data
+server_set = resolve_server_settings(settings)
 
 ###
-
-async def golang_process_check():
-    while True:
-        try:
-            other_set_temp = {}
-            for k in data_db_set:
-                other_set_temp["db_" + k] = data_db_set[k]
-
-            other_set = {
-                "url" : "test",
-                "data" : json_dumps(other_set_temp),
-                "session" : "{}",
-                "cookies" : "",
-                "ip" : "127.0.0.1"
-            }
-
-            response = requests.post('http://127.0.0.1:' + server_set["golang_port"] + '/compatible_api/test', data = json_dumps(other_set))
-            if response.status_code == 200:
-                logger.info('Golang turn on')
-                break
-        except requests.ConnectionError:
-            logger.info('Wait golang...')
-            time.sleep(1)
-
-def kill_port(port, timeout = 1.5, force = True):
-    pids = {
-        c.pid for c in psutil.net_connections(kind = "inet")
-        if c.pid and c.laddr and c.laddr.port == port and c.status == psutil.CONN_LISTEN
-    }
-    procs = []
-    for pid in pids:
-        try:
-            p = psutil.Process(pid)
-            p.terminate()
-            procs.append(p)
-        except psutil.NoSuchProcess:
-            pass
-        except psutil.AccessDenied:
-            logger.exception("Golang PID is not dying, please shut down manually by sudo.")
-            raise
-
-    _, alive = psutil.wait_procs(procs, timeout = timeout)
-    if force:
-        for p in alive:
-            try:
-                p.kill()
-            except psutil.NoSuchProcess:
-                pass
-            except psutil.AccessDenied:
-                logger.exception("Golang PID is not dying, please shut down manually by sudo.")
-                raise
-
-        psutil.wait_procs(alive, timeout = timeout)
-
-    return sorted(pids)
-
 port_kill = kill_port(server_set["golang_port"])
 logger.info("Golang port killed : %s", port_kill)
 
-exe_name = linux_exe_chmod()
-exe_path = os.path.join(BIN_DIR, exe_name)
-
-cmd = [exe_path, server_set["golang_port"], run_mode, 'api']
-golang_process = subprocess.Popen(cmd, cwd = BIN_DIR)
-
-try:
-    loop = asyncio.get_running_loop()
-    loop.create_task(golang_process_check())
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(golang_process_check())
+exe_name = select_go_helper_executable()
+golang_process = start_gopennamu_process(
+    bin_dir=BIN_DIR,
+    executable_name=exe_name,
+    golang_port=server_set["golang_port"],
+    run_mode=run_mode,
+)
+wait_for_gopennamu_startup(data_db_set, server_set["golang_port"])
 
 ###
-
-def back_up(data_db_set):
-    try:
-        settings = get_other_setting_repository()
-        back_time_data = settings.get('back_up')
-        back_time = float(number_check(back_time_data, True)) if back_time_data != '' else 0
-
-        back_up_count_data = settings.get('backup_count')
-        back_up_count = int(number_check(back_up_count_data)) if back_up_count_data != '' else 3
-
-        if back_time != 0:
-            back_up_where = settings.get('backup_where') or data_db_set['name'] + '.db'
-
-            logger.info('Back up state : %s hours', back_time)
-            logger.info('Back up directory : %s', back_up_where)
-            if back_up_count != 0:
-                logger.info('Back up max number : %s', back_up_count)
-
-                file_dir = os.path.split(back_up_where)[0]
-                file_dir = '.' if file_dir == '' else file_dir
-                
-                file_name = os.path.split(back_up_where)[1]
-                file_name = re.sub(r'\.db$', '_[0-9]{14}.db', file_name)
-
-                backup_file = [for_a for for_a in os.listdir(file_dir) if re.search('^' + file_name + '$', for_a)]
-                backup_file = sorted(backup_file)
-                
-                if len(backup_file) >= back_up_count:
-                    remove_dir = os.path.join(file_dir, backup_file[0])
-                    os.remove(remove_dir)
-                    logger.info('Back up : Remove (%s)', remove_dir)
-
-            now_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-            new_file_name = re.sub(r'\.db$', '_' + now_time + '.db', back_up_where)
-            shutil.copyfile(
-                data_db_set['name'] + '.db', 
-                new_file_name
-            )
-
-            logger.info('Back up : OK (%s)', new_file_name)
-        else:
-            logger.info('Back up state : Turn off')
-
-            back_time = 1
-    except Exception:
-        logger.exception('Back up : Error')
-
-        back_time = 1
-
-    threading.Timer(60 * 60 * back_time, back_up, [data_db_set]).start()
-
-async def do_every_day():
-    # 오늘의 날짜 불러오기
-    time_today = get_time().split()[0]
-    settings = get_other_setting_repository()
-    votes = get_vote_repository()
-    user_settings = get_user_setting_repository()
-    document_meta = get_document_meta_repository()
-
-    # vote 관리
-    for for_a in votes.list_by_types(('open', 'n_open'), limit=100000):
-        db_data = votes.get_option(for_a.vote_id, 'end_date')
-        if db_data != '':
-            time_db = db_data.split()[0]
-            if time_today > time_db:
-                votes.update_main_type(for_a.vote_id, for_a.type, 'close' if for_a.type == 'open' else 'n_close')
-
-    # ban 관리
-    get_recent_block_repository().close_expired(get_time())
-
-    # auth 관리
-    for for_a in user_settings.list_id_data_by_name('auth_date'):
-        time_db = for_a[1].split()[0]
-        if time_today > time_db:
-            user_settings.upsert(for_a[0], 'acl', 'user')
-            user_settings.delete(for_a[0], 'auth_date')
-            
-    # acl 관리
-    for for_a in document_meta.list_doc_rev_data_by_set_name('acl_date'):
-        time_db = for_a[2].split()[0]
-        if time_today > time_db:
-            document_meta.delete_acl(for_a[0], for_a[1])
-            document_meta.delete(for_a[0], 'acl_date', doc_rev=for_a[1])
-            
-    # ua 관리
-    db_data = settings.get('ua_expiration_date')
-    if db_data != '':
-        time_db = int(number_check(db_data))
-        
-        time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
-        time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
-        
-        get_user_agent_repository().delete_older_than(time_calc)
-        
-    # auth history 관리
-    db_data = settings.get('auth_history_expiration_date')
-    if db_data != '':
-        time_db = int(number_check(db_data))
-        
-        time_calc = datetime.date.today() - datetime.timedelta(days = time_db)
-        time_calc = time_calc.strftime('%Y-%m-%d %H:%M:%S')
-        
-        get_admin_repository().delete_records_older_than(time_calc)
-
-    # 사이트맵 생성 관리
-    db_data = settings.get('sitemap_auto_make')
-    if db_data != '':
-        await main_setting_sitemap(1)
-
-        logger.info('Make sitemap')
-
-    # 칭호 관리
-    for for_a in user_settings.list_ids_by_name_data('user_title', '✅'):
-        if await acl_check('', 'all_admin_auth', '', for_a) == 1:
-            user_settings.update_user_title_checkmark(for_a)
-
-async def daily_loop():
-    while True:
-        await do_every_day()
-        await asyncio.sleep(60 * 60 * 24)
-
-def _run_bg_loop_forever():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(daily_loop())
-    loop.run_forever()
-
-_daily_task = None
-_daily_thread = None
-
-def start_daily_scheduler():
-    global _daily_task, _daily_thread
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        if _daily_thread is None or not _daily_thread.is_alive():
-            _daily_thread = threading.Thread(target = _run_bg_loop_forever, daemon = True)
-            _daily_thread.start()
-    else:
-        if _daily_task is None or _daily_task.done():
-            _daily_task = loop.create_task(daily_loop())
-
-def auto_do_something(data_db_set):
-    if data_db_set['type'] == 'sqlite':
-        back_up(data_db_set)
-
-    start_daily_scheduler()
 
 auto_do_something(data_db_set)
 
@@ -412,564 +154,41 @@ logger.info('Now running... http://127.0.0.1:%s', server_set['port'])
 
 @app.before_request
 def before_request_func():
-    db_data = global_some_set_do('wiki_access_password')
+    db_data = get_runtime_value('wiki_access_password')
     if db_data and db_data != '':
         access_password = db_data
         input_password = flask.request.cookies.get('opennamu_forge_wiki_access', ' ')
         if url_pas(access_password) != input_password:
-            with get_db_connect() as conn:
-                return '''
-                    <script>
-                        "use strict";
-                        function opennamu_forge_do_wiki_access() {
-                            let password = document.getElementById('wiki_access').value;
-                            document.cookie = 'opennamu_forge_wiki_access=' + encodeURIComponent(password) + '; path=/;';
-                            history.go(0);
-                        }
-                    </script>
-                    <h2>''' + load_lang('error_password_require_for_wiki_access') + '''</h2>
-                    <input class="__ON_INPUT__" type="password" id="wiki_access">
-                    <input class="__ON_INPUT__" type="submit" onclick="opennamu_forge_do_wiki_access();">
-                '''
+            return '''
+                <script>
+                    "use strict";
+                    function opennamu_forge_do_wiki_access() {
+                        let password = document.getElementById('wiki_access').value;
+                        document.cookie = 'opennamu_forge_wiki_access=' + encodeURIComponent(password) + '; path=/;';
+                        history.go(0);
+                    }
+                </script>
+                <h2>''' + load_lang('error_password_require_for_wiki_access') + '''</h2>
+                <input class="__ON_INPUT__" type="password" id="wiki_access">
+                <input class="__ON_INPUT__" type="submit" onclick="opennamu_forge_do_wiki_access();">
+            '''
 
 # Init-custom
 if os.path.exists('custom.py'):
     from custom import custom_run
     custom_run('error', app)
 
-# Route_Go_Func
-
-import itertools
-
-_golang_view_seq = itertools.count()
-
-def golang_view():
-    idx = next(_golang_view_seq)
-
-    async def _view(*args, **kwargs):
-        return await python_to_golang("same")
-    
-    _view.__name__ = f"_golang_view_{idx}"
-    return _view
-
-# Func
-# Func-inter_wiki
-app.route('/filter/inter_wiki', defaults = { 'tool' : 'inter_wiki' })(filter_all)
-app.route('/filter/inter_wiki/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'inter_wiki' })(filter_all_add)
-app.route('/filter/inter_wiki/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'inter_wiki' })(filter_all_add)
-app.route('/filter/inter_wiki/del/<everything:name>', defaults = { 'tool' : 'inter_wiki' })(filter_all_delete)
-
-app.route('/filter/outer_link', defaults = { 'tool' : 'outer_link' })(filter_all)
-app.route('/filter/outer_link/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'outer_link' })(filter_all_add)
-app.route('/filter/outer_link/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'outer_link' })(filter_all_add)
-app.route('/filter/outer_link/del/<everything:name>', defaults = { 'tool' : 'outer_link' })(filter_all_delete)
-
-app.route('/filter/document', defaults = { 'tool' : 'document' })(filter_all)
-app.route('/filter/document/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'document' })(filter_all_add)
-app.route('/filter/document/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'document' })(filter_all_add)
-app.route('/filter/document/del/<everything:name>', defaults = { 'tool' : 'document' })(filter_all_delete)
-
-app.route('/filter/edit_top', defaults = { 'tool' : 'edit_top' })(filter_all)
-app.route('/filter/edit_top/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'edit_top' })(filter_all_add)
-app.route('/filter/edit_top/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'edit_top' })(filter_all_add)
-app.route('/filter/edit_top/del/<everything:name>', defaults = { 'tool' : 'edit_top' })(filter_all_delete)
-
-app.route('/filter/image_license', defaults = { 'tool' : 'image_license' })(filter_all)
-app.route('/filter/image_license/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'image_license' })(filter_all_add)
-app.route('/filter/image_license/del/<everything:name>', defaults = { 'tool' : 'image_license' })(filter_all_delete)
-
-app.route('/filter/template', defaults = { 'tool' : 'template' })(filter_all)
-app.route('/filter/template/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'template' })(filter_all_add)
-app.route('/filter/template/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'template' })(filter_all_add)
-app.route('/filter/template/del/<everything:name>', defaults = { 'tool' : 'template' })(filter_all_delete)
-
-app.route('/filter/edit_filter', defaults = { 'tool' : 'edit_filter' })(filter_all)
-app.route('/filter/edit_filter/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'edit_filter' })(filter_all_add)
-app.route('/filter/edit_filter/add/<everything:name>', methods = ['POST', 'GET'], defaults = { 'tool' : 'edit_filter' })(filter_all_add)
-app.route('/filter/edit_filter/del/<everything:name>', defaults = { 'tool' : 'edit_filter' })(filter_all_delete)
-
-app.route('/filter/email_filter', defaults = { 'tool' : 'email_filter' })(filter_all)
-app.route('/filter/email_filter/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'email_filter' })(filter_all_add)
-app.route('/filter/email_filter/del/<everything:name>', defaults = { 'tool' : 'email_filter' })(filter_all_delete)
-
-app.route('/filter/file_filter', defaults = { 'tool' : 'file_filter' })(filter_all)
-app.route('/filter/file_filter/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'file_filter' })(filter_all_add)
-app.route('/filter/file_filter/del/<everything:name>', defaults = { 'tool' : 'file_filter' })(filter_all_delete)
-
-app.route('/filter/name_filter', defaults = { 'tool' : 'name_filter' })(filter_all)
-app.route('/filter/name_filter/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'name_filter' })(filter_all_add)
-app.route('/filter/name_filter/del/<everything:name>', defaults = { 'tool' : 'name_filter' })(filter_all_delete)
-
-app.route('/filter/extension_filter', defaults = { 'tool' : 'extension_filter' })(filter_all)
-app.route('/filter/extension_filter/add', methods = ['POST', 'GET'], defaults = { 'tool' : 'extension_filter' })(filter_all_add)
-app.route('/filter/extension_filter/del/<everything:name>', defaults = { 'tool' : 'extension_filter' })(filter_all_delete)
-
-# Func-list
-app.route('/list/document/old')(golang_view())
-app.route('/list/document/old/<int:num>')(golang_view())
-
-app.route('/list/document/new')(golang_view())
-app.route('/list/document/new/<int:num>')(golang_view())
-
-app.route('/list/document/no_link')(list_no_link)
-app.route('/list/document/no_link/<int:num>')(list_no_link)
-
-app.route('/list/document/acl')(list_acl)
-app.route('/list/document/acl/<int:arg_num>')(list_acl)
-
-app.route('/list/document/need')(list_please)
-app.route('/list/document/need/<int:arg_num>')(list_please)
-
-app.route('/list/document/all')(list_title_index)
-app.route('/list/document/all/<int:num>')(list_title_index)
-
-app.route('/list/document/long')(golang_view())
-app.route('/list/document/long/<int:arg_num>')(golang_view())
-
-app.route('/list/document/short')(golang_view())
-app.route('/list/document/short/<int:arg_num>')(golang_view())
-
-app.route('/list/file')(list_image_file)
-app.route('/list/file/<int:arg_num>')(list_image_file)
-app.route('/list/image', defaults = { 'do_type' : 1 })(list_image_file)
-app.route('/list/image/<int:arg_num>', defaults = { 'do_type' : 1 })(list_image_file)
-
-app.route('/list/admin')(list_admin)
-
-app.route('/list/admin/auth_use', methods = ['POST', 'GET'])(list_admin_auth_use)
-app.route('/list/admin/auth_use_page/<int:arg_num>/<everything:arg_search>', methods = ['POST', 'GET'])(list_admin_auth_use)
-
-app.route('/list/user')(list_user)
-app.route('/list/user/<int:arg_num>')(list_user)
-
-app.route('/list/user/check_submit/<name>')(list_user_check_submit)
-app.route('/list/user/check/<name>')(list_user_check)
-app.route('/list/user/check/<name>/<do_type>')(list_user_check)
-app.route('/list/user/check/<name>/<do_type>/<int:arg_num>')(list_user_check)
-app.route('/list/user/check/<name>/<do_type>/<int:arg_num>/<plus_name>')(list_user_check)
-app.route('/list/user/check/delete/<name>/<ip>/<time>/<do_type>', methods = ['POST', 'GET'])(list_user_check_delete)
-
-# Func-auth
-app.route('/auth/give', methods = ['POST', 'GET'])(give_auth)
-app.route('/auth/give_total', methods = ['POST', 'GET'])(give_auth)
-app.route('/auth/give/<user_name>', methods = ['POST', 'GET'])(give_auth)
-
-app.route('/auth/ban', methods = ['POST', 'GET'])(give_user_ban)
-app.route('/auth/ban/multiple', methods = ['POST', 'GET'], defaults = { 'ban_type' : 'multiple' })(give_user_ban)
-app.route('/auth/ban/<everything:name>', methods = ['POST', 'GET'])(give_user_ban)
-app.route('/auth/ban_cidr/<everything:name>', methods = ['POST', 'GET'], defaults = { 'ban_type' : 'cidr' })(give_user_ban)
-app.route('/auth/ban_regex/<everything:name>', methods = ['POST', 'GET'], defaults = { 'ban_type' : 'regex' })(give_user_ban)
-
-# /auth/list
-# /auth/list/add/<name>
-# /auth/list/delete/<name>
-app.route('/auth/list')(list_admin_group)
-app.route('/auth/list/add/<name>', methods = ['POST', 'GET'])(give_admin_groups)
-app.route('/auth/list/delete/<name>', methods = ['POST', 'GET'])(give_delete_admin_group)
-
-app.route('/auth/give/fix/<user_name>', methods = ['POST', 'GET'])(give_user_fix)
-
-app.route('/app_submit', methods = ['POST', 'GET'])(recent_app_submit)
-
-# /auth/history
-app.route('/recent_block')(golang_view())
-app.route('/recent_block/all')(golang_view())
-app.route('/recent_block/all/<int:num>')(golang_view())
-app.route('/recent_block/all/<int:num>/<everything:why>')(golang_view())
-app.route('/recent_block/user/<user_name>')(golang_view())
-app.route('/recent_block/user/<user_name>/<int:num>')(golang_view())
-app.route('/recent_block/admin/<user_name>')(golang_view())
-app.route('/recent_block/admin/<user_name>/<int:num>')(golang_view())
-app.route('/recent_block/regex')(golang_view())
-app.route('/recent_block/regex/<int:num>')(golang_view())
-app.route('/recent_block/cidr')(golang_view())
-app.route('/recent_block/cidr/<int:num>')(golang_view())
-app.route('/recent_block/private')(golang_view())
-app.route('/recent_block/private/<int:num>')(golang_view())
-app.route('/recent_block/ongoing')(golang_view())
-app.route('/recent_block/ongoing/<int:num>')(golang_view())
-
-app.route('/recent_change')(golang_view())
-app.route('/recent_changes')(golang_view())
-app.route('/recent_change/<int:num>/<set_type>')(golang_view())
-
-app.route('/recent_discuss')(golang_view())
-app.route('/recent_discuss/<int:num>/<tool>')(golang_view())
-
-# Func-history
-app.route('/recent_edit_request')(recent_edit_request)
-
-app.route('/record/<name>', defaults = { 'tool' : 'record' })(recent_change)
-app.route('/record/<int:num>/<set_type>/<name>', defaults = { 'tool' : 'record' })(recent_change)
-
-app.route('/record/reset/<name>', methods = ['POST', 'GET'])(recent_record_reset)
-app.route('/record/topic/<name>')(recent_record_topic)
-
-app.route('/record/bbs/<name>', defaults = { 'tool' : 'record' })(bbs_w)
-app.route('/record/bbs_comment/<name>', defaults = { 'tool' : 'comment_record' })(bbs_w)
-
-app.route('/history/<everything:doc_name>', methods = ['POST', 'GET'])(golang_view())
-app.route('/history_page/<int:num>/<set_type>/<everything:doc_name>', methods = ['POST', 'GET'])(golang_view())
-
-app.route('/history_tool/<int(signed = True):rev>/<everything:name>')(recent_history_tool)
-app.route('/history_delete/<int(signed = True):rev>/<everything:name>', methods = ['POST', 'GET'])(recent_history_delete)
-app.route('/history_hidden/<int(signed = True):rev>/<everything:name>')(recent_history_hidden)
-app.route('/history_send/<int(signed = True):rev>/<everything:name>', methods = ['POST', 'GET'])(recent_history_send)
-app.route('/history_reset/<everything:name>', methods = ['POST', 'GET'])(recent_history_reset)
-app.route('/history_add/<everything:name>', methods = ['POST', 'GET'])(recent_history_add)
-
-# Func-view
-app.route('/xref/<everything:name>')(view_xref)
-app.route('/xref_page/<int:num>/<everything:name>')(view_xref)
-app.route('/xref_this/<everything:name>', defaults = { 'xref_type' : 2 })(view_xref)
-app.route('/xref_this_page/<int:num>/<everything:name>', defaults = { 'xref_type' : 2 })(view_xref)
-
-app.route('/doc_watch_list/<int:num>/<everything:name>')(golang_view())
-app.route('/doc_star_doc/<int:num>/<everything:name>')(golang_view())
-
-app.route('/raw/<everything:name>')(golang_view())
-app.route('/raw_acl/<everything:name>')(golang_view())
-app.route('/raw_rev/<int(signed = True):rev>/<everything:name>')(golang_view())
-
-app.route('/diff/<int(signed = True):num_a>/<int(signed = True):num_b>/<everything:name>')(view_diff)
-
-app.route('/down/<everything:name>')(golang_view())
-
-app.route('/acl_multiple', defaults = { 'multiple' : True }, methods = ['POST', 'GET'])(view_set)
-app.route('/acl/<everything:name>', methods = ['POST', 'GET'])(view_set)
-
-app.route('/render/<int:doc_rev>/<everything:name>')(view_w)
-
-app.route('/w_from/<everything:name>', defaults = { 'do_type' : 'from' })(view_w)
-app.route('/w/<everything:name>')(view_w)
-
-app.route('/random')(golang_view())
-app.route('/list/random')(golang_view())
-
-# Func-edit
-app.route('/edit/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-app.route('/edit_from/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-
-app.route('/edit_request/<everything:name>', methods = ['POST', 'GET'])(edit_request)
-app.route('/edit_request_from/<everything:name>', defaults = { 'do_type' : 'from' }, methods = ['POST', 'GET'])(edit_request)
-
-# app.route('/edit_request_rev/<int:rev>/<everything:name>', methods = ['POST', 'GET'])(edit_request)
-
-app.route('/upload', methods = ['POST', 'GET'])(edit_upload)
-
-# 개편 예정
-app.route('/xref_reset/<everything:name>')(edit_backlink_reset)
-
-app.route('/delete/<everything:name>', methods = ['POST', 'GET'])(edit_delete)
-app.route('/delete_file/<everything:name>', methods = ['POST', 'GET'])(edit_delete_file)
-app.route('/delete_multiple', methods = ['POST', 'GET'])(edit_delete_multiple)
-
-app.route('/revert/<int:num>/<everything:name>', methods = ['POST', 'GET'])(edit_revert)
-
-app.route('/move/<everything:name>', methods = ['POST', 'GET'])(edit_move)
-app.route('/move_all')(edit_move_all)
-
-# Func-topic
-app.route('/topic/<everything:name>')(golang_view())
-app.route('/topic_page/<int:page>/<everything:name>')(golang_view())
-app.route('/topic_close/<int:page>/<everything:name>')(golang_view())
-app.route('/topic_agree/<int:page>/<everything:name>')(golang_view())
-
-app.route('/thread/<int:topic_num>', methods = ['POST', 'GET'])(topic)
-app.route('/thread/0/<everything:doc_name>', defaults = { 'topic_num' : '0' }, methods = ['POST', 'GET'])(topic)
-
-app.route('/thread/<int:topic_num>/tool')(topic_tool)
-app.route('/thread/<int:topic_num>/setting', methods = ['POST', 'GET'])(topic_tool_setting)
-app.route('/thread/<int:topic_num>/acl', methods = ['POST', 'GET'])(topic_tool_acl)
-app.route('/thread/<int:topic_num>/delete', methods = ['POST', 'GET'])(topic_tool_delete)
-app.route('/thread/<int:topic_num>/change', methods = ['POST', 'GET'])(topic_tool_change)
-
-app.route('/thread/<int:topic_num>/comment/<int:num>/tool')(topic_comment_tool)
-app.route('/thread/<int:topic_num>/comment/<int:num>/notice')(topic_comment_notice)
-app.route('/thread/<int:topic_num>/comment/<int:num>/blind')(topic_comment_blind)
-app.route('/thread/<int:topic_num>/comment/<int:num>/raw')(view_raw)
-app.route('/thread/<int:topic_num>/comment/<int:num>/delete', methods = ['POST', 'GET'])(topic_comment_delete)
-
-# Func-user
-app.route('/change', methods = ['POST', 'GET'])(user_setting)
-app.route('/change/key')(user_setting_key)
-app.route('/change/key/delete')(user_setting_key_delete)
-app.route('/change/pw', methods = ['POST', 'GET'])(user_setting_pw)
-app.route('/change/head', methods = ['GET', 'POST'], defaults = { 'skin_name' : '' })(user_setting_head)
-app.route('/change/head/<skin_name>', methods = ['GET', 'POST'])(user_setting_head)
-app.route('/change/head_reset', methods = ['GET', 'POST'])(user_setting_head_reset)
-app.route('/change/skin_set')(user_setting_skin_set)
-app.route('/change/top_menu', methods = ['GET', 'POST'])(user_setting_top_menu)
-app.route('/change/user_name', methods = ['GET', 'POST'])(user_setting_user_name)
-app.route('/change/user_name/<user_name>', methods = ['GET', 'POST'])(user_setting_user_name)
-# 하위 호환용 S
-app.route('/skin_set')(user_setting_skin_set)
-# 하위 호환용 E
-app.route('/change/skin_set/main', methods = ['POST', 'GET'])(user_setting_skin_set_main)
-
-app.route('/user')(golang_view())
-app.route('/user/<name>')(golang_view())
-
-app.route('/challenge', methods = ['GET', 'POST'])(user_challenge)
-
-app.route('/edit_filter/<name>', methods = ['GET', 'POST'])(user_edit_filter)
-
-app.route('/count')(user_count)
-app.route('/count/<name>')(user_count)
-
-app.route('/alarm')(user_alarm)
-app.route('/alarm/delete')(user_alarm_delete)
-app.route('/alarm/delete/<int:id>')(user_alarm_delete)
-
-app.route('/watch_list')(golang_view())
-app.route('/watch_list/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-app.route('/watch_list_from/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-
-app.route('/star_doc')(golang_view())
-app.route('/star_doc/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-app.route('/star_doc_from/<everything:name>', methods = ['POST', 'GET'])(golang_view())
-
-# 개편 보류중 S
-app.route('/change/email', methods = ['POST', 'GET'])(user_setting_email)
-app.route('/change/email/delete')(user_setting_email_delete)
-app.route('/change/email/check', methods = ['POST', 'GET'])(user_setting_email_check)
-# 개편 보류중 E
-
-# Func-login
-# 개편 예정
-
-# login -> login/2fa -> login/2fa/email with login_id
-# register -> register/email -> regiter/email/check with reg_id
-# pass_find -> pass_find/email with find_id
-
-app.route('/login', methods = ['POST', 'GET'])(login_login)
-app.route('/login/2fa', methods = ['POST', 'GET'])(login_login_2fa)
-app.route('/register', methods = ['POST', 'GET'])(login_register)
-app.route('/register/email', methods = ['POST', 'GET'])(login_register_email)
-app.route('/register/email/check', methods = ['POST', 'GET'])(login_register_email_check)
-app.route('/register/submit', methods = ['POST', 'GET'])(login_register_submit)
-
-app.route('/login/find')(login_find)
-app.route('/login/find/key', methods = ['POST', 'GET'])(login_find_key)
-app.route('/login/find/email', methods = ['POST', 'GET'], defaults = { 'tool' : 'pass_find' })(login_find_email)
-app.route('/login/find/email/check', methods = ['POST', 'GET'], defaults = { 'tool' : 'check_key' })(login_find_email_check)
-app.route('/logout')(login_logout)
-
-# Func-vote
-app.route('/vote/<int:num>', methods = ['POST', 'GET'])(vote_select)
-app.route('/vote/end/<int:num>')(vote_end)
-app.route('/vote/close/<int:num>')(vote_close)
-app.route('/vote', defaults = { 'list_type' : 'normal' })(vote_list)
-app.route('/vote/list', defaults = { 'list_type' : 'normal' })(vote_list)
-app.route('/vote/list/<int:num>', defaults = { 'list_type' : 'normal' })(vote_list)
-app.route('/vote/list/close', defaults = { 'list_type' : 'close' })(vote_list)
-app.route('/vote/list/close/<int:num>', defaults = { 'list_type' : 'close' })(vote_list)
-app.route('/vote/add', methods = ['POST', 'GET'])(vote_add)
-
-# Func-bbs
-app.route('/bbs/main')(golang_view())
-app.route('/bbs/make', methods = ['POST', 'GET'])(bbs_make)
-app.route('/bbs/in/<int:bbs_num>')(golang_view())
-app.route('/bbs/in/<int:bbs_num>/<int:page>')(golang_view())
-# app.route('/bbs/blind/<int:bbs_num>', methods = ['POST', 'GET'])(bbs_hide)
-app.route('/bbs/delete/<int:bbs_num>', methods = ['POST', 'GET'])(bbs_delete)
-app.route('/bbs/set/<int:bbs_num>', methods = ['POST', 'GET'])(bbs_w_set)
-app.route('/bbs/edit/<int:bbs_num>', methods = ['POST', 'GET'])(bbs_w_edit)
-app.route('/bbs/w/<int:bbs_num>/<int:post_num>', methods = ['POST'])(bbs_w_post)
-app.route('/bbs/w/<int:bbs_num>/<int:post_num>', methods = ['GET'])(golang_view())
-# app.route('/bbs/blind/<int:bbs_num>/<int:post_num>', methods = ['POST', 'GET'])(bbs_w_hide)
-app.route('/bbs/pinned/<int:bbs_num>/<int:post_num>', methods = ['POST', 'GET'])(bbs_w_pinned)
-app.route('/bbs/delete/<int:bbs_num>/<int:post_num>', methods = ['POST', 'GET'])(bbs_w_delete)
-app.route('/bbs/raw/<int:bbs_num>/<int:post_num>')(view_raw)
-app.route('/bbs/tool/<int:bbs_num>/<int:post_num>')(bbs_w_tool)
-app.route('/bbs/edit/<int:bbs_num>/<int:post_num>', methods = ['POST', 'GET'])(bbs_w_edit)
-app.route('/bbs/tool/<int:bbs_num>/<int:post_num>/<comment_num>')(bbs_w_comment_tool)
-app.route('/bbs/raw/<int:bbs_num>/<int:post_num>/<comment_num>')(view_raw)
-app.route('/bbs/edit/<int:bbs_num>/<int:post_num>/<comment_num>', methods = ['POST', 'GET'])(bbs_w_edit)
-app.route('/bbs/delete/<int:bbs_num>/<int:post_num>/<comment_num>', methods = ['POST', 'GET'])(bbs_w_delete)
-
-# Func-api
-## v1 API
-app.route('/api/render', methods = ['POST'])(api_w_render_exter)
-app.route('/api/render/<tool>', methods = ['POST'])(api_w_render_exter)
-
-app.route('/api/raw_exist/<everything:name>', defaults = { 'exist_check' : 'on' })(api_w_raw)
-app.route('/api/raw_rev/<int(signed = True):rev>/<everything:name>')(api_w_raw)
-app.route('/api/raw/<everything:name>')(api_w_raw)
-
-app.route('/api/xref/<int:page>/<everything:name>')(golang_view())
-app.route('/api/xref_this/<int:page>/<everything:name>')(golang_view())
-
-app.route('/api/random')(golang_view())
-
-app.route('/api/bbs/w/<sub_code>')(api_bbs_w)
-app.route('/api/bbs/w/comment/<sub_code>')(api_bbs_w_comment_exter)
-app.route('/api/bbs/w/comment_one/<sub_code>')(api_bbs_w_comment_one_exter)
-
-app.route('/api/version', defaults = { 'version_list' : version_list })(api_version)
-app.route('/api/skin_info')(api_skin_info)
-app.route('/api/skin_info/<name>')(api_skin_info)
-app.route('/api/user_info/<user_name>')(golang_view())
-
-app.route('/api/thread/<int:topic_num>/<int:s_num>/<int:e_num>')(api_topic)
-app.route('/api/thread/<int:topic_num>/<tool>')(api_topic)
-app.route('/api/thread/<int:topic_num>')(api_topic)
-
-app.route('/api/search/<everything:name>')(golang_view())
-app.route('/api/search_page/<int:num>/<everything:name>')(golang_view())
-app.route('/api/search_data/<everything:name>', defaults = { 'search_type' : 'data' })(golang_view())
-app.route('/api/search_data_page/<int:num>/<everything:name>', defaults = { 'search_type' : 'data' })(golang_view())
-
-app.route('/api/recent_change')(golang_view())
-app.route('/api/recent_changes')(golang_view())
-app.route('/api/recent_change/<int:limit>')(golang_view())
-app.route('/api/recent_change/<int:limit>/<set_type>/<int:num>')(golang_view())
-
-app.route('/api/recent_edit_request')(api_list_recent_edit_request_exter)
-app.route('/api/recent_edit_request/<int:limit>/<set_type>/<int:num>')(api_list_recent_edit_request_exter)
-
-app.route('/api/recent_discuss/<set_type>/<int:limit>')(golang_view())
-app.route('/api/recent_discuss/<int:limit>')(golang_view())
-app.route('/api/recent_discuss')(golang_view())
-
-app.route('/api/lang', methods = ['POST'])(api_func_language_exter)
-app.route('/api/lang/<data>')(api_func_language_exter)
-app.route('/api/sha224/<everything:data>')(golang_view())
-app.route('/api/ip/<everything:data>')(api_func_ip)
-
-app.route('/api/image/<everything:name>')(api_image_view)
-
-## v2 API
-app.route('/api/v2/recent_edit_request/<set_type>/<int:num>', defaults = { 'limit' : 50 })(api_list_recent_edit_request)
-app.route('/api/v2/recent_change/<set_type>/<int:num>')(golang_view())
-app.route('/api/v2/recent_discuss/<set_type>/<int:num>')(golang_view())
-app.route('/api/v2/recent_block/<set_type>/<int:num>')(golang_view())
-app.route('/api/v2/recent_block/<set_type>/<int:num>/<everything:why>')(golang_view())
-app.route('/api/v2/recent_block_user/<set_type>/<int:num>/<user_name>')(golang_view())
-app.route('/api/v2/recent_block_user/<set_type>/<int:num>/<user_name>/<everything:why>')(golang_view())
-app.route('/api/v2/list/document/old/<int:num>')(golang_view())
-app.route('/api/v2/list/document/new/<int:num>')(golang_view())
-app.route('/api/v2/list/document/<int:num>')(golang_view())
-app.route('/api/v2/list/auth')(golang_view())
-app.route('/api/v2/list/markup')(golang_view())
-app.route('/api/v2/list/acl/<data_type>')(api_list_acl)
-app.route('/api/v2/history/<int:num>/<set_type>/<everything:doc_name>')(golang_view())
-
-app.route('/api/v2/topic/<int:num>/<set_type>/<everything:name>')(golang_view())
-
-app.route('/api/v2/bbs')(golang_view())
-app.route('/api/v2/bbs/main')(golang_view())
-app.route('/api/v2/bbs/set/<int:bbs_num>/<name>', methods = ['GET', 'PUT'])(api_bbs_w_set)
-app.route('/api/v2/bbs/in/<int:bbs_num>/<int:page>')(golang_view())
-
-app.route('/api/v2/bbs/w/<sub_code>', defaults = { 'legacy' : '' })(api_bbs_w)
-app.route('/api/v2/bbs/w/tabom/<sub_code>', methods = ['GET', 'POST'])(golang_view())
-app.route('/api/v2/bbs/w/comment/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment_exter)
-app.route('/api/v2/bbs/w/comment_one/<sub_code>/<tool>', defaults = { 'legacy' : '' })(api_bbs_w_comment_one_exter)
-
-app.route('/api/v2/bbs/w/page_view/<set_id>/<set_code>')(golang_view())
-app.route('/api/v2/bbs/w/page_view_post/<set_id>/<set_code>')(golang_view())
-
-app.route('/api/v2/doc_star_doc/<int:num>/<everything:name>', defaults = { 'do_type' : 'star_doc' })(golang_view())
-app.route('/api/v2/doc_watch_list/<int:num>/<everything:name>')(golang_view())
-app.route('/api/v2/set_reset/<everything:name>')(golang_view())
-
-app.route('/api/v2/page_view/<everything:name>')(golang_view())
-app.route('/api/v2/page_view_post/<everything:name>')(golang_view())
-
-app.route('/api/v2/setting/<name>', methods = ['GET', 'PUT'])(api_setting_exter)
-
-app.route('/api/v2/auth')(api_func_auth_exter)
-app.route('/api/v2/auth/<user_name>')(api_func_auth_exter)
-app.route('/api/v2/auth/give', methods = ['PATCH'])(golang_view())
-
-app.route('/api/v2/user/rankup', methods = ['GET', 'PATCH'])(golang_view())
-app.route('/api/v2/user/setting/editor', methods = ['GET', 'POST', 'DELETE'])(golang_view())
-
-app.route('/api/v2/ip/<everything:data>', methods = ['GET', 'POST'])(api_func_ip)
-app.route('/api/v2/ip_menu/<everything:ip>', defaults = { 'option' : 'user' }, methods = ['GET', 'POST'])(api_func_ip_menu)
-app.route('/api/v2/user_menu/<everything:ip>')(api_func_ip_menu)
-app.route('/api/v2/lang', defaults = { 'legacy' : '' }, methods = ['POST'])(api_func_language_exter)
-
-# Func-main
-# 여기도 전반적인 조정 시행 예정
-app.route('/other')(golang_view())
-app.route('/manager', methods = ['POST', 'GET'])(main_tool_admin)
-app.route('/manager/<int:num>', methods = ['POST', 'GET'])(main_tool_redirect)
-app.route('/manager/<int:num>/<everything:add_2>', methods = ['POST', 'GET'])(main_tool_redirect)
-
-app.route('/search/<everything:name>', methods = ['GET'])(golang_view())
-app.route('/goto/<everything:name>', methods = ['GET'])(golang_view())
-app.route('/search_page/<int:num>/<everything:name>', methods = ['GET'])(golang_view())
-app.route('/search_data/<everything:name>', methods = ['GET'])(golang_view())
-app.route('/search_data_page/<int:num>/<everything:name>', methods = ['GET'])(golang_view())
-
-app.route('/goto', methods = ['POST'])(golang_view())
-app.route('/goto/<everything:name>', methods = ['POST'])(golang_view())
-app.route('/search', methods = ['POST'])(golang_view())
-app.route('/search/<everything:name>', methods = ['POST'])(golang_view())
-app.route('/search_page/<int:num>/<everything:name>', methods = ['POST'])(golang_view())
-app.route('/search_data/<everything:name>', methods = ['POST'])(golang_view())
-app.route('/search_data_page/<int:num>/<everything:name>', methods = ['POST'])(golang_view())
-
-app.route('/setting')(main_setting)
-app.route('/setting/main', methods = ['POST', 'GET'])(main_setting_main)
-app.route('/setting/main/logo', methods = ['POST', 'GET'])(main_setting_main_logo)
-app.route('/setting/top_menu', methods = ['POST', 'GET'])(main_setting_top_menu)
-app.route('/setting/phrase', methods = ['POST', 'GET'])(main_setting_phrase)
-app.route('/setting/head', defaults = { 'num' : 3 }, methods = ['POST', 'GET'])(main_setting_head)
-app.route('/setting/head/<skin_name>', defaults = { 'num' : 3 }, methods = ['POST', 'GET'])(main_setting_head)
-app.route('/setting/body/top', defaults = { 'num' : 4 }, methods = ['POST', 'GET'])(main_setting_head)
-app.route('/setting_preview/body/top', defaults = { 'num' : 4, 'set_preview' : 1 }, methods = ['POST'])(main_setting_head)
-app.route('/setting/body/bottom', defaults = { 'num' : 7 }, methods = ['POST', 'GET'])(main_setting_head)
-app.route('/setting_preview/body/bottom', defaults = { 'num' : 7, 'set_preview' : 1 }, methods = ['POST'])(main_setting_head)
-app.route('/setting/robot', methods = ['POST', 'GET'])(main_setting_robot)
-app.route('/setting/external', methods = ['POST', 'GET'])(main_setting_external)
-app.route('/setting/sitemap', methods = ['POST', 'GET'])(main_setting_sitemap)
-app.route('/setting/sitemap_set', methods = ['POST', 'GET'])(main_setting_sitemap_set)
-app.route('/setting/skin_set', methods = ['POST', 'GET'])(main_setting_skin_set)
-app.route('/setting/404_page', methods = ['POST', 'GET'])(main_setting_404_page)
-app.route('/setting/email_test', methods = ['POST', 'GET'])(main_setting_email_test)
-
-# views -> view
-app.route('/view/<path:name>')(main_view)
-app.route('/views/<path:name>')(main_view)
-app.route('/image/<path:name>')(main_view_image)
-# 조정 계획 중
-app.route('/<regex("[^.]+\\.(?:txt|xml|ico)"):data>')(main_view_file)
-
-@app.get('/forge/theme.css.cache_v1')
-def opennamu_forge_theme_css():
-    return flask.Response(build_theme_css(os.getenv('NAMU_THEME_COLOR')), mimetype='text/css')
-
-app.route('/shutdown', methods = ['POST', 'GET'])(main_sys_shutdown)
-app.route('/restart', defaults = { 'golang_process' : golang_process }, methods = ['POST', 'GET'])(main_sys_restart)
-app.route('/update', defaults = { 'golang_process' : golang_process }, methods = ['POST', 'GET'])(main_sys_update)
-
-app.errorhandler(404)(golang_view())
-
-def terminate_golang():
-    if golang_process.poll() is None:
-        golang_process.terminate()
-        try:
-            golang_process.wait(timeout = 5)
-        except subprocess.TimeoutExpired:
-            golang_process.kill()
-            try:
-                golang_process.wait(timeout = 5)
-            except subprocess.TimeoutExpired:
-                logger.error('Golang process not terminated properly.')
-
+register_routes(app, version_list=version_list, golang_process=golang_process)
 def signal_handler(signal, frame):
     logger.info("EXIT SIGNAL RECEIVED")
     
-    terminate_golang()
+    terminate_gopennamu_process(golang_process)
     os._exit(0)
 
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-atexit.register(terminate_golang)
+atexit.register(terminate_gopennamu_process, golang_process)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for = 1, x_proto = 1)
 

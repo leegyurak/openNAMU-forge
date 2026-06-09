@@ -3,174 +3,175 @@ from pathlib import Path
 
 import pytest
 
+from opennamu_forge.application.runtime_context import clear_runtime_context, get_runtime_value, set_runtime_value
+
 
 @pytest.fixture
-def func_tool():
+def sql_dialect():
     module_path = (
         Path(__file__).resolve().parents[1]
         / "opennamu_forge"
         / "presentation"
-        / "routes"
-        / "tool"
-        / "func_tool.py"
+        / "shared"
+        / "sql_dialect.py"
     )
-    spec = importlib.util.spec_from_file_location("opennamu_forge_func_tool_for_test", module_path)
+    spec = importlib.util.spec_from_file_location("opennamu_forge_sql_dialect_for_test", module_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError("opennamu_forge/presentation/routes/tool/func_tool.py 로드에 실패했습니다.")
+        raise RuntimeError("opennamu_forge/presentation/shared/sql_dialect.py 로드에 실패했습니다.")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.global_func_some_set.clear()
+    clear_runtime_context()
     return module
 
 
-def test_sqlite_sql은_변경하지_않는다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "sqlite")
+def test_sqlite_sql은_변경하지_않는다(sql_dialect):
+    set_runtime_value("db_type", "sqlite")
 
     sql = 'select data from other where name = "ver" and id = ?'
 
-    assert func_tool.db_change(sql) == sql
+    assert sql_dialect.db_change(sql) == sql
 
 
-def test_db_type이_없으면_sql은_변경하지_않는다(func_tool):
+def test_db_type이_없으면_sql은_변경하지_않는다(sql_dialect):
     sql = "select random() from data where title like ?"
 
-    assert func_tool.db_change(sql) == sql
+    assert sql_dialect.db_change(sql) == sql
 
 
-def test_mysql_sql은_mysql_placeholder와_collation을_사용한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "mysql")
+def test_mysql_sql은_mysql_placeholder와_collation을_사용한다(sql_dialect):
+    set_runtime_value("db_type", "mysql")
 
     sql = "select title from data where title like ? collate nocase limit 1"
 
-    assert func_tool.db_change(sql) == "select title from data where title like %s collate utf8mb4_general_ci limit 1"
+    assert sql_dialect.db_change(sql) == "select title from data where title like %s collate utf8mb4_general_ci limit 1"
 
 
-def test_mysql_sql은_random과_percent를_변환한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "mysql")
+def test_mysql_sql은_random과_percent를_변환한다(sql_dialect):
+    set_runtime_value("db_type", "mysql")
 
     sql = "select random() from data where title like '%A%' and id = ?"
 
-    assert func_tool.db_change(sql) == "select rand() from data where title like '%%A%%' and id = %s"
+    assert sql_dialect.db_change(sql) == "select rand() from data where title like '%%A%%' and id = %s"
 
 
-def test_postgresql_sql은_placeholder와_limit_offset을_변환한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "postgresql")
+def test_postgresql_sql은_placeholder와_limit_offset을_변환한다(sql_dialect):
+    set_runtime_value("db_type", "postgresql")
 
     sql = "select id from history where title = ? order by id + 0 desc limit ?, 50"
 
     assert (
-        func_tool.db_change(sql)
+        sql_dialect.db_change(sql)
         == "select id from history where title = %s order by CAST(id AS INTEGER) desc limit 50 offset %s"
     )
 
 
-def test_postgresql_sql은_큰따옴표_문자열을_변환한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "postgresql")
+def test_postgresql_sql은_큰따옴표_문자열을_변환한다(sql_dialect):
+    set_runtime_value("db_type", "postgresql")
 
     sql = 'select data from other where name = "ver"'
 
-    assert func_tool.db_change(sql) == "select data from other where name = 'ver'"
+    assert sql_dialect.db_change(sql) == "select data from other where name = 'ver'"
 
 
-def test_postgresql_sql은_문자열_내_작은따옴표를_escape한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "postgresql")
+def test_postgresql_sql은_문자열_내_작은따옴표를_escape한다(sql_dialect):
+    set_runtime_value("db_type", "postgresql")
 
     sql = 'select data from other where name = "owner\'s page"'
 
-    assert func_tool.db_change(sql) == "select data from other where name = 'owner''s page'"
+    assert sql_dialect.db_change(sql) == "select data from other where name = 'owner''s page'"
 
 
-def test_postgresql_sql은_collate_nocase를_제거한다(func_tool):
-    func_tool.global_func_some_set_do("db_type", "postgresql")
+def test_postgresql_sql은_collate_nocase를_제거한다(sql_dialect):
+    set_runtime_value("db_type", "postgresql")
 
     sql = "select title from data where title like ? collate nocase"
 
-    assert func_tool.db_change(sql) == "select title from data where title like %s "
+    assert sql_dialect.db_change(sql) == "select title from data where title like %s "
 
 
-def test_전역_설정은_저장하고_조회한다(func_tool):
-    assert func_tool.global_func_some_set_do("missing") is None
-    assert func_tool.global_func_some_set_do("db_type", "postgresql") == "postgresql"
-    assert func_tool.global_func_some_set_do("db_type") == "postgresql"
+def test_runtime_context는_설정을_저장하고_조회한다(sql_dialect):
+    assert get_runtime_value("missing") is None
+    assert set_runtime_value("db_type", "postgresql") == "postgresql"
+    assert get_runtime_value("db_type") == "postgresql"
 
 
-def test_문자열_헬퍼는_기존_출력을_유지한다(func_tool):
-    assert func_tool.url_pas("./A/B") == "%5C.%2FA%2FB"
-    assert func_tool.sha224_replace("OpenNamu Forge") == "a80cdeda8410c42f471fe2eafa4c1fc66ab84a2634522591f4b74f2f"
-    assert func_tool.md5_replace("OpenNamu Forge") == "741c396b18a6f4d87f84c382dcbe9a10"
+def test_문자열_헬퍼는_기존_출력을_유지한다(sql_dialect):
+    assert sql_dialect.url_pas("./A/B") == "%5C.%2FA%2FB"
+    assert sql_dialect.sha224_replace("OpenNamu Forge") == "a80cdeda8410c42f471fe2eafa4c1fc66ab84a2634522591f4b74f2f"
+    assert sql_dialect.md5_replace("OpenNamu Forge") == "741c396b18a6f4d87f84c382dcbe9a10"
 
 
-def test_json_헬퍼는_직렬화와_역직렬화를_지원한다(func_tool):
+def test_json_헬퍼는_직렬화와_역직렬화를_지원한다(sql_dialect):
     payload = {"name": "테스트", "count": 1}
 
-    encoded = func_tool.json_dumps(payload)
+    encoded = sql_dialect.json_dumps(payload)
 
     assert isinstance(encoded, str)
-    assert func_tool.json_loads(encoded) == payload
+    assert sql_dialect.json_loads(encoded) == payload
 
 
-def test_ip_or_user는_ip와_사용자를_구분한다(func_tool):
-    assert func_tool.ip_or_user("127.0.0.1") == 1
-    assert func_tool.ip_or_user("2001:db8::1") == 1
-    assert func_tool.ip_or_user("wiki-user") == 0
+def test_ip_or_user는_ip와_사용자를_구분한다(sql_dialect):
+    assert sql_dialect.ip_or_user("127.0.0.1") == 1
+    assert sql_dialect.ip_or_user("2001:db8::1") == 1
+    assert sql_dialect.ip_or_user("wiki-user") == 0
 
 
-def test_ip_check는_session_id를_우선한다(func_tool):
-    app = func_tool.flask.Flask(__name__)
+def test_ip_check는_session_id를_우선한다(sql_dialect):
+    app = sql_dialect.flask.Flask(__name__)
     app.secret_key = "test-secret"
 
     with app.test_request_context("/"):
-        func_tool.flask.session["id"] = "login-user"
+        sql_dialect.flask.session["id"] = "login-user"
 
-        assert func_tool.ip_check() == "login-user"
+        assert sql_dialect.ip_check() == "login-user"
 
 
-def test_ip_check는_header에서_ip를_읽는다(func_tool):
-    app = func_tool.flask.Flask(__name__)
+def test_ip_check는_header에서_ip를_읽는다(sql_dialect):
+    app = sql_dialect.flask.Flask(__name__)
     app.secret_key = "test-secret"
 
     with app.test_request_context("/", environ_base={"HTTP_X_REAL_IP": "203.0.113.10"}):
-        assert func_tool.ip_check() == "203.0.113.10"
+        assert sql_dialect.ip_check() == "203.0.113.10"
 
 
-def test_ip_check는_custom_header를_읽는다(func_tool):
-    app = func_tool.flask.Flask(__name__)
+def test_ip_check는_custom_header를_읽는다(sql_dialect):
+    app = sql_dialect.flask.Flask(__name__)
     app.secret_key = "test-secret"
-    func_tool.global_func_some_set_do("load_ip_select", "HTTP_X_FORWARDED_FOR")
+    set_runtime_value("load_ip_select", "HTTP_X_FORWARDED_FOR")
 
     with app.test_request_context("/", environ_base={"HTTP_X_FORWARDED_FOR": "198.51.100.5"}):
-        assert func_tool.ip_check() == "198.51.100.5"
+        assert sql_dialect.ip_check() == "198.51.100.5"
 
 
-def test_ip_check는_d_type이_0이_아니면_session_id를_사용하지_않는다(func_tool):
-    app = func_tool.flask.Flask(__name__)
+def test_ip_check는_d_type이_0이_아니면_session_id를_사용하지_않는다(sql_dialect):
+    app = sql_dialect.flask.Flask(__name__)
     app.secret_key = "test-secret"
 
     with app.test_request_context("/", environ_base={"REMOTE_ADDR": "198.51.100.7"}):
-        func_tool.flask.session["id"] = "login-user"
+        sql_dialect.flask.session["id"] = "login-user"
 
-        assert func_tool.ip_check(d_type=1) == "198.51.100.7"
+        assert sql_dialect.ip_check(d_type=1) == "198.51.100.7"
 
 
-def test_ip_check는_사용자형_헤더를_루프백으로_대체한다(func_tool):
-    app = func_tool.flask.Flask(__name__)
+def test_ip_check는_사용자형_헤더를_루프백으로_대체한다(sql_dialect):
+    app = sql_dialect.flask.Flask(__name__)
     app.secret_key = "test-secret"
 
     with app.test_request_context("/", environ_base={"HTTP_X_REAL_IP": "wiki-user"}):
-        assert func_tool.ip_check() == "::1"
+        assert sql_dialect.ip_check() == "::1"
 
 
 @pytest.fixture()
-def main_skin_db_set(tmp_path, func_tool):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+def main_skin_db_set(tmp_path, sql_dialect):
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
     db_set = {"type": "sqlite", "name": str(Path(tmp_path) / "main-skin")}
     reset_sqlmodel_engine()
     migration_result = run_schema_migrations(db_set)
-    func_tool.global_func_some_set_do("db_type", "sqlite")
-    func_tool.global_func_some_set_do("db_name", db_set["name"])
+    set_runtime_value("db_type", "sqlite")
+    set_runtime_value("db_name", db_set["name"])
 
     yield db_set
 
@@ -178,25 +179,25 @@ def main_skin_db_set(tmp_path, func_tool):
     reset_sqlmodel_engine()
 
 
-def test_main_skin_set은_사용자_설정을_우선한다(func_tool, main_skin_db_set):
+def test_main_skin_set은_사용자_설정을_우선한다(sql_dialect, main_skin_db_set):
     from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
 
     UserSettingRepository(main_skin_db_set).upsert("wiki-user", "main_skin", "ringo")
 
-    assert func_tool.get_main_skin_set(None, {}, "main_skin", "wiki-user") == "ringo"
+    assert sql_dialect.get_main_skin_set({}, "main_skin", "wiki-user") == "ringo"
 
 
-def test_main_skin_set은_기본값이면_공통_설정으로_fallback한다(func_tool, main_skin_db_set):
+def test_main_skin_set은_기본값이면_공통_설정으로_fallback한다(sql_dialect, main_skin_db_set):
     from opennamu_forge.infrastructure.setting_repository import OtherSettingRepository
 
     OtherSettingRepository(main_skin_db_set).upsert("main_skin", "liberty")
 
-    assert func_tool.get_main_skin_set(None, {}, "main_skin", "127.0.0.1") == "liberty"
+    assert sql_dialect.get_main_skin_set({}, "main_skin", "127.0.0.1") == "liberty"
 
 
-def test_main_skin_set은_설정이_비어있으면_default를_반환한다(func_tool, main_skin_db_set):
+def test_main_skin_set은_설정이_비어있으면_default를_반환한다(sql_dialect, main_skin_db_set):
     from opennamu_forge.infrastructure.user_setting_repository import UserSettingRepository
 
     UserSettingRepository(main_skin_db_set).upsert("wiki-user", "main_skin", "")
 
-    assert func_tool.get_main_skin_set(None, {}, "main_skin", "wiki-user") == "default"
+    assert sql_dialect.get_main_skin_set({}, "main_skin", "wiki-user") == "default"

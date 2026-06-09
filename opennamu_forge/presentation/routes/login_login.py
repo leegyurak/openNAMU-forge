@@ -1,68 +1,86 @@
-from .tool.func import *
-
+from opennamu_forge.presentation.captcha_helpers import (
+    captcha_get,
+    captcha_post,
+)
+from opennamu_forge.presentation.authorization_helpers import ban_check
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    get_time,
+    ip_check,
+    ip_or_user,
+    pw_check,
+    re_error,
+    ua_plus,
+)
+from opennamu_forge.presentation.response_helpers import (
+    get_lang,
+    http_warning,
+    redirect,
+    render_template,
+)
+from opennamu_forge.presentation.dependencies import get_user_setting_repository
 async def login_login():
-    with get_db_connect() as conn:
-        user_settings = get_user_setting_repository()
+    user_settings = get_user_setting_repository()
 
-        ip = ip_check()
-        if ip_or_user(ip) == 0:
-            return redirect(conn, '/user')
+    ip = ip_check()
+    if ip_or_user(ip) == 0:
+        return redirect('/user')
 
-        if (await ban_check(None, 'login'))[0] == 1:
-            return await re_error(conn, 0)
-        
-        return_url = flask.request.args.get('return', '')
-        if not return_url.startswith('/') or return_url.startswith('//') or '\\' in return_url:
-            return_url = ''
+    if (await ban_check(None, 'login'))[0] == 1:
+        return await re_error(0)
+    
+    return_url = flask.request.args.get('return', '')
+    if not return_url.startswith('/') or return_url.startswith('//') or '\\' in return_url:
+        return_url = ''
 
-        if flask.request.method == 'POST':
-            if await captcha_post(conn, flask.request.form.get('g-recaptcha-response', flask.request.form.get('g-recaptcha', ''))) == 1:
-                return await re_error(conn, 13)
+    if flask.request.method == 'POST':
+        if await captcha_post(flask.request.form.get('g-recaptcha-response', flask.request.form.get('g-recaptcha', ''))) == 1:
+            return await re_error(13)
 
-            user_agent = flask.request.headers.get('User-Agent', '')
-            user_id = flask.request.form.get('id', '')
-            user_pw = flask.request.form.get('pw', '')
+        user_agent = flask.request.headers.get('User-Agent', '')
+        user_id = flask.request.form.get('id', '')
+        user_pw = flask.request.form.get('pw', '')
 
-            db_user_pw = user_settings.get(user_id, "pw")
-            if db_user_pw == "":
-                return await re_error(conn, 2)
-                
-            db_user_encode = user_settings.get(user_id, "encode")
-            if db_user_encode == "":
-                return await re_error(conn, 2)
+        db_user_pw = user_settings.get(user_id, "pw")
+        if db_user_pw == "":
+            return await re_error(2)
+            
+        db_user_encode = user_settings.get(user_id, "encode")
+        if db_user_encode == "":
+            return await re_error(2)
 
-            if pw_check(conn, user_pw, db_user_pw, db_user_encode, user_id) != 1:
-                return await re_error(conn, 10)
+        if pw_check(user_pw, db_user_pw, db_user_encode, user_id) != 1:
+            return await re_error(10)
 
-            if user_settings.get(user_id, "2fa") != "":
-                flask.session['login_id'] = user_id
+        if user_settings.get(user_id, "2fa") != "":
+            flask.session['login_id'] = user_id
 
-                return redirect(conn, '/login/2fa')
-            else:
-                flask.session['id'] = user_id
-
-                ua_plus(conn, user_id, ip, user_agent, get_time())
-
-                if return_url != '':
-                    return redirect(conn, return_url)
-                else:
-                    return redirect(conn, '/user')
+            return redirect('/login/2fa')
         else:
-            return await render_template(
-                await get_lang('login'),
-                '''
-                <form method="post">
-                    <input class="__ON_INPUT__" placeholder="''' + await get_lang('id') + '''" name="id" type="text">
-                    <hr class="main_hr">
-                    <input class="__ON_INPUT__" placeholder="''' + await get_lang('password') + '''" name="pw" type="password">
-                    <hr class="main_hr">
-                    <!-- <label class="__ON_CHECKLABEL__"><input class="__ON_CHECKBOX__" type="checkbox" name="auto_login"> ''' + await get_lang('auto_login') + ''' (''' + await get_lang('not_working') + ''')</label>
-                    <hr class="main_hr"> -->
-                    ''' + await captcha_get(conn) + '''
-                    <button class="__ON_BUTTON__" type="submit">''' + await get_lang('login') + '''</button>
-                    ''' + await http_warning() + '''
-                </form>
-                ''',
-                0,
-                [['user', await get_lang('return')]]
-            )
+            flask.session['id'] = user_id
+
+            ua_plus(user_id, ip, user_agent, get_time())
+
+            if return_url != '':
+                return redirect(return_url)
+            else:
+                return redirect('/user')
+    else:
+        return await render_template(
+            await get_lang('login'),
+            '''
+            <form method="post">
+                <input class="__ON_INPUT__" placeholder="''' + await get_lang('id') + '''" name="id" type="text">
+                <hr class="main_hr">
+                <input class="__ON_INPUT__" placeholder="''' + await get_lang('password') + '''" name="pw" type="password">
+                <hr class="main_hr">
+                <!-- <label class="__ON_CHECKLABEL__"><input class="__ON_CHECKBOX__" type="checkbox" name="auto_login"> ''' + await get_lang('auto_login') + ''' (''' + await get_lang('not_working') + ''')</label>
+                <hr class="main_hr"> -->
+                ''' + await captcha_get() + '''
+                <button class="__ON_BUTTON__" type="submit">''' + await get_lang('login') + '''</button>
+                ''' + await http_warning() + '''
+            </form>
+            ''',
+            0,
+            [['user', await get_lang('return')]]
+        )

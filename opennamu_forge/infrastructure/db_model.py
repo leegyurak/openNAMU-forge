@@ -4,11 +4,7 @@ from typing import Any
 from sqlalchemy import Column, String, Text
 from sqlmodel import Field, SQLModel
 
-from opennamu_forge.infrastructure.database_config import (
-    build_sqlmodel_database_url,
-    get_sqlmodel_engine,
-    open_sqlmodel_session,
-)
+from opennamu_forge.infrastructure.database_engine import get_sqlmodel_engine, open_sqlmodel_session
 
 
 def _text_column() -> Column[Any]:
@@ -19,11 +15,11 @@ def _pk_text_column() -> Column[Any]:
     return Column(String(191), primary_key=True, nullable=False, server_default="")
 
 
-class LegacyRow(SQLModel):
+class BaseRow(SQLModel):
     pass
 
 
-class DataSet(LegacyRow, table=True):
+class DataSet(BaseRow, table=True):
     __tablename__ = "data_set"
     __table_args__ = {"extend_existing": True}
 
@@ -33,7 +29,7 @@ class DataSet(LegacyRow, table=True):
     set_data: str = Field(default="", sa_column=_text_column())
 
 
-class WikiData(LegacyRow, table=True):
+class WikiData(BaseRow, table=True):
     __tablename__ = "data"
     __table_args__ = {"extend_existing": True}
 
@@ -42,7 +38,7 @@ class WikiData(LegacyRow, table=True):
     type: str = Field(default="", sa_column=_text_column())
 
 
-class History(LegacyRow, table=True):
+class History(BaseRow, table=True):
     __tablename__ = "history"
     __table_args__ = {"extend_existing": True}
 
@@ -57,7 +53,7 @@ class History(LegacyRow, table=True):
     type: str = Field(default="", sa_column=_text_column())
 
 
-class RecentChange(LegacyRow, table=True):
+class RecentChange(BaseRow, table=True):
     __tablename__ = "rc"
     __table_args__ = {"extend_existing": True}
 
@@ -67,7 +63,7 @@ class RecentChange(LegacyRow, table=True):
     type: str = Field(default="", sa_column=_text_column())
 
 
-class Acl(LegacyRow, table=True):
+class Acl(BaseRow, table=True):
     __tablename__ = "acl"
     __table_args__ = {"extend_existing": True}
 
@@ -76,7 +72,7 @@ class Acl(LegacyRow, table=True):
     type: str = Field(default="", sa_column=_pk_text_column())
 
 
-class Backlink(LegacyRow, table=True):
+class Backlink(BaseRow, table=True):
     __tablename__ = "back"
     __table_args__ = {"extend_existing": True}
 
@@ -86,7 +82,7 @@ class Backlink(LegacyRow, table=True):
     data: str = Field(default="", sa_column=_text_column())
 
 
-class TopicSet(LegacyRow, table=True):
+class TopicSet(BaseRow, table=True):
     __tablename__ = "topic_set"
     __table_args__ = {"extend_existing": True}
 
@@ -96,7 +92,7 @@ class TopicSet(LegacyRow, table=True):
     set_data: str = Field(default="", sa_column=_text_column())
 
 
-class RecentDiscuss(LegacyRow, table=True):
+class RecentDiscuss(BaseRow, table=True):
     __tablename__ = "rd"
     __table_args__ = {"extend_existing": True}
 
@@ -110,7 +106,7 @@ class RecentDiscuss(LegacyRow, table=True):
     acl: str = Field(default="", sa_column=_text_column())
 
 
-class Topic(LegacyRow, table=True):
+class Topic(BaseRow, table=True):
     __tablename__ = "topic"
     __table_args__ = {"extend_existing": True}
 
@@ -123,7 +119,7 @@ class Topic(LegacyRow, table=True):
     code: str = Field(default="", sa_column=_pk_text_column())
 
 
-class RecentBlock(LegacyRow, table=True):
+class RecentBlock(BaseRow, table=True):
     __tablename__ = "rb"
     __table_args__ = {"extend_existing": True}
 
@@ -137,7 +133,7 @@ class RecentBlock(LegacyRow, table=True):
     ongoing: str = Field(default="", sa_column=_text_column())
 
 
-class Other(LegacyRow, table=True):
+class Other(BaseRow, table=True):
     __tablename__ = "other"
     __table_args__ = {"extend_existing": True}
 
@@ -146,7 +142,7 @@ class Other(LegacyRow, table=True):
     coverage: str = Field(default="", sa_column=_pk_text_column())
 
 
-class HtmlFilter(LegacyRow, table=True):
+class HtmlFilter(BaseRow, table=True):
     __tablename__ = "html_filter"
     __table_args__ = {"extend_existing": True}
 
@@ -156,7 +152,7 @@ class HtmlFilter(LegacyRow, table=True):
     plus_t: str = Field(default="", sa_column=_text_column())
 
 
-class Vote(LegacyRow, table=True):
+class Vote(BaseRow, table=True):
     __tablename__ = "vote"
     __table_args__ = {"extend_existing": True}
 
@@ -169,7 +165,7 @@ class Vote(LegacyRow, table=True):
     acl: str = Field(default="", sa_column=_text_column())
 
 
-class AdminList(LegacyRow, table=True):
+class AdminList(BaseRow, table=True):
     __tablename__ = "alist"
     __table_args__ = {"extend_existing": True}
 
@@ -177,7 +173,7 @@ class AdminList(LegacyRow, table=True):
     acl: str = Field(default="", sa_column=_pk_text_column())
 
 
-class AdminRecord(LegacyRow, table=True):
+class AdminRecord(BaseRow, table=True):
     __tablename__ = "re_admin"
     __table_args__ = {"extend_existing": True}
 
@@ -186,7 +182,7 @@ class AdminRecord(LegacyRow, table=True):
     time: str = Field(default="", sa_column=_pk_text_column())
 
 
-class UserAgentData(LegacyRow, table=True):
+class UserAgentData(BaseRow, table=True):
     __tablename__ = "ua_d"
     __table_args__ = {"extend_existing": True}
 
@@ -197,7 +193,7 @@ class UserAgentData(LegacyRow, table=True):
     sub: str = Field(default="", sa_column=_text_column())
 
 
-class UserSet(LegacyRow, table=True):
+class UserSet(BaseRow, table=True):
     __tablename__ = "user_set"
     __table_args__ = {"extend_existing": True}
 
@@ -206,7 +202,7 @@ class UserSet(LegacyRow, table=True):
     data: str = Field(default="", sa_column=_text_column())
 
 
-class UserNotice(LegacyRow, table=True):
+class UserNotice(BaseRow, table=True):
     __tablename__ = "user_notice"
     __table_args__ = {"extend_existing": True}
 
@@ -217,7 +213,7 @@ class UserNotice(LegacyRow, table=True):
     readme: str = Field(default="", sa_column=_text_column())
 
 
-class BbsSet(LegacyRow, table=True):
+class BbsSet(BaseRow, table=True):
     __tablename__ = "bbs_set"
     __table_args__ = {"extend_existing": True}
 
@@ -227,7 +223,7 @@ class BbsSet(LegacyRow, table=True):
     set_data: str = Field(default="", sa_column=_text_column())
 
 
-class BbsData(LegacyRow, table=True):
+class BbsData(BaseRow, table=True):
     __tablename__ = "bbs_data"
     __table_args__ = {"extend_existing": True}
 
@@ -235,10 +231,6 @@ class BbsData(LegacyRow, table=True):
     set_code: str = Field(default="", sa_column=_pk_text_column())
     set_id: str = Field(default="", sa_column=_pk_text_column())
     set_data: str = Field(default="", sa_column=_text_column())
-
-
-def get_sqlmodel_database_url(db_set):
-    return build_sqlmodel_database_url(db_set)
 
 
 def init_sqlmodel(db_set):

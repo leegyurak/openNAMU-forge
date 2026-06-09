@@ -82,8 +82,8 @@ NAMU_PROMETHEUS_GROUP_BY=endpoint
 uv run --extra dev pytest
 uv run --extra dev python -m coverage run -m pytest
 uv run --extra dev python -m coverage report --fail-under=90
-uv run --extra dev ruff check app.py opennamu_forge migrations tests route/tool/func_tool.py
-uv run --extra dev ty check app.py opennamu_forge/application opennamu_forge/infrastructure opennamu_forge/presentation/flask_factory.py opennamu_forge/presentation/theme.py opennamu_forge/presentation/__init__.py migrations tests
+uv run --extra dev ruff check app.py opennamu_forge migrations tests opennamu_forge/presentation/shared/sql_dialect.py
+uv run --extra dev ty check app.py opennamu_forge/config opennamu_forge/application opennamu_forge/infrastructure opennamu_forge/presentation/flask_factory.py opennamu_forge/presentation/theme.py opennamu_forge/presentation/__init__.py opennamu_forge/presentation/url_converters.py opennamu_forge/presentation/dependencies.py opennamu_forge/presentation/response_helpers.py opennamu_forge/presentation/encoding_helpers.py opennamu_forge/presentation/captcha_helpers.py opennamu_forge/presentation/email_helpers.py opennamu_forge/presentation/file_helpers.py opennamu_forge/presentation/authorization_helpers.py opennamu_forge/presentation/identity_helpers.py opennamu_forge/presentation/text_helpers.py opennamu_forge/presentation/user_validation_helpers.py opennamu_forge/presentation/route_registry.py opennamu_forge/presentation/runtime migrations tests
 ```
 
 테스트는 pytest 기반으로 작성합니다. 테스트 함수명은 `test_` prefix를 유지하면서 한국어로 작성합니다.
@@ -94,10 +94,15 @@ uv run --extra dev ty check app.py opennamu_forge/application opennamu_forge/inf
 신규 코드는 `opennamu_forge/` 아래의 3-layer 구조를 따릅니다.
 
 - `opennamu_forge/presentation/`: Flask app factory와 HTTP adapter
+- `opennamu_forge/config/`: `.env` 기반 프로젝트/runtime config builder
 - `opennamu_forge/application/`: use-case orchestration과 application service
 - `opennamu_forge/infrastructure/`: DB, logging, monitoring, external process adapter
 
-기존 route 기반 코드는 점진적으로 이동합니다. 기존 SQL은 주변 기능이 SQLModel로 완전히 이전되기 전까지 `db_change()`를 통해 DB별 dialect 차이를 흡수합니다.
+`settings`는 위키/유저/권한/스킨/문구 같은 도메인 동작 설정을 의미합니다.
+`config`는 DB 연결, SQLModel engine/pool, Prometheus, Gunicorn, `.env` 기반 런타임 값을 의미합니다.
+런타임 값에는 `*Config`, `*_config`, `build_*_config_from_env()` 명칭을 사용하고, 도메인 설정에는 `SettingKey`, `WikiSettingsService`, `*SettingRepository` 명칭을 사용합니다.
+
+route 모듈은 raw SQL을 직접 사용하지 않습니다. DB 접근은 application port와 infrastructure repository를 통해 처리하며, SQL dialect 변환만 `opennamu_forge/presentation/shared/sql_dialect.py`에 격리합니다.
 
 ## 문서
 

@@ -4,8 +4,8 @@ import argparse
 import os
 import sys
 
-from opennamu_forge.infrastructure.database import build_database_settings_from_env, should_init_sqlmodel
-from opennamu_forge.infrastructure.env import load_env_file
+from opennamu_forge.config.database import build_database_config_from_env, is_sqlmodel_database_type
+from opennamu_forge.config.env import load_env_file
 from opennamu_forge.infrastructure.logging import get_logger
 from opennamu_forge.infrastructure.migrations import run_schema_migrations
 
@@ -39,13 +39,13 @@ def run_dev() -> int:
 
 def run_migrate() -> int:
     load_env_file()
-    db_set = build_database_settings_from_env()
+    db_config = build_database_config_from_env()
 
-    if not should_init_sqlmodel(db_set):
-        logger.info("Alembic migrations are not enabled for DB type: %s", db_set["type"])
+    if not is_sqlmodel_database_type(db_config):
+        logger.info("Alembic migrations are not enabled for DB type: %s", db_config.type)
         return 0
 
-    result = run_schema_migrations(db_set)
+    result = run_schema_migrations(db_config.to_db_set())
     logger.info("Alembic migration completed. table_count=%d", len(result.table_names))
     result.engine.dispose()
     return 0

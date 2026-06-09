@@ -1,17 +1,19 @@
+from typing import Any, cast
+
 import pytest
 
 
-def load_db_model():
+def load_database_config():
     pytest.importorskip("sqlmodel")
-    from opennamu_forge.infrastructure import db_model
+    from opennamu_forge.config import database
 
-    return db_model
+    return database
 
 
 def test_postgresql_database_url을_생성한다():
-    db_model = load_db_model()
+    database = load_database_config()
 
-    url = db_model.get_sqlmodel_database_url(
+    url = database.build_sqlmodel_database_url(
         {
             "type": "postgresql",
             "name": "data",
@@ -26,9 +28,9 @@ def test_postgresql_database_url을_생성한다():
 
 
 def test_postgresql_database_url은_특수문자를_escape한다():
-    db_model = load_db_model()
+    database = load_database_config()
 
-    url = db_model.get_sqlmodel_database_url(
+    url = database.build_sqlmodel_database_url(
         {
             "type": "postgresql",
             "name": "data",
@@ -43,15 +45,15 @@ def test_postgresql_database_url은_특수문자를_escape한다():
 
 
 def test_sqlite_database_url을_생성한다():
-    db_model = load_db_model()
+    database = load_database_config()
 
-    assert db_model.get_sqlmodel_database_url({"type": "sqlite", "name": "data"}) == "sqlite:///data.db"
+    assert database.build_sqlmodel_database_url({"type": "sqlite", "name": "data"}) == "sqlite:///data.db"
 
 
 def test_mysql_database_url을_생성한다():
-    db_model = load_db_model()
+    database = load_database_config()
 
-    url = db_model.get_sqlmodel_database_url(
+    url = database.build_sqlmodel_database_url(
         {
             "type": "mysql",
             "name": "data",
@@ -66,9 +68,9 @@ def test_mysql_database_url을_생성한다():
 
 
 def test_mysql_database_url은_문자열_port를_허용한다():
-    db_model = load_db_model()
+    database = load_database_config()
 
-    url = db_model.get_sqlmodel_database_url(
+    url = database.build_sqlmodel_database_url(
         {
             "type": "mysql",
             "name": "data",
@@ -83,21 +85,24 @@ def test_mysql_database_url은_문자열_port를_허용한다():
 
 
 def test_sqlite_database_url은_경로형_name을_그대로_사용한다(tmp_path):
-    db_model = load_db_model()
+    database = load_database_config()
 
     db_name = str(tmp_path / "wiki")
 
-    assert db_model.get_sqlmodel_database_url({"type": "sqlite", "name": db_name}) == f"sqlite:///{db_name}.db"
+    assert database.build_sqlmodel_database_url({"type": "sqlite", "name": db_name}) == f"sqlite:///{db_name}.db"
 
 
 def test_지원하지_않는_database_type은_예외를_낸다():
-    db_model = load_db_model()
+    database = load_database_config()
 
     with pytest.raises(ValueError, match="Unsupported database type"):
-        db_model.get_sqlmodel_database_url({"type": "oracle"})
+        database.build_sqlmodel_database_url({"type": "oracle"})
 
 
 def test_sqlmodel_schema는_기존_other_column을_primary_key로_사용한다():
-    db_model = load_db_model()
+    pytest.importorskip("sqlmodel")
+    from opennamu_forge.infrastructure import db_model
 
-    assert set(db_model.Other.__table__.primary_key.columns.keys()) == {"name", "coverage"}
+    other_table = cast(Any, db_model.Other).__table__
+
+    assert set(other_table.primary_key.columns.keys()) == {"name", "coverage"}

@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture()
 def seeded_document_meta_db_set(tmp_path):
-    from opennamu_forge.infrastructure.database_config import reset_sqlmodel_engine
+    from opennamu_forge.infrastructure.database_engine import reset_sqlmodel_engine
     from opennamu_forge.infrastructure.db_model import Acl, DataSet, get_sqlmodel_session
     from opennamu_forge.infrastructure.migrations import run_schema_migrations
 

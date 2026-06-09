@@ -1,4 +1,8 @@
-from .tool.func import *
+from opennamu_forge.presentation.shared.func import (
+    flask,
+    python_to_golang,
+    sys,
+)
 
 async def api_bbs_w_set(name = 'Test', bbs_num = 1):
     other_set = {}
