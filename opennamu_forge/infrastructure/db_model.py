@@ -8,7 +8,7 @@ from opennamu_forge.infrastructure.database_engine import get_sqlmodel_engine, o
 
 
 def _text_column() -> Column[Any]:
-    return Column(Text, nullable=False, server_default="")
+    return Column(Text, nullable=False)
 
 
 def _pk_text_column() -> Column[Any]:

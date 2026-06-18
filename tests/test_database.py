@@ -46,3 +46,17 @@ def test_database_config는_runtime_options로_명시_변환된다():
 
     assert db_config.to_runtime_options()["type"] == "postgresql"
     assert db_config.to_runtime_options()["name"] == "wiki"
+
+
+def test_mysql_ddl은_text_column에_server_default를_넣지_않는다():
+    pytest.importorskip("sqlalchemy")
+
+    from sqlalchemy.dialects import mysql
+    from sqlalchemy.schema import CreateTable
+
+    from opennamu_forge.infrastructure.db_model import DataSet
+
+    ddl = str(CreateTable(DataSet.__table__).compile(dialect=mysql.dialect()))
+
+    assert "set_data TEXT NOT NULL" in ddl
+    assert "set_data TEXT NOT NULL DEFAULT" not in ddl
