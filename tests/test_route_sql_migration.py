@@ -203,6 +203,7 @@ def test_전환된_route는_db_connection을_직접_열지_않는다(route_file)
     assert "get_db_connect," not in source
 
 
+@pytest.mark.requires_ripgrep
 def test_project_code는_legacy_db_connection을_재도입하지_않는다():
     result = subprocess.run(
         ["rg", "-n", "get_db_connect|shared/db_connection|db_connection\\.py", "opennamu_forge"],
@@ -221,6 +222,7 @@ def test_rendering_module은_shared_legacy_경로로_두지_않는다():
     assert Path("opennamu_forge/presentation/rendering/namumark.py").exists()
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_repository_factory를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -244,6 +246,7 @@ def test_route와_runtime은_repository_factory를_shared_func에서_import하�
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_response_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -267,6 +270,7 @@ def test_route와_runtime은_response_helper를_shared_func에서_import하지_�
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_text_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -290,6 +294,7 @@ def test_route와_runtime은_text_helper를_shared_func에서_import하지_않�
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_encoding_helper를_shared_계층에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -315,6 +320,7 @@ def test_route와_runtime은_encoding_helper를_shared_계층에서_import하지
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_startup과_file_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -338,6 +344,7 @@ def test_route와_runtime은_startup과_file_helper를_shared_func에서_import�
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route는_ip_pas를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -359,6 +366,7 @@ def test_route는_ip_pas를_shared_func에서_import하지_않는다():
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route와_runtime은_authorization_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -382,6 +390,7 @@ def test_route와_runtime은_authorization_helper를_shared_func에서_import하
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route는_email_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -403,6 +412,7 @@ def test_route는_email_helper를_shared_func에서_import하지_않는다():
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route는_captcha_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [
@@ -425,6 +435,7 @@ def test_route는_captcha_helper를_shared_func에서_import하지_않는다():
     assert result.returncode == 1, result.stdout
 
 
+@pytest.mark.requires_ripgrep
 def test_route는_user_validation_helper를_shared_func에서_import하지_않는다():
     result = subprocess.run(
         [

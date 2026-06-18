@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 def test_route_패키지는_presentation_routes_안에_있다():
     assert not Path("route").exists()
@@ -19,6 +21,7 @@ def test_presentation_shared에는_gopennamu_client와_runtime_state를_두지_�
     assert Path("opennamu_forge/application/runtime_context.py").exists()
 
 
+@pytest.mark.requires_ripgrep
 def test_shared_func_축소_수치_baseline은_유지한다():
     shared_func_source = Path("opennamu_forge/presentation/shared/func.py").read_text()
     route_imports = subprocess.run(
@@ -32,6 +35,7 @@ def test_shared_func_축소_수치_baseline은_유지한다():
     assert len(route_imports.stdout.splitlines()) == 0
 
 
+@pytest.mark.requires_ripgrep
 def test_project_code는_shared_func를_내부_호출처로_재사용하지_않는다():
     result = subprocess.run(
         ["rg", "-n", "opennamu_forge\\.presentation\\.shared\\.func|presentation\\.shared import func|shared\\.func", "opennamu_forge"],
@@ -91,6 +95,7 @@ def test_runtime_config는_settings_명칭을_사용하지_않는다():
     assert "MonitoringSettings" not in monitoring_config_source
 
 
+@pytest.mark.requires_ripgrep
 def test_project_code는_wildcard_import를_사용하지_않는다():
     result = subprocess.run(
         ["rg", "-n", "import \\*", "opennamu_forge"],
@@ -112,6 +117,7 @@ def test_legacy_self_update_route는_제거되어_있다():
     assert 'href="/update"' not in admin_tool_source
 
 
+@pytest.mark.requires_ripgrep
 def test_route는_직접_external_http_io를_수행하지_않는다():
     result = subprocess.run(
         ["rg", "-n", "urllib\\.request|urlopen\\(|urlretrieve\\(", "opennamu_forge/presentation/routes"],

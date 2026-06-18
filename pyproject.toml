@@ -65,6 +65,9 @@ pythonpath = [
 testpaths = [
     "tests",
 ]
+markers = [
+    "requires_ripgrep: test shells out to ripgrep(rg); auto-skipped when the binary is missing from PATH",
+]
 
 [tool.ruff]
 target-version = "py310"
