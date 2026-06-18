@@ -1,6 +1,7 @@
 import asyncio
 
 import flask
+import pytest
 
 from opennamu_forge.presentation import (
     admin_ui_helpers,
@@ -165,7 +166,10 @@ def test_edit_toolbar_helpers는_button과_ip_warning을_렌더링한다(monkeyp
     monkeypatch.setattr(edit_toolbar_helpers, "get_lang", fake_get_lang)
     monkeypatch.setattr(edit_toolbar_helpers, "ip_or_user", lambda: 1)
 
-    assert "Alpha" in asyncio.run(edit_toolbar_helpers.edit_button())
+    edit_button_html = asyncio.run(edit_toolbar_helpers.edit_button())
+    assert "Alpha" in edit_button_html
+    assert "opennamu_forge_edit_actionbar_insert" in edit_button_html
+    assert "opennamu_forge_edit_action_add" in edit_button_html
     assert "warn" in asyncio.run(edit_toolbar_helpers.ip_warning())
 
 
@@ -212,6 +216,36 @@ def test_edit_validation_helpers는_bottom_text와_title_length를_검증한다(
     assert edit_validation_helpers.do_title_length_check("FrontPage") == 1
 
 
+@pytest.mark.parametrize(
+    ("tool", "setting_name", "expected"),
+    (
+        ("edit", "edit_only_bottom_text", "edit notice"),
+        ("move", "move_bottom_text", "move notice"),
+        ("delete", "delete_bottom_text", "delete notice"),
+        ("revert", "revert_bottom_text", "revert notice"),
+    ),
+)
+def test_edit_validation_helpers는_tool별_bottom_text를_우선한다(monkeypatch, tool, setting_name, expected):
+    monkeypatch.setattr(
+        edit_validation_helpers,
+        "get_other_setting_repository",
+        lambda: FakeSettings({"edit_bottom_text": "default notice", setting_name: expected}),
+    )
+
+    assert edit_validation_helpers.get_edit_text_bottom(tool) == expected + '<hr class="main_hr">'
+
+
+def test_edit_validation_helpers는_topic_title_length를_검증한다(monkeypatch):
+    monkeypatch.setattr(
+        edit_validation_helpers,
+        "get_other_setting_repository",
+        lambda: FakeSettings({"title_topic_max_length": "4"}),
+    )
+
+    assert edit_validation_helpers.do_title_length_check("TopicLong", "topic") == 1
+    assert edit_validation_helpers.do_title_length_check("Tiny", "topic") == 0
+
+
 def test_edit_validation_helpers는_checkbox와_send_policy를_검증한다(monkeypatch):
     app = flask.Flask(__name__)
     app.secret_key = "test"
@@ -230,6 +264,37 @@ def test_edit_validation_helpers는_checkbox와_send_policy를_검증한다(monk
         assert "agree" in edit_validation_helpers.get_edit_text_bottom_check_box()
         assert edit_validation_helpers.do_edit_text_bottom_check_box_check("") == 1
         assert asyncio.run(edit_validation_helpers.do_edit_send_check("")) == 1
+
+
+def test_edit_validation_helpers는_checkbox_pass_session을_존중한다(monkeypatch):
+    app = flask.Flask(__name__)
+    app.secret_key = "test"
+    monkeypatch.setattr(
+        edit_validation_helpers,
+        "get_other_setting_repository",
+        lambda: FakeSettings({"copyright_checkbox_text": "agree"}),
+    )
+
+    with app.test_request_context("/"):
+        flask.session["bottom_check_box_pass"] = 1
+        assert "checked" in edit_validation_helpers.get_edit_text_bottom_check_box()
+        assert edit_validation_helpers.do_edit_text_bottom_check_box_check("") == 0
+
+
+def test_edit_validation_helpers는_checkbox_text가_없으면_빈문자열을_반환한다(monkeypatch):
+    monkeypatch.setattr(edit_validation_helpers, "get_other_setting_repository", lambda: FakeSettings())
+
+    assert edit_validation_helpers.get_edit_text_bottom_check_box() == ""
+
+
+def test_edit_validation_helpers는_send_policy가_비어있으면_통과한다(monkeypatch):
+    async def fake_acl_check(*args, **kwargs):
+        return 1
+
+    monkeypatch.setattr(edit_validation_helpers, "acl_check", fake_acl_check)
+    monkeypatch.setattr(edit_validation_helpers, "get_other_setting_repository", lambda: FakeSettings())
+
+    assert asyncio.run(edit_validation_helpers.do_edit_send_check("")) == 0
 
 
 def test_edit_validation_helpers는_slow와_filter_policy를_검증한다(monkeypatch):
@@ -251,6 +316,28 @@ def test_edit_validation_helpers는_slow와_filter_policy를_검증한다(monkey
     assert asyncio.run(edit_validation_helpers.do_edit_filter("blocked text")) == 1
     assert users.upserts[0] == ("alice", "edit_filter", "blocked text")
     assert bans[0][0] == "alice"
+
+
+def test_edit_validation_helpers는_thread_slow_policy를_검증한다(monkeypatch):
+    async def fake_acl_check(*args, **kwargs):
+        return 1
+
+    monkeypatch.setattr(edit_validation_helpers, "acl_check", fake_acl_check)
+    monkeypatch.setattr(edit_validation_helpers, "ip_check", lambda: "alice")
+    monkeypatch.setattr(edit_validation_helpers, "get_other_setting_repository", lambda: FakeSettings({"slow_thread": "60"}))
+    monkeypatch.setattr(edit_validation_helpers, "get_topic_repository", lambda: FakeHistory())
+
+    assert asyncio.run(edit_validation_helpers.do_edit_slow_check("thread")) == 1
+
+
+def test_edit_validation_helpers는_filter_acl이_통과되면_검사를_건너뛴다(monkeypatch):
+    async def fake_acl_check(*args, **kwargs):
+        return 0
+
+    monkeypatch.setattr(edit_validation_helpers, "acl_check", fake_acl_check)
+    monkeypatch.setattr(edit_validation_helpers, "ip_check", lambda: "alice")
+
+    assert asyncio.run(edit_validation_helpers.do_edit_filter("blocked text")) == 0
 
 
 def test_render_helper는_acl_block과_renderer_output을_처리한다(monkeypatch):
@@ -281,3 +368,62 @@ def test_render_helper는_acl_block과_renderer_output을_처리한다(monkeypat
 
     assert '<div class="opennamu_forge_render_complete"><p>body</p></div>' in rendered
     assert "console.log('ok')" in rendered
+
+
+def test_render_helper는_api_type과_skin_style_option을_적용한다(monkeypatch):
+    app = flask.Flask(__name__)
+    app.secret_key = "test"
+
+    async def allowed_acl(*args, **kwargs):
+        return 0
+
+    async def fake_get_lang(data, safe=0):
+        return data
+
+    skin_values = {
+        "main_css_font_size": "18",
+        "main_css_table_scroll": "on",
+        "main_css_view_joke": "off",
+        "main_css_math_scroll": "on",
+        "main_css_table_transparent": "on",
+    }
+
+    monkeypatch.setattr(render_helpers, "acl_check", allowed_acl)
+    monkeypatch.setattr(render_helpers, "get_lang", fake_get_lang)
+    monkeypatch.setattr(render_helpers, "get_other_setting_repository", lambda: FakeSettings({"namumark_compatible": "1"}))
+    monkeypatch.setattr(render_helpers, "class_do_render", FakeClassRender)
+    monkeypatch.setattr(render_helpers, "ip_check", lambda: "alice")
+    monkeypatch.setattr(render_helpers, "get_main_skin_set", lambda session, name, ip: skin_values.get(name, "default"))
+
+    with app.test_request_context("/"):
+        rendered = asyncio.run(render_helpers.render_set("A", None, "api_from"))
+
+    assert rendered[1] == "console.log('ok')"
+    assert "font-size: 18px" in rendered[0]
+    assert "font-size: 15px" in rendered[0]
+    assert ".table_safe { overflow-x: scroll" in rendered[0]
+    assert ".opennamu_forge_joke { display: none; }" in rendered[0]
+    assert ".katex .base { overflow-x: scroll; }" in rendered[0]
+    assert "background: transparent" in rendered[0]
+
+
+def test_render_helper는_backlink_type이면_빈문자열을_반환한다(monkeypatch):
+    app = flask.Flask(__name__)
+    app.secret_key = "test"
+
+    async def allowed_acl(*args, **kwargs):
+        return 0
+
+    async def fake_get_lang(data, safe=0):
+        return data
+
+    monkeypatch.setattr(render_helpers, "acl_check", allowed_acl)
+    monkeypatch.setattr(render_helpers, "get_lang", fake_get_lang)
+    monkeypatch.setattr(render_helpers, "get_other_setting_repository", lambda: FakeSettings())
+    monkeypatch.setattr(render_helpers, "class_do_render", FakeClassRender)
+    monkeypatch.setattr(render_helpers, "ip_check", lambda: "alice")
+
+    with app.test_request_context("/"):
+        rendered = asyncio.run(render_helpers.render_set("A", "body", "backlink"))
+
+    assert rendered == ""

@@ -1,6 +1,11 @@
+from pathlib import Path
+
 import flask
 
 from opennamu_forge.presentation.shared.sql_dialect import re
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+VIEWS_DIR = PROJECT_ROOT / "views"
 
 
 async def main_view(name = ''):
@@ -9,7 +14,7 @@ async def main_view(name = ''):
         return ''
     else:
         file_name = file_name.group(1)
-        dir_name = './views/' + re.sub(r'\.{2,}', '', name[:-len(file_name)])
+        dir_name = VIEWS_DIR / re.sub(r'\.{2,}', '', name[:-len(file_name)])
 
         file_name = re.sub(r'\.cache_v(?:[0-9]+)$', '', file_name)
 

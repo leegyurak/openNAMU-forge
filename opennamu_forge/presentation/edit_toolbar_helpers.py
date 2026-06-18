@@ -15,17 +15,23 @@ async def edit_button():
     for get_data in db_data:
         insert_list += [[get_data.plus, get_data.html]]
 
-    data = ""
+    data = '<div class="opennamu_forge_edit_actionbar opennamu_forge_edit_actionbar_insert">'
     for insert_data in insert_list:
         data += (
-            "<a href=\"javascript:do_insert_data('"
+            '<a class="opennamu_forge_edit_action" href="javascript:do_insert_data(\''
             + get_tool_js_safe(insert_data[0])
-            + "');\">("
+            + "');\">"
             + html.escape(insert_data[1])
-            + ")</a> "
+            + "</a>"
         )
 
-    data += (" " if data != "" else "") + '<a href="/filter/edit_top">(' + await get_lang("add") + ")</a>"
+    data += (
+        '<a class="opennamu_forge_edit_action opennamu_forge_edit_action_add" '
+        'href="/filter/edit_top">'
+        + await get_lang("add")
+        + "</a>"
+    )
+    data += "</div>"
     data += '<hr class="main_hr">'
 
     return data

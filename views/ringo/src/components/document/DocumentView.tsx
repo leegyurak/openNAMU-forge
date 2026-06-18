@@ -82,7 +82,12 @@ export function DocumentView({
             </article>
             <footer className={styles.footer} id="footer">
                 <div dangerouslySetInnerHTML={{ __html: wiki.licenseHtml }} />
-                <a className={styles.footerLogo} href="https://github.com/opennamu-forge/opennamu-forge">
+                <a
+                    className={styles.footerLogo}
+                    href="https://github.com/leegyurak/openNAMU-forge"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
                     <img alt="opennamu-forge logo" src="/views/main_css/file/s_logo.webp" />
                 </a>
             </footer>

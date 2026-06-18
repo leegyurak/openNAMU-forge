@@ -2,7 +2,7 @@
 name = "opennamu-forge"
 version = "3.6.0b58"
 description = "Modern, agent-friendly Python/Flask wiki engine based on openNAMU."
-readme = "readme-en.md"
+readme = "README-EN.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [

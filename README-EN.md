@@ -1,7 +1,12 @@
-[(en-US)](./readme-en.md) | [(ko-KR)](./readme.md)
+[(en-US)](./README-EN.md) | [(ko-KR)](./README.md)
 
 # OpenNamu Forge
-[![Python 3.10+](https://img.shields.io/badge/python->=%203.10-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python->=%203.10-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.1+-000000.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![React](https://img.shields.io/badge/React-UI-61DAFB.svg?logo=react&logoColor=222222)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-typed-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](./rules/testing-and-coverage.md)
+[![Open Source](https://img.shields.io/badge/open%20source-yes-brightgreen.svg)](./LICENSE)
 [![LICENSE](https://img.shields.io/badge/license-BSD%203--Clause-lightgrey.svg)](./LICENSE)
 
 ![](https://raw.githubusercontent.com/openNAMU/openNAMU/beta/.github/logo.png)
@@ -38,9 +43,10 @@ The upstream openNAMU project remains available for original issues and pull req
 
 - [AGENTS.md](./AGENTS.md): agent workflow rules
 - [docs/docker.md](./docs/docker.md): Docker and Docker Compose guide
-- [agent-rules/runtime-and-packaging.md](./agent-rules/runtime-and-packaging.md): runtime, uv, CLI, Ruff, and ty rules
-- [agent-rules/database-and-migrations.md](./agent-rules/database-and-migrations.md): DB, SQLModel, and Alembic rules
-- [agent-rules/testing-and-coverage.md](./agent-rules/testing-and-coverage.md): pytest and coverage rules
+- [rules/runtime-and-packaging.md](./rules/runtime-and-packaging.md): runtime, uv, CLI, Ruff, and ty rules
+- [rules/database-and-migrations.md](./rules/database-and-migrations.md): DB, SQLModel, and Alembic rules
+- [rules/testing-and-coverage.md](./rules/testing-and-coverage.md): pytest and coverage rules
+- [skills/](./skills/): task playbooks
 
 ## License
 OpenNamu Forge follows the upstream [BSD 3-Clause License](./LICENSE). Please refer to the documentation for details.

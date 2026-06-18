@@ -1,32 +1,48 @@
 :root {
     --forge-theme-color: #008275;
     --forge-theme-color-strong: #015f55;
+    --forge-theme-color-soft: rgba(0, 130, 117, 0.08);
     --forge-theme-color-muted: rgba(0, 130, 117, 0.14);
     --forge-theme-color-surface: #e8f5f2;
 
-    --namu-page-bg: #f7f7f5;
+    --namu-page-bg: #f5f6f8;
     --namu-panel-bg: #ffffff;
     --namu-panel-bg-raised: #ffffff;
     --namu-header-bg: #ffffff;
-    --namu-header-bg-strong: #f3f4f5;
-    --namu-header-text: #202326;
-    --namu-header-muted: #6c757d;
-    --namu-text: #212529;
-    --namu-text-muted: #6c757d;
-    --namu-border: #e1e4e8;
-    --namu-border-strong: #cfd3d8;
-    --namu-hover: #eef1f3;
+    --namu-header-bg-strong: #f1f3f5;
+    --namu-header-text: #1a1d20;
+    --namu-header-muted: #6b7280;
+    --namu-text: #1f2328;
+    --namu-text-strong: #0d1117;
+    --namu-text-muted: #656d76;
+    --namu-text-subtle: #8b949e;
+    --namu-border: #e6e8eb;
+    --namu-border-soft: #eef0f2;
+    --namu-border-strong: #d0d7de;
+    --namu-hover: #f3f5f7;
+    --namu-active: #e9ecef;
     --namu-info-bg: #f8f9fb;
-    --namu-info-border: #dee1e5;
-    --namu-code-bg: #f3f5f7;
-    --namu-code-text: #2c2f33;
+    --namu-info-border: #e1e4e8;
+    --namu-code-bg: #f6f8fa;
+    --namu-code-text: #1f2328;
     --namu-link: var(--forge-theme-color);
     --namu-link-hover: var(--forge-theme-color-strong);
-    --namu-shadow: 0 1px 0 rgba(22, 28, 36, 0.04),
-        0 2px 8px rgba(22, 28, 36, 0.04);
-    --namu-shadow-strong: 0 8px 28px rgba(22, 28, 36, 0.16);
-    --namu-radius: 4px;
-    --namu-radius-lg: 6px;
+
+    --namu-shadow-xs: 0 1px 0 rgba(15, 23, 42, 0.04);
+    --namu-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+        0 1px 3px rgba(15, 23, 42, 0.06);
+    --namu-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06),
+        0 1px 3px rgba(15, 23, 42, 0.04);
+    --namu-shadow-strong: 0 12px 36px rgba(15, 23, 42, 0.14),
+        0 4px 12px rgba(15, 23, 42, 0.08);
+
+    --namu-radius-sm: 4px;
+    --namu-radius: 6px;
+    --namu-radius-lg: 10px;
+    --namu-radius-pill: 999px;
+
+    --namu-ease: cubic-bezier(0.2, 0, 0, 1);
+    --namu-transition: 0.16s var(--namu-ease);
 
     --md-callout-note-bg: #eef5fb;
     --md-callout-note-border: #4a8ad0;
@@ -75,27 +91,38 @@
 [data-theme="dark"] {
     --forge-theme-color: #2ec4b6;
     --forge-theme-color-strong: #6dded2;
+    --forge-theme-color-soft: rgba(46, 196, 182, 0.10);
     --forge-theme-color-muted: rgba(46, 196, 182, 0.18);
     --forge-theme-color-surface: #1c2c2b;
 
-    --namu-page-bg: #1a1b1f;
-    --namu-panel-bg: #25272c;
-    --namu-panel-bg-raised: #2c2f35;
-    --namu-header-bg: #2d2f34;
-    --namu-header-bg-strong: #24262a;
+    --namu-page-bg: #16181d;
+    --namu-panel-bg: #1e2127;
+    --namu-panel-bg-raised: #262932;
+    --namu-header-bg: #1e2127;
+    --namu-header-bg-strong: #181a1f;
     --namu-header-text: #f0f2f4;
     --namu-header-muted: #b9bdc4;
     --namu-text: #e6e8eb;
+    --namu-text-strong: #f7f9fb;
     --namu-text-muted: #9ea3aa;
-    --namu-border: #383b42;
-    --namu-border-strong: #4a4e57;
-    --namu-hover: #2f3239;
-    --namu-info-bg: #2a2c31;
-    --namu-info-border: #3e424a;
-    --namu-code-bg: #1f2126;
+    --namu-text-subtle: #6e7480;
+    --namu-border: #2f333b;
+    --namu-border-soft: #262932;
+    --namu-border-strong: #444851;
+    --namu-hover: #282b33;
+    --namu-active: #323540;
+    --namu-info-bg: #23262d;
+    --namu-info-border: #353941;
+    --namu-code-bg: #181a1f;
     --namu-code-text: #e6e8eb;
-    --namu-shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.35);
-    --namu-shadow-strong: 0 8px 28px rgba(0, 0, 0, 0.55);
+
+    --namu-shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.4);
+    --namu-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.35);
+    --namu-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4),
+        0 1px 3px rgba(0, 0, 0, 0.3);
+    --namu-shadow-strong: 0 14px 38px rgba(0, 0, 0, 0.55),
+        0 4px 14px rgba(0, 0, 0, 0.4);
 
     --md-callout-note-bg: rgba(74, 138, 208, 0.12);
     --md-callout-note-border: #6aa3df;
@@ -110,7 +137,7 @@
     --md-callout-danger-border: #e26b6b;
     --md-callout-danger-text: #f1b6b6;
 
-    --md-code-toolbar-bg: #2a2c31;
+    --md-code-toolbar-bg: #23262d;
     --md-code-toolbar-text: #9ea3aa;
 
     --md-hljs-fg: #c9d1d9;

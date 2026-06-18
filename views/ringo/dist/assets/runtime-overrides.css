@@ -1,180 +1,16 @@
 /* Runtime overrides for the Flask-served React skin bundle. */
 :root {
     --namu-header-bg: #ffffff;
-    --namu-header-bg-strong: #f3f4f5;
-    --namu-header-text: #202326;
-    --namu-header-muted: #6c757d;
+    --namu-header-bg-strong: #f1f3f5;
+    --namu-header-text: #1a1d20;
+    --namu-header-muted: #6b7280;
 }
 
 [data-theme="dark"] {
-    --namu-header-bg: #2d2f34;
-    --namu-header-bg-strong: #24262a;
+    --namu-header-bg: #1e2127;
+    --namu-header-bg-strong: #181a1f;
     --namu-header-text: #f0f2f4;
     --namu-header-muted: #b9bdc4;
-}
-
-.ringo_Header-module__root__-VrM- {
-    border-bottom: 2px solid var(--forge-theme-color);
-}
-
-.ringo_Header-module__logo__QLIeK,
-.ringo_DocumentView-module__title__iMdAZ {
-    letter-spacing: 0;
-}
-
-.ringo_DocumentView-module__section__vcVB2 {
-    width: min(100%, 1180px);
-    max-width: none;
-    margin: 16px 0 0;
-}
-
-.opennamu_forge_main h1,
-.opennamu_forge_main h2,
-.opennamu_forge_main h3,
-.opennamu_forge_main h4,
-.opennamu_forge_main h5,
-.opennamu_forge_main h6 {
-    margin: 1.25em 0 0.55em;
-    padding: 0 0 0.24em;
-    line-height: 1.35;
-}
-
-.opennamu_forge_main h1::before,
-.opennamu_forge_main h2::before,
-.opennamu_forge_main h3::before,
-.opennamu_forge_main h4::before,
-.opennamu_forge_main h5::before,
-.opennamu_forge_main h6::before {
-    display: none;
-}
-
-.opennamu_forge_main h1 {
-    font-size: 1.8em;
-}
-
-.opennamu_forge_main h2 {
-    font-size: 1.5em;
-}
-
-.opennamu_forge_main h3 {
-    font-size: 1.3em;
-}
-
-.opennamu_forge_main h4 {
-    font-size: 1.15em;
-}
-
-.opennamu_forge_main h5 {
-    font-size: 1em;
-}
-
-.opennamu_forge_main h6 {
-    font-size: 0.95em;
-}
-
-.opennamu_forge_main p {
-    margin: 0.4em 0;
-}
-
-.opennamu_forge_main ul,
-.opennamu_forge_main ol {
-    padding-left: 1.5em;
-    margin: 0.35em 0;
-}
-
-.opennamu_forge_main li {
-    margin: 0.18em 0;
-}
-
-.opennamu_forge_main blockquote {
-    margin: 0.8em 0;
-    padding: 0.65em 1em;
-    border: 1px solid var(--namu-info-border);
-    border-left: 4px solid var(--namu-border-strong);
-    border-radius: 0;
-}
-
-.opennamu_forge_main code {
-    padding: 1px 5px;
-    border-radius: 3px;
-}
-
-.opennamu_forge_main pre {
-    padding: 12px 14px;
-    border-radius: 3px;
-}
-
-.opennamu_forge_main table {
-    margin: 0.8em 0;
-    font-size: 0.95em;
-}
-
-.opennamu_forge_main table th,
-.opennamu_forge_main table td {
-    padding: 5px 8px;
-}
-
-.opennamu_forge_main hr {
-    margin: 1.2em 0;
-}
-
-.opennamu_forge_main img {
-    border-radius: 0;
-    max-width: 100%;
-    height: auto;
-}
-
-.opennamu_forge_TOC {
-    min-width: 260px;
-    margin: 0.8em 0 1.2em;
-    padding: 0.75em 1em;
-    border-radius: 3px;
-    box-shadow: none;
-    font-size: 0.95em;
-}
-
-.opennamu_forge_TOC_list {
-    line-height: 1.65;
-}
-
-.opennamu_forge_footnote {
-    margin-top: 1.8em;
-    padding: 0.8em 0 0;
-    background: transparent;
-    border: none;
-    border-top: 1px solid var(--namu-info-border);
-    border-radius: 0;
-}
-
-.ringo_DocumentView-module__menu__7dvZc {
-    gap: 6px;
-    border-top: 1px solid var(--namu-border);
-    border-bottom: none;
-    padding: 10px 14px;
-}
-
-.ringo_DocumentView-module__menuItem__04o89 {
-    justify-content: center;
-    min-height: 32px;
-    height: auto;
-    color: var(--namu-text);
-    font-weight: 600;
-    background: var(--namu-info-bg);
-    border: 1px solid var(--namu-border);
-    border-radius: 6px;
-    margin-bottom: 0;
-}
-
-.ringo_DocumentView-module__menuItem__04o89:hover {
-    color: var(--forge-theme-color-strong);
-    background: var(--forge-theme-color-muted);
-    border-color: var(--forge-theme-color);
-}
-
-.ringo_DocumentView-module__menuItemActive__h8LBv {
-    color: var(--forge-theme-color);
-    background: var(--forge-theme-color-muted);
-    border-color: var(--forge-theme-color);
 }
 
 .opennamu_forge_edit_actionbar {
@@ -182,34 +18,34 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin: 0 0 12px;
-    padding: 10px;
+    margin: 0 0 14px;
+    padding: 12px;
     background: var(--namu-info-bg);
     border: 1px solid var(--namu-info-border);
-    border-radius: 8px;
+    border-radius: var(--namu-radius);
 }
 
 .opennamu_forge_main .opennamu_forge_edit_action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 34px;
+    padding: 0 14px;
     background: var(--namu-panel-bg);
     color: var(--namu-text);
     border: 1px solid var(--namu-border-strong);
-    border-radius: 6px;
+    border-radius: var(--namu-radius);
     font-size: 13px;
     font-weight: 600;
     line-height: 1;
     text-decoration: none;
-    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease,
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease,
         transform 0.06s ease;
 }
 
 .opennamu_forge_main .opennamu_forge_edit_action:hover,
 .opennamu_forge_main .opennamu_forge_edit_action:focus-visible {
-    background: var(--forge-theme-color-muted);
+    background: var(--forge-theme-color-soft);
     color: var(--forge-theme-color-strong);
     border-color: var(--forge-theme-color);
     text-decoration: none;
@@ -231,10 +67,4 @@
     background: var(--forge-theme-color-strong);
     color: #ffffff;
     border-color: var(--forge-theme-color-strong);
-}
-
-@media (max-width: 768px) {
-    .ringo_DocumentView-module__menu__7dvZc {
-        padding: 10px 8px;
-    }
 }

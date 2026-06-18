@@ -732,7 +732,6 @@
     "no_exist_user_error": "The account does not exist.",
     "no_admin_block_error": "You cannot block or check administrators.",
     "error_skin_set": "The skin you are using does not support individual settings.",
-    "error_skin_set_old": "Some older skins may only work by using the old version link.",
     "same_id_exist_error": "There are users using the same username.",
     "long_id_error": "Username must be shorter than 128 characters.",
     "id_char_error": "XSS characters(inequality symbol, quotation marks) and . and: are not available.",

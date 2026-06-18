@@ -63,6 +63,8 @@ def test_edit_editor는_editor_html을_렌더링한다(monkeypatch):
     assert "EDIT_BUTTON" in html
     assert "<select>markup</select>" in html
     assert "vs-dark" in html
+    assert "opennamu_forge_edit_actionbar_temp" in html
+    assert "opennamu_forge_edit_action" in html
 
 
 def test_edit_timeout는_render_set이_끝나면_성공을_반환한다(monkeypatch):

@@ -56,7 +56,16 @@ async def edit_editor(ip, data_main="", do_type="edit", addon="", name="", marku
 
     p_text = html.escape(help_text) if help_text != "" else await get_lang("default_edit_help")
 
-    monaco_editor_top += '<a href="javascript:opennamu_forge_do_editor_temp_save();">(' + await get_lang("load_temp_save") + ')</a> <a href="javascript:opennamu_forge_do_editor_temp_save_load();">(' + await get_lang("load_temp_save_load") + ")</a>"
+    monaco_editor_top += (
+        '<div class="opennamu_forge_edit_actionbar opennamu_forge_edit_actionbar_temp">'
+        '<a class="opennamu_forge_edit_action" href="javascript:opennamu_forge_do_editor_temp_save();">'
+        + await get_lang("load_temp_save")
+        + '</a>'
+        '<a class="opennamu_forge_edit_action" href="javascript:opennamu_forge_do_editor_temp_save_load();">'
+        + await get_lang("load_temp_save_load")
+        + '</a>'
+        '</div>'
+    )
     monaco_editor_top += '<hr class="main_hr">'
 
     darkmode = flask.request.cookies.get("main_css_darkmode", "0")

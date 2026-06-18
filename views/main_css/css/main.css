@@ -456,7 +456,7 @@
     border-bottom: 2px solid gainsboro;
 }
 
-/* 이 부분 이하로는 레거시 */
+/* topic marker */
 .opennamu_forge_main #topic_color {
     background: #bbeabb;
 }

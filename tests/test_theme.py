@@ -33,7 +33,7 @@ def test_theme_css는_css_variable을_생성한다():
         ".env.example",
         "README.md",
         "docs/docker.md",
-        "agent-rules/frontend-responsive.md",
+        "rules/frontend-responsive.md",
     ),
 )
 def test_theme_color_env는_문서화되어_있다(path):

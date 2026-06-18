@@ -1,44 +1,56 @@
 .root {
     position: fixed;
-    right: 14px;
-    bottom: 16px;
+    right: 16px;
+    bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     z-index: 950;
 }
 
 .button {
-    width: 36px;
-    height: 36px;
-    border-radius: 4px;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--namu-radius-pill);
     background: var(--namu-panel-bg);
     color: var(--namu-text-muted);
-    border: 1px solid var(--namu-border-strong);
-    box-shadow: var(--namu-shadow);
+    border: 1px solid var(--namu-border);
+    box-shadow: var(--namu-shadow-md);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    font-size: 17px;
+    font-size: 18px;
     line-height: 1;
-    transition: background 0.12s ease, color 0.12s ease,
-        border-color 0.12s ease;
+    transition: background var(--namu-transition),
+        color var(--namu-transition),
+        border-color var(--namu-transition),
+        transform var(--namu-transition),
+        box-shadow var(--namu-transition);
 }
 
 .button:hover {
     background: var(--forge-theme-color);
     color: #ffffff;
     border-color: var(--forge-theme-color);
+    box-shadow: 0 6px 16px var(--forge-theme-color-muted),
+        var(--namu-shadow-md);
+    transform: translateY(-1px);
+}
+
+.button:active {
+    transform: translateY(0);
 }
 
 @media (max-width: 768px) {
     .root {
-        right: 10px;
-        bottom: 10px;
+        right: 12px;
+        bottom: 12px;
+        gap: 6px;
     }
     .button {
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
     }
 }

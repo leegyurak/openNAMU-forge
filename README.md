@@ -1,8 +1,13 @@
-[(en-US)](./readme-en.md) | [(ko-KR)](./readme.md)
+[(en-US)](./README-EN.md) | [(ko-KR)](./README.md)
 
 # OpenNamu Forge
 
-[![Python 3.10 이상](https://img.shields.io/badge/python->=%203.10-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python->=%203.10-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.1+-000000.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![React](https://img.shields.io/badge/React-UI-61DAFB.svg?logo=react&logoColor=222222)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-typed-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![커버리지](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](./rules/testing-and-coverage.md)
+[![오픈소스](https://img.shields.io/badge/open%20source-yes-brightgreen.svg)](./LICENSE)
 [![라이선스](https://img.shields.io/badge/license-BSD%203--Clause-lightgrey.svg)](./LICENSE)
 
 OpenNamu Forge는 openNAMU를 기반으로 아키텍처, 런타임, 테스트, 관측 가능성, agent-friendly 기여 규칙을 현대화한 Python/Flask 위키 엔진입니다.
@@ -14,7 +19,7 @@ OpenNamu Forge는 openNAMU를 기반으로 아키텍처, 런타임, 테스트, �
 - SQLModel 기반 ORM 레이어를 새 DB 작업의 기준으로 사용합니다.
 - Gunicorn 기반 WSGI 실행을 기본 운영 방식으로 둡니다.
 - Prometheus `/metrics`를 제공하며 `.env`로 path와 활성화 여부를 조정할 수 있습니다.
-- agent가 일관되게 기여할 수 있도록 `AGENTS.md`와 `agent-rules/`에 작업 규칙을 분리했습니다.
+- agent가 일관되게 기여할 수 있도록 `AGENTS.md`, `rules/`, `skills/`, `agents/`에 작업 규칙과 절차를 분리했습니다.
 - 신규/리팩터링 코드는 3-layer architecture를 따릅니다.
 
 ## 기술 스택
@@ -108,10 +113,11 @@ route 모듈은 raw SQL을 직접 사용하지 않습니다. DB 접근은 applic
 
 - [AGENTS.md](./AGENTS.md): agent 작업 규칙의 진입점
 - [docs/docker.md](./docs/docker.md): Docker와 Docker Compose 실행 가이드
-- [agent-rules/runtime-and-packaging.md](./agent-rules/runtime-and-packaging.md): uv, Python, Gunicorn, Ruff, ty 규칙
-- [agent-rules/database-and-migrations.md](./agent-rules/database-and-migrations.md): DB와 SQLModel 규칙
-- [agent-rules/testing-and-coverage.md](./agent-rules/testing-and-coverage.md): pytest와 coverage 규칙
-- [agent-rules/observability.md](./agent-rules/observability.md): Prometheus 규칙
+- [rules/runtime-and-packaging.md](./rules/runtime-and-packaging.md): uv, Python, Gunicorn, Ruff, ty 규칙
+- [rules/database-and-migrations.md](./rules/database-and-migrations.md): DB와 SQLModel 규칙
+- [rules/testing-and-coverage.md](./rules/testing-and-coverage.md): pytest와 coverage 규칙
+- [rules/observability.md](./rules/observability.md): Prometheus 규칙
+- [skills/](./skills/): 작업 유형별 플레이북
 
 ## Upstream
 

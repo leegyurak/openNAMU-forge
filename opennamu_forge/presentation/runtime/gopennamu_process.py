@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import subprocess
 import time
 from collections.abc import Mapping
@@ -47,12 +48,49 @@ async def wait_for_gopennamu(database_runtime_options: Mapping[str, str], golang
             logger.info("Wait golang...")
             time.sleep(1)
 
+def _connection_pid(connection) -> int | None:
+    return getattr(connection, "pid", None)
+
+
+def _connection_listens_on_port(connection, port_number: int) -> bool:
+    local_address = getattr(connection, "laddr", None)
+    return bool(
+        local_address
+        and local_address.port == port_number
+        and getattr(connection, "status", None) == psutil.CONN_LISTEN
+    )
+
+
+def _listening_pids_from_process_connections(port_number: int) -> set[int]:
+    pids = set()
+    for process in psutil.process_iter(["pid"]):
+        try:
+            connections = process.net_connections(kind="inet")
+        except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
+            continue
+
+        for connection in connections:
+            if _connection_listens_on_port(connection, port_number):
+                pids.add(_connection_pid(connection) or process.pid)
+
+    return pids
+
+
+def _listening_pids_on_port(port: str | int) -> set[int]:
+    port_number = int(port)
+    try:
+        return {
+            c.pid
+            for c in psutil.net_connections(kind="inet")
+            if _connection_pid(c) and _connection_listens_on_port(c, port_number)
+        }
+    except psutil.AccessDenied:
+        logger.warning("Cannot inspect some system network connections; falling back to per-process scan.")
+        return _listening_pids_from_process_connections(port_number)
+
+
 def kill_port(port: str | int, timeout: float = 1.5, force: bool = True) -> list[int]:
-    pids = {
-        c.pid
-        for c in psutil.net_connections(kind="inet")
-        if c.pid and c.laddr and c.laddr.port == int(port) and c.status == psutil.CONN_LISTEN
-    }
+    pids = _listening_pids_on_port(port)
     procs = []
     for pid in pids:
         try:
@@ -86,10 +124,29 @@ def start_gopennamu_process(
     executable_name: str,
     golang_port: str,
     run_mode: str,
+    database_runtime_options: Mapping[str, str],
 ) -> subprocess.Popen:
     exe_path = Path(bin_dir) / executable_name
     cmd = [str(exe_path), golang_port, run_mode, "api"]
-    return subprocess.Popen(cmd, cwd=str(bin_dir))
+    return subprocess.Popen(cmd, cwd=str(bin_dir), env=build_gopennamu_environment(database_runtime_options))
+
+
+def build_gopennamu_environment(database_runtime_options: Mapping[str, str]) -> dict[str, str]:
+    env = os.environ.copy()
+    env["NAMU_DB_TYPE"] = database_runtime_options["type"]
+    env["NAMU_DB"] = database_runtime_options["name"]
+    if database_runtime_options["type"] == "mysql":
+        env["NAMU_DB_HOST"] = database_runtime_options["mysql_host"]
+        env["NAMU_DB_PORT"] = database_runtime_options["mysql_port"]
+        env["NAMU_DB_USER"] = database_runtime_options["mysql_user"]
+        env["NAMU_DB_PASSWORD"] = database_runtime_options["mysql_pw"]
+    elif database_runtime_options["type"] == "postgresql":
+        env["NAMU_DB_HOST"] = database_runtime_options["postgresql_host"]
+        env["NAMU_DB_PORT"] = database_runtime_options["postgresql_port"]
+        env["NAMU_DB_USER"] = database_runtime_options["postgresql_user"]
+        env["NAMU_DB_PASSWORD"] = database_runtime_options["postgresql_pw"]
+
+    return env
 
 def wait_for_gopennamu_startup(database_runtime_options: Mapping[str, str], golang_port: str) -> None:
     try:

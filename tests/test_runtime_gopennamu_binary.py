@@ -66,6 +66,7 @@ def test_download_binary는_실패_응답이면_파일을_만들지_않는다(tm
     ("run_mode", "setup_tool", "existing_data", "expected_data", "expected_calls"),
     [
         ("dev", "update", b"old", b"old", []),
+        ("dev", "update", None, b"new", ["https://example.test/main.bin"]),
         ("", "normal", b"old", b"old", []),
         ("", "update", b"old", b"new", ["https://example.test/main.bin"]),
         ("", "init", None, b"new", ["https://example.test/main.bin"]),

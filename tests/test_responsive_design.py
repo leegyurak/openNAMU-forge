@@ -1,36 +1,50 @@
+from itertools import product
 from pathlib import Path
 
 import pytest
 
-RINGO_CSS_TEXT = Path("views/ringo/css/main.css").read_text(encoding="utf-8")
+SKIN_LAYOUT_CSS = (
+    Path("views/ringo/src/components/header/Header.module.css"),
+    Path("views/ringo/src/components/document/DocumentView.module.css"),
+    Path("views/ringo/src/components/sidebar/FloatingSidebar.module.css"),
+    Path("views/ringo/src/components/nav/QuickNav.module.css"),
+    Path("views/ringo/src/components/drawer/Drawer.module.css"),
+)
+SKIN_CONTENT_CSS = (
+    Path("views/ringo/src/styles/document-content.css"),
+    Path("views/ringo/src/components/document/DocumentView.module.css"),
+)
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("css_path", SKIN_LAYOUT_CSS, ids=lambda p: p.stem)
+def test_ringo_layout_css는_mobile_breakpoint를_제공한다(css_path):
+    text = read_text(css_path)
+    assert "@media (max-width:" in text
+
+
+@pytest.mark.parametrize("css_path", SKIN_LAYOUT_CSS, ids=lambda p: p.stem)
+def test_ringo_layout_css는_full_viewport_width를_쓰지_않는다(css_path):
+    text = read_text(css_path)
+    assert "width: 100vw" not in text
+
+
+VW_FORBIDDEN = ("font-size: 1vw", "font-size: 2vw", "font-size: 3vw")
+VW_TARGETS = SKIN_LAYOUT_CSS + SKIN_CONTENT_CSS
 
 
 @pytest.mark.parametrize(
-    "required_css",
-    (
-        "@media screen and (max-width: 1000px)",
-        "section {\n        width: 100%;",
-        "aside {\n        float: none;\n        width: 100%;",
-        "header#main span#right {\n        float: none;\n        display: flex;\n        flex-wrap: wrap;",
-        "header#main form.only_mobile {\n        line-height: 1;\n        width: 100%;",
-        "input.only_mobile.search {\n    display: inline-block;\n    width: calc(100% - 82px);",
-        ".top_cel_in {\n        left: 0;\n        right: auto;",
-        ".change_space,\n.opennamu_forge_main {\n    overflow-wrap: anywhere;",
-    ),
+    ("css_path", "forbidden"),
+    tuple(product(VW_TARGETS, VW_FORBIDDEN)),
+    ids=lambda value: getattr(value, "stem", value),
 )
-def test_ringo_css는_responsive_invariant를_유지한다(required_css):
-    assert required_css in RINGO_CSS_TEXT
+def test_ringo_skin은_viewport_scaled_typography를_사용하지_않는다(css_path, forbidden):
+    assert forbidden not in read_text(css_path)
 
 
-@pytest.mark.parametrize(
-    "forbidden_css",
-    (
-        "width: 100vw",
-        "font-size: 1vw",
-        "font-size: 2vw",
-        "font-size: 3vw",
-        "letter-spacing: -",
-    ),
-)
-def test_ringo_css는_responsive_안티패턴을_사용하지_않는다(forbidden_css):
-    assert forbidden_css not in RINGO_CSS_TEXT
+@pytest.mark.parametrize("css_path", SKIN_CONTENT_CSS, ids=lambda p: p.stem)
+def test_ringo_content_css는_safe_wrap_규칙을_가진다(css_path):
+    assert "overflow-wrap: anywhere" in read_text(css_path)

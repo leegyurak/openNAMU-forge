@@ -39,7 +39,12 @@ function do_insert_data(data) {
 
 // 아직 개편이 더 필요함
 function do_paste_image() {
-    document.getElementById('opennamu_forge_edit_textarea').addEventListener("paste", pasteListener);
+    const textarea = document.getElementById('opennamu_forge_edit_textarea');
+    if(!textarea) {
+        return;
+    }
+
+    textarea.addEventListener("paste", pasteListener);
 }
 
 function pasteListener(e) {

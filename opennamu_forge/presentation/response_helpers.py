@@ -327,9 +327,6 @@ async def re_error(data):
         data = "???"
 
     if num == 5:
-        if flask.request.path != "/skin_set":
-            data += "<br>" + await get_lang("error_skin_set_old") + ' <a href="/skin_set">(' + await get_lang("go") + ")</a>"
-
         return await render_template(
             await get_lang("skin_set"),
             '<div id="main_skin_set">'

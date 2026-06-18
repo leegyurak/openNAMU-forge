@@ -121,6 +121,7 @@ golang_process = start_gopennamu_process(
     executable_name=exe_name,
     golang_port=server_set["golang_port"],
     run_mode=run_mode,
+    database_runtime_options=database_runtime_options,
 )
 wait_for_gopennamu_startup(database_runtime_options, server_set["golang_port"])
 

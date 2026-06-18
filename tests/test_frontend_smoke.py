@@ -9,9 +9,13 @@ def read_all_text(paths):
 
 JS_TEXT = read_all_text(Path("views/main_css/js").rglob("*.js"))
 ROUTE_TEXT = read_all_text(Path("opennamu_forge/presentation/routes").rglob("*.py"))
-RINGO_JS_TEXT = read_all_text(Path("views/ringo/js").rglob("*.js"))
 RINGO_TEMPLATE_TEXT = Path("views/ringo/index.html").read_text(encoding="utf-8")
-RINGO_CSS_TEXT = Path("views/ringo/css/main.css").read_text(encoding="utf-8")
+RINGO_TS_TEXT = read_all_text(
+    tuple(Path("views/ringo/src").rglob("*.ts"))
+    + tuple(Path("views/ringo/src").rglob("*.tsx"))
+)
+RINGO_CSS_TEXT = read_all_text(Path("views/ringo/src").rglob("*.css"))
+EDITOR_JS_TEXT = Path("views/main_css/js/func/editor.js").read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize(
@@ -57,7 +61,7 @@ def test_ringo_skin은_dynamic_theme_css를_로드한다():
 )
 def test_ringo_skin은_legacy_namespace와_문구를_사용하지_않는다(legacy_text):
     assert legacy_text not in RINGO_TEMPLATE_TEXT
-    assert legacy_text not in RINGO_JS_TEXT
+    assert legacy_text not in RINGO_TS_TEXT
 
 
 @pytest.mark.parametrize(
@@ -72,3 +76,8 @@ def test_ringo_skin은_legacy_namespace와_문구를_사용하지_않는다(lega
 )
 def test_ringo_skin은_css_variable_design_token을_사용한다(css_variable):
     assert css_variable in RINGO_CSS_TEXT
+
+
+def test_editor_paste_hook은_textarea가_없어도_중단된다():
+    assert "const textarea = document.getElementById('opennamu_forge_edit_textarea');" in EDITOR_JS_TEXT
+    assert "if(!textarea)" in EDITOR_JS_TEXT

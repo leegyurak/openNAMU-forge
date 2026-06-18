@@ -45,8 +45,8 @@
 
 ## P1 - Config/Settings 용어와 경계 정리
 
-- [x] runtime config에서 legacy 용어를 제거한다.
-  - 후보: `db_set`, `to_db_set`, `legacy_db_set`
+- [x] runtime config 용어를 정리한다.
+  - 후보: `db_set`, `to_db_set`
   - 목표 이름: `runtime_db_options`, `to_runtime_options` 등 현재 구조를 드러내는 이름
 - [x] `settings`와 `config` 용어를 코드/문서/테스트에서 일관되게 적용한다.
   - `settings`: 위키/유저/권한/스킨/문구 같은 도메인 동작 설정
@@ -62,7 +62,7 @@
   - 조건은 SQLAlchemy/SQLModel query expression으로 표현한다.
 - [x] mapper batch 변환 규칙을 명확히 한다.
   - repository 내부 반복 금지를 유지하되, mapper에서 batch 변환을 허용할지 또는 tuple/map 기반으로 제한할지 결정한다.
-  - 결정 후 `agent-rules/repository-and-dto.md`와 convention test에 반영한다.
+  - 결정 후 `rules/repository-and-dto.md`와 convention test에 반영한다.
 - [x] DTO 반환 경계를 재점검한다.
   - route/application이 SQLModel row를 직접 받지 않도록 guard test를 보강한다.
 
@@ -86,7 +86,7 @@
 
 ## P2 - Frontend/Template 부채
 
-- [x] `views/ringo`의 HTML/CSS/JS에 남은 namespace와 레거시 문구를 재검색한다.
+- [x] `views/ringo`의 HTML/CSS/JS에 남은 이전 namespace와 문구를 재검색한다.
 - [x] 반응형 요구사항을 route/template 변경마다 검증한다.
   - desktop/tablet/mobile viewport smoke test를 유지한다.
 - [x] theme color 환경변수 적용 범위를 문서화한다.

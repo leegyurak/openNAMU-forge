@@ -1,11 +1,13 @@
 .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.42);
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     z-index: 1100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.24s var(--namu-ease);
 }
 
 .backdropOpen {
@@ -19,15 +21,16 @@
     left: 0;
     bottom: 0;
     z-index: 1101;
-    width: 308px;
+    width: 320px;
     max-width: 86vw;
     background: var(--namu-panel-bg);
     color: var(--namu-text);
     box-shadow: var(--namu-shadow-strong);
     transform: translateX(-100%);
-    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0.18, 1);
+    transition: transform 0.28s var(--namu-ease);
     display: flex;
     flex-direction: column;
+    border-right: 1px solid var(--namu-border-soft);
 }
 
 .panelOpen {
@@ -38,16 +41,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px;
-    height: 50px;
+    padding: 12px 16px;
+    height: 56px;
     background: var(--namu-header-bg);
     color: var(--namu-header-text);
     border-bottom: 2px solid var(--forge-theme-color);
 }
 
 .headTitle {
-    font-weight: 700;
-    font-size: 15px;
+    font-weight: 800;
+    font-size: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -58,28 +61,30 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border: none;
     background: transparent;
     color: var(--namu-header-text);
-    border-radius: 4px;
+    border-radius: var(--namu-radius-sm);
     cursor: pointer;
     font-size: 18px;
-    transition: background 0.12s ease;
+    transition: background var(--namu-transition),
+        color var(--namu-transition);
 }
 
 .close:hover {
     background: var(--namu-hover);
+    color: var(--forge-theme-color);
 }
 
 .userCard {
-    padding: 14px 16px;
+    padding: 16px 18px;
     background: var(--namu-info-bg);
     border-bottom: 1px solid var(--namu-border);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .userTop {
@@ -90,16 +95,22 @@
 
 .avatar {
     flex: 0 0 auto;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background: var(--forge-theme-color);
+    background: linear-gradient(
+        135deg,
+        var(--forge-theme-color),
+        var(--forge-theme-color-strong)
+    );
     color: #ffffff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 17px;
+    letter-spacing: -0.02em;
+    box-shadow: 0 2px 6px var(--forge-theme-color-muted);
 }
 
 .userMeta {
@@ -109,8 +120,8 @@
 
 .userName {
     font-weight: 700;
-    font-size: 14.5px;
-    color: var(--namu-text);
+    font-size: 15px;
+    color: var(--namu-text-strong);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -129,19 +140,21 @@
 
 .userAction {
     flex: 1 1 0;
-    height: 32px;
-    border-radius: 4px;
+    height: 34px;
+    border-radius: var(--namu-radius);
     background: var(--namu-panel-bg);
     border: 1px solid var(--namu-border-strong);
     color: var(--namu-text);
     font-size: 12.5px;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
     gap: 6px;
-    transition: background 0.12s ease, color 0.12s ease,
-        border-color 0.12s ease;
+    transition: background var(--namu-transition),
+        color var(--namu-transition),
+        border-color var(--namu-transition);
 }
 
 .userAction:hover {
@@ -154,12 +167,27 @@
 .scroll {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 4px 0 12px;
+    padding: 8px 0 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--namu-border-strong) transparent;
+}
+
+.scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+    background: var(--namu-border);
+    border-radius: 4px;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--namu-border-strong);
 }
 
 .section {
-    padding: 4px 0;
-    border-bottom: 1px solid var(--namu-border);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--namu-border-soft);
 }
 
 .section:last-child {
@@ -167,30 +195,34 @@
 }
 
 .sectionTitle {
-    padding: 10px 16px 4px;
+    padding: 12px 18px 6px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--namu-text-muted);
+    color: var(--namu-text-subtle);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
 }
 
 .item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 16px;
+    gap: 12px;
+    padding: 10px 18px;
     color: var(--namu-text);
     text-decoration: none;
     font-size: 13.5px;
     line-height: 1.3;
-    transition: background 0.12s ease, color 0.12s ease;
+    border-left: 2px solid transparent;
+    transition: background var(--namu-transition),
+        color var(--namu-transition),
+        border-color var(--namu-transition);
 }
 
 .item:hover,
 .item:focus-visible {
     background: var(--namu-hover);
     color: var(--forge-theme-color);
+    border-left-color: var(--forge-theme-color);
     text-decoration: none;
     outline: none;
 }
@@ -198,21 +230,33 @@
 .item .iconify {
     flex: 0 0 auto;
     color: var(--namu-text-muted);
-    font-size: 17px;
+    font-size: 18px;
+    transition: color var(--namu-transition);
+}
+
+.item:hover .iconify,
+.item:focus-visible .iconify {
+    color: var(--forge-theme-color);
 }
 
 .itemBadge {
     margin-left: auto;
-    background: var(--forge-theme-color-muted);
-    color: var(--forge-theme-color-strong);
-    border-radius: 999px;
-    padding: 1px 8px;
-    font-size: 11.5px;
-    font-weight: 600;
+    background: var(--forge-theme-color);
+    color: #ffffff;
+    border-radius: var(--namu-radius-pill);
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    min-width: 20px;
+    text-align: center;
 }
 
 @media (max-width: 768px) {
     .head {
-        height: 48px;
+        height: 52px;
+    }
+    .panel {
+        width: 300px;
     }
 }

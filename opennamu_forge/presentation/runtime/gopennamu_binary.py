@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Protocol
 
 import requests
@@ -42,10 +42,10 @@ def ensure_gopennamu_binary(
     logger,
     get_response=requests.get,
 ) -> None:
-    if run_mode == "dev":
+    local_file_path = Path(bin_dir) / executable_name
+    if run_mode == "dev" and local_file_path.exists():
         return
 
-    local_file_path = Path(bin_dir) / executable_name
     if setup_tool == "normal" and local_file_path.exists():
         return
 
