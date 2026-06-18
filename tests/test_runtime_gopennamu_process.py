@@ -1,4 +1,5 @@
 import asyncio
+import json
 import subprocess
 from types import SimpleNamespace
 
@@ -57,8 +58,10 @@ def test_wait_for_gopennamu는_connection_error_후_200이면_종료한다(monke
 
     assert calls[0][0] == "http://127.0.0.1:3001/compatible_api/test"
     assert calls[1][0] == "http://127.0.0.1:3001/compatible_api/test"
-    assert '\\"db_type\\":\\"sqlite\\"' in calls[1][1]
-    assert '\\"db_name\\":\\"wiki\\"' in calls[1][1]
+    payload = json.loads(calls[1][1])
+    db_payload = json.loads(payload["data"])
+    assert db_payload["db_type"] == "sqlite"
+    assert db_payload["db_name"] == "wiki"
 
 
 def test_wait_for_gopennamu_startup은_running_loop가_없으면_완료까지_기다린다(monkeypatch):

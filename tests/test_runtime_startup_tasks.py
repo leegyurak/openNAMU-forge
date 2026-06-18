@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from opennamu_forge.application.runtime_context import clear_runtime_context, get_runtime_value
 from opennamu_forge.presentation.runtime import startup_tasks
 
@@ -104,8 +106,14 @@ def test_ensure_startup_defaults는_runtime과_기본값을_설정한다(monkeyp
     monkeypatch.setattr(startup_tasks, "load_random_key", lambda length=128: "k" * length)
     monkeypatch.setattr(startup_tasks.platform, "system", lambda: "Linux")
     monkeypatch.setattr(startup_tasks.platform, "machine", lambda: "x86_64")
-    monkeypatch.setattr(startup_tasks.os, "stat", lambda path: type("Stat", (), {"st_mode": 0o644})())
-    monkeypatch.setattr(startup_tasks.os, "chmod", lambda path, mode: chmod_calls.append((path, mode)))
+    real_os = startup_tasks.os
+    fake_os = SimpleNamespace(
+        path=real_os.path,
+        makedirs=real_os.makedirs,
+        stat=lambda path: type("Stat", (), {"st_mode": 0o644})(),
+        chmod=lambda path, mode: chmod_calls.append((path, mode)),
+    )
+    monkeypatch.setattr(startup_tasks, "os", fake_os)
 
     startup_tasks.ensure_startup_defaults("123", "dev")
 

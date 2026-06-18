@@ -54,9 +54,9 @@ def test_mysql_ddl은_text_column에_server_default를_넣지_않는다():
     from sqlalchemy.dialects import mysql
     from sqlalchemy.schema import CreateTable
 
-    from opennamu_forge.infrastructure.db_model import DataSet
+    from opennamu_forge.infrastructure import db_model
 
-    ddl = str(CreateTable(DataSet.__table__).compile(dialect=mysql.dialect()))
+    ddl = str(CreateTable(db_model.SQLModel.metadata.tables["data_set"]).compile(dialect=mysql.dialect()))
 
     assert "set_data TEXT NOT NULL" in ddl
     assert "set_data TEXT NOT NULL DEFAULT" not in ddl
