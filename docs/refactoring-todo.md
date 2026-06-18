@@ -60,11 +60,18 @@
 - [x] repository convention test를 더 엄격하게 만든다.
   - repository 내부 `if`, `for`, `while`, comprehension, `list()` 사용 금지 유지
   - 조건은 SQLAlchemy/SQLModel query expression으로 표현한다.
+- [x] 동적 repository filter를 query spec/composer로 분리한다.
+  - `or_(literal(not flag), condition)` 형태의 SQL tautology를 금지한다.
+  - 예시 기준: sitemap title exclusion은 `WikiTitleSpec`이 SQLAlchemy expression을 조립한다.
+- [x] repository 본문의 OR query 조합을 query spec/composer로 분리한다.
+  - 예시 기준: `BbsPostCommentSpec`, `BacklinkRedirectSpec`, `UserAgentIdentitySpec`이 OR expression을 조립한다.
 - [x] mapper batch 변환 규칙을 명확히 한다.
   - repository 내부 반복 금지를 유지하되, mapper에서 batch 변환을 허용할지 또는 tuple/map 기반으로 제한할지 결정한다.
   - 결정 후 `rules/repository-and-dto.md`와 convention test에 반영한다.
 - [x] DTO 반환 경계를 재점검한다.
   - route/application이 SQLModel row를 직접 받지 않도록 guard test를 보강한다.
+- [x] JPA-style repository method 이름과 where 조건의 대표 mismatch를 convention test로 막는다.
+  - 우선 `*_by_title_type`, `*_by_ip_type`처럼 정적 equality 조건이 분명한 method부터 검사한다.
 
 ## P1 - Integration Test 현실화
 

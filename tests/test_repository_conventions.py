@@ -20,6 +20,44 @@ REPOSITORY_FILES = (
     Path("opennamu_forge/infrastructure/vote_repository.py"),
     Path("opennamu_forge/infrastructure/wiki_repository.py"),
 )
+EXPECTED_REPOSITORY_METHOD_EQUALITIES = (
+    (
+        Path("opennamu_forge/infrastructure/history_repository.py"),
+        "list_records_by_title_type",
+        (("title", "title"), ("type", "change_type")),
+    ),
+    (
+        Path("opennamu_forge/infrastructure/history_repository.py"),
+        "list_records_by_ip_type",
+        (("ip", "ip"), ("type", "change_type")),
+    ),
+    (
+        Path("opennamu_forge/infrastructure/backlink_repository.py"),
+        "list_distinct_links_by_title_type",
+        (("title", "title"), ("type", "link_type")),
+    ),
+)
+
+
+def _model_attribute_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "col"
+        and len(node.args) == 1
+    ):
+        return _model_attribute_name(node.args[0])
+    return None
+
+
+def _name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    return None
+
+
 class RepositoryControlFlowVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
         self.lines: set[int] = set()
@@ -81,6 +119,68 @@ class RepositoryReturnAnnotationVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class RepositoryOptionalFilterTautologyVisitor(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.lines: set[int] = set()
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "or_"
+            and node.args
+            and self._is_literal_not(node.args[0])
+        ):
+            self.lines.add(node.lineno)
+        self.generic_visit(node)
+
+    @staticmethod
+    def _is_literal_not(node: ast.AST) -> bool:
+        return (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "literal"
+            and len(node.args) == 1
+            and isinstance(node.args[0], ast.UnaryOp)
+            and isinstance(node.args[0].op, ast.Not)
+        )
+
+
+class RepositoryOrCallVisitor(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.lines: set[int] = set()
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if isinstance(node.func, ast.Name) and node.func.id == "or_":
+            self.lines.add(node.lineno)
+        self.generic_visit(node)
+
+
+class RepositoryWhereEqualityVisitor(ast.NodeVisitor):
+    def __init__(self, method_name: str) -> None:
+        self.method_name = method_name
+        self.in_target_method = False
+        self.equalities: set[tuple[str, str]] = set()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        if node.name == self.method_name:
+            self.in_target_method = True
+            self.generic_visit(node)
+            self.in_target_method = False
+
+    def visit_Compare(self, node: ast.Compare) -> None:
+        if (
+            self.in_target_method
+            and len(node.ops) == 1
+            and isinstance(node.ops[0], ast.Eq)
+            and len(node.comparators) == 1
+        ):
+            column_name = _model_attribute_name(node.left)
+            parameter_name = _name(node.comparators[0])
+            if column_name is not None and parameter_name is not None:
+                self.equalities.add((column_name, parameter_name))
+        self.generic_visit(node)
+
+
 @pytest.mark.parametrize("repository_file", REPOSITORY_FILES, ids=str)
 def test_repository는_제어문을_직접_사용하지_않는다(repository_file):
     tree = ast.parse(repository_file.read_text(encoding="utf-8"))
@@ -88,6 +188,37 @@ def test_repository는_제어문을_직접_사용하지_않는다(repository_fil
     visitor.visit(tree)
 
     assert sorted(visitor.lines) == []
+
+
+@pytest.mark.parametrize("repository_file", REPOSITORY_FILES, ids=str)
+def test_repository는_optional_filter를_sql_tautology로_표현하지_않는다(repository_file):
+    tree = ast.parse(repository_file.read_text(encoding="utf-8"))
+    visitor = RepositoryOptionalFilterTautologyVisitor()
+    visitor.visit(tree)
+
+    assert sorted(visitor.lines) == []
+
+
+@pytest.mark.parametrize("repository_file", REPOSITORY_FILES, ids=str)
+def test_repository는_or_query_조합을_spec으로_위임한다(repository_file):
+    tree = ast.parse(repository_file.read_text(encoding="utf-8"))
+    visitor = RepositoryOrCallVisitor()
+    visitor.visit(tree)
+
+    assert sorted(visitor.lines) == []
+
+
+@pytest.mark.parametrize(
+    "repository_file, method_name, expected_equalities",
+    EXPECTED_REPOSITORY_METHOD_EQUALITIES,
+    ids=("history-title-type", "history-ip-type", "backlink-title-type"),
+)
+def test_repository_by_메서드명은_where_equality와_맞춘다(repository_file, method_name, expected_equalities):
+    tree = ast.parse(repository_file.read_text(encoding="utf-8"))
+    visitor = RepositoryWhereEqualityVisitor(method_name)
+    visitor.visit(tree)
+
+    assert visitor.equalities.issuperset(expected_equalities)
 
 
 @pytest.mark.parametrize("repository_file", REPOSITORY_FILES, ids=str)

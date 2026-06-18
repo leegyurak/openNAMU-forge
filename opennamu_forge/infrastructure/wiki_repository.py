@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from sqlalchemy import delete, func, insert, literal, or_, update
+from sqlalchemy import delete, func, insert, literal, update
 from sqlmodel import col, select
 
 from opennamu_forge.infrastructure.db_model import Backlink, WikiData, get_sqlmodel_session
+from opennamu_forge.infrastructure.wiki_title_spec import WikiTitleSpec
 
 
 @dataclass(frozen=True)
@@ -21,13 +22,14 @@ class WikiDocumentRepository:
         exclude_category_pages: bool = False,
     ) -> list[str]:
         title_column = col(WikiData.title)
+        title_spec = WikiTitleSpec.from_exclusions(
+            exclude_user_pages=exclude_user_pages,
+            exclude_file_pages=exclude_file_pages,
+            exclude_category_pages=exclude_category_pages,
+        )
         query = (
             select(title_column)
-            .where(
-                or_(literal(not exclude_user_pages), title_column.not_like("user:%")),
-                or_(literal(not exclude_file_pages), title_column.not_like("file:%")),
-                or_(literal(not exclude_category_pages), title_column.not_like("category:%")),
-            )
+            .where(*title_spec.criteria(title_column))
             .order_by(title_column)
         )
 

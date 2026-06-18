@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from sqlalchemy import Integer, delete, func, or_, update
+from sqlalchemy import Integer, delete, func, update
 from sqlalchemy import cast as sa_cast
 from sqlmodel import col, select
 
+from opennamu_forge.infrastructure.bbs_specs import BbsPostCommentSpec
 from opennamu_forge.infrastructure.db_model import BbsData, BbsSet, get_sqlmodel_session
 
 
@@ -121,22 +122,24 @@ class BbsRepository:
 
     def count_comments_for_post(self, set_id: str) -> int:
         with get_sqlmodel_session(self.db_set) as session:
+            comment_spec = BbsPostCommentSpec.for_post(set_id)
             return int(
                 session.exec(
                     select(func.count()).select_from(BbsData).where(
                         BbsData.set_name == "comment_date",
-                        or_(col(BbsData.set_id) == set_id, col(BbsData.set_id).like(set_id + "-%")),
+                        comment_spec.set_id_criteria(col(BbsData.set_id)),
                     )
                 ).one()
             )
 
     def latest_comment_date_for_post(self, set_id: str) -> str:
         with get_sqlmodel_session(self.db_set) as session:
+            comment_spec = BbsPostCommentSpec.for_post(set_id)
             value = (
                 select(BbsData.set_data)
                 .where(
                     BbsData.set_name == "comment_date",
-                    or_(col(BbsData.set_id) == set_id, col(BbsData.set_id).like(set_id + "-%")),
+                    comment_spec.set_id_criteria(col(BbsData.set_id)),
                 )
                 .order_by(col(BbsData.set_data).desc())
                 .limit(1)

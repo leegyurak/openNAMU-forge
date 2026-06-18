@@ -71,6 +71,75 @@ def test_wiki_document_repository는_복합_exclude를_적용한다(seeded_wiki_
     ) == ["FrontPage"]
 
 
+def test_wiki_title_spec은_exclude조건을_expression으로_조립한다():
+    from sqlmodel import col
+
+    from opennamu_forge.infrastructure.db_model import WikiData
+    from opennamu_forge.infrastructure.wiki_title_spec import WikiTitleSpec
+
+    title_column = col(WikiData.title)
+    criteria = WikiTitleSpec.from_exclusions(
+        exclude_user_pages=True,
+        exclude_category_pages=True,
+    ).criteria(title_column)
+    compiled_user_filter = str(criteria[0].compile(compile_kwargs={"literal_binds": True}))
+    compiled_category_filter = str(criteria[1].compile(compile_kwargs={"literal_binds": True}))
+
+    assert len(criteria) == 2
+    assert "user:%" in compiled_user_filter
+    assert "category:%" in compiled_category_filter
+
+
+@pytest.mark.parametrize(
+    ("exclude_user_pages", "exclude_file_pages", "exclude_category_pages", "expected_count"),
+    (
+        (False, False, False, 0),
+        (True, False, False, 1),
+        (False, True, False, 1),
+        (False, False, True, 1),
+        (True, True, False, 2),
+        (True, False, True, 2),
+        (False, True, True, 2),
+        (True, True, True, 3),
+    ),
+)
+def test_wiki_title_spec은_exclusion_matrix를_지원한다(
+    exclude_user_pages,
+    exclude_file_pages,
+    exclude_category_pages,
+    expected_count,
+):
+    from sqlmodel import col
+
+    from opennamu_forge.infrastructure.db_model import WikiData
+    from opennamu_forge.infrastructure.wiki_title_spec import WikiTitleSpec
+
+    criteria = WikiTitleSpec.from_exclusions(
+        exclude_user_pages=exclude_user_pages,
+        exclude_file_pages=exclude_file_pages,
+        exclude_category_pages=exclude_category_pages,
+    ).criteria(col(WikiData.title))
+
+    assert len(criteria) == expected_count
+
+
+@pytest.mark.parametrize(
+    ("factory_name", "expected_key"),
+    (
+        ("all", (False, False, False)),
+        ("exclude_user_pages", (True, False, False)),
+        ("exclude_file_pages", (False, True, False)),
+        ("exclude_category_pages", (False, False, True)),
+    ),
+)
+def test_wiki_title_spec은_named_factory를_제공한다(factory_name, expected_key):
+    from opennamu_forge.infrastructure.wiki_title_spec import WikiTitleSpec
+
+    factory = getattr(WikiTitleSpec, factory_name)
+
+    assert factory().key == expected_key
+
+
 def test_wiki_document_repository는_prefix_page를_조회한다(seeded_wiki_db_set):
     from opennamu_forge.infrastructure.wiki_repository import WikiDocumentRepository
 

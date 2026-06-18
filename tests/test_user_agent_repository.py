@@ -58,6 +58,17 @@ def test_user_agent_repository는_두_identity_record를_조회한다(user_agent
     assert rows[2].name == "beta"
 
 
+def test_user_agent_identity_spec은_두_identity_or조건을_조립한다():
+    from opennamu_forge.infrastructure.db_model import UserAgentData
+    from opennamu_forge.infrastructure.user_agent_specs import UserAgentIdentitySpec
+
+    criteria = UserAgentIdentitySpec.two_identities("name", "alpha", "ip", "10.0.0.1").criteria(UserAgentData)
+    compiled = str(criteria[0].compile(compile_kwargs={"literal_binds": True}))
+
+    assert "name = 'alpha'" in compiled
+    assert "ip = '10.0.0.1'" in compiled
+
+
 def test_user_agent_repository는_distinct_value를_조회한다(user_agent_db_set):
     from opennamu_forge.infrastructure.user_agent_repository import UserAgentDataRepository
 

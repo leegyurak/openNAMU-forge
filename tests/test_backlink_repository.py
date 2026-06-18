@@ -60,6 +60,25 @@ def test_backlink_repository는_include와_redirect를_조회한다(backlink_db_
     assert repository.redirect_exists_for_title_or_link("Old") is True
 
 
+def test_backlink_redirect_spec은_title_or_link와_redirect_type을_조립한다():
+    from sqlmodel import col
+
+    from opennamu_forge.infrastructure.backlink_specs import BacklinkRedirectSpec
+    from opennamu_forge.infrastructure.db_model import Backlink
+
+    criteria = BacklinkRedirectSpec.title_or_link("FrontPage").criteria(
+        col(Backlink.title),
+        col(Backlink.link),
+        col(Backlink.type),
+    )
+    compiled_identity = str(criteria[0].compile(compile_kwargs={"literal_binds": True}))
+    compiled_type = str(criteria[1].compile(compile_kwargs={"literal_binds": True}))
+
+    assert "title = 'FrontPage'" in compiled_identity
+    assert "link = 'FrontPage'" in compiled_identity
+    assert "type = 'redirect'" in compiled_type
+
+
 def test_backlink_repository는_document_backlink를_교체한다(backlink_db_set):
     from opennamu_forge.infrastructure.backlink_repository import BacklinkRepository
 

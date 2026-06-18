@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from sqlalchemy import delete, func, or_
+from sqlalchemy import delete, func
 from sqlmodel import col, select
 
+from opennamu_forge.infrastructure.backlink_specs import BacklinkRedirectSpec
 from opennamu_forge.infrastructure.db_model import Backlink, get_sqlmodel_session
 from opennamu_forge.infrastructure.mappers.backlink_mapper import backlink_rows_to_models
 
@@ -116,13 +117,13 @@ class BacklinkRepository:
 
     def redirect_exists_for_title_or_link(self, value: str) -> bool:
         with get_sqlmodel_session(self.db_set) as session:
+            redirect_spec = BacklinkRedirectSpec.title_or_link(value)
             return cast(
                 bool,
                 session.exec(
-                    select(func.count()).select_from(Backlink).where(
-                        or_(col(Backlink.title) == value, col(Backlink.link) == value),
-                        Backlink.type == "redirect",
-                    )
+                    select(func.count())
+                    .select_from(Backlink)
+                    .where(*redirect_spec.criteria(col(Backlink.title), col(Backlink.link), col(Backlink.type)))
                 ).one()
                 > 0,
             )

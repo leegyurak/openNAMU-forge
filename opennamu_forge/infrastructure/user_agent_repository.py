@@ -3,12 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from sqlalchemy import delete, func, or_
+from sqlalchemy import delete, func
 from sqlmodel import col, select
 
 from opennamu_forge.application.dto.user_agent import UserAgentDataDTO
 from opennamu_forge.infrastructure.db_model import UserAgentData, get_sqlmodel_session
 from opennamu_forge.infrastructure.mappers.user_agent_mapper import user_agent_data_to_dtos
+from opennamu_forge.infrastructure.user_agent_specs import UserAgentIdentitySpec
 
 UserAgentColumn = str
 
@@ -35,14 +36,16 @@ class UserAgentDataRepository:
         second_value: str,
     ) -> int:
         with get_sqlmodel_session(self.db_set) as session:
-            first_identity = getattr(UserAgentData, first_column)
-            second_identity = getattr(UserAgentData, second_column)
+            identity_spec = UserAgentIdentitySpec.two_identities(
+                first_column,
+                first_value,
+                second_column,
+                second_value,
+            )
 
             return int(
                 session.exec(
-                    select(func.count(func.distinct(UserAgentData.ip))).where(
-                        or_(first_identity == first_value, second_identity == second_value)
-                    )
+                    select(func.count(func.distinct(UserAgentData.ip))).where(*identity_spec.criteria(UserAgentData))
                 ).one()
             )
 
@@ -77,11 +80,15 @@ class UserAgentDataRepository:
         limit: int = 50,
     ) -> list[UserAgentDataDTO]:
         with get_sqlmodel_session(self.db_set) as session:
-            first_identity = getattr(UserAgentData, first_column)
-            second_identity = getattr(UserAgentData, second_column)
+            identity_spec = UserAgentIdentitySpec.two_identities(
+                first_column,
+                first_value,
+                second_column,
+                second_value,
+            )
             rows = session.exec(
                 select(UserAgentData)
-                .where(or_(first_identity == first_value, second_identity == second_value))
+                .where(*identity_spec.criteria(UserAgentData))
                 .order_by(col(UserAgentData.today).desc())
                 .offset(offset)
                 .limit(limit)

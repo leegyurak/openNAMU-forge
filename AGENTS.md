@@ -80,6 +80,7 @@ uv run python -m opennamu_forge.cli serve --host 0.0.0.0 --port 3000 --workers 1
 - repository caller는 application port와 DTO를 통해 통신하기.
 - repository 구현은 SQLModel row를 외부로 반환하지 않기.
 - repository 구현에는 명시적 `if`/`for`/`while`, comprehension, generator, 불필요한 `list()` 변환을 넣지 않기.
+- repository의 동적 filter와 OR query 조합은 infrastructure spec/composer로 분리하고 SQL tautology나 직접 `or_`를 본문에 두지 않기.
 - route module에서 raw SQL이나 직접 외부 HTTP I/O를 하지 않기.
 - DB connection/session 소유권은 infrastructure에 두기.
 - GopenNAMU 프로세스 생명주기와 `NAMU_GOLANGPORT` 계약을 유지하기.

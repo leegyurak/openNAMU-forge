@@ -80,6 +80,19 @@ def test_bbs_repository는_board와_post_목록을_조회한다(bbs_db_set):
     assert repository.latest_comment_date_for_post("1-1") == "2026-01-02 00:00:00"
 
 
+def test_bbs_post_comment_spec은_post와_comment_set_id를_포함한다():
+    from sqlmodel import col
+
+    from opennamu_forge.infrastructure.bbs_specs import BbsPostCommentSpec
+    from opennamu_forge.infrastructure.db_model import BbsData
+
+    criteria = BbsPostCommentSpec.for_post("1").set_id_criteria(col(BbsData.set_id))
+    compiled = str(criteria.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "set_id = '1'" in compiled
+    assert "set_id LIKE '1-%'" in compiled
+
+
 def test_bbs_repository는_pinned를_관리한다(bbs_db_set):
     from opennamu_forge.infrastructure.bbs_repository import BbsRepository
 

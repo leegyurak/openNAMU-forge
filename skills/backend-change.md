@@ -18,7 +18,8 @@
 4. 계층 사이의 데이터는 애플리케이션 포트와 DTO로 전달합니다.
 5. 라우트에는 raw SQL, SQL dialect 변환, DB 세션 생성 코드를 넣지 않습니다.
 6. 저장소 구현에는 명시적인 `if`, `for`, `while` 제어 흐름을 늘리지 않고 SQL 조건 또는 매퍼로 표현합니다.
-7. 대상 테스트를 먼저 돌리고, 공유 동작이면 전체 테스트와 타입 검사를 확장합니다.
+7. 저장소의 optional filter나 OR query 조합이 늘어나면 repository 본문에 `or_(...)`를 두지 말고 infrastructure query spec/composer를 둡니다.
+8. 대상 테스트를 먼저 돌리고, 공유 동작이면 전체 테스트와 타입 검사를 확장합니다.
 
 ## 선호 패턴
 
@@ -27,11 +28,15 @@
 - 응답, URL/hash/JSON, captcha, email, file, identity, text, user validation 관련 기능은 각각의 전용 helper에서 가져옵니다.
 - 설정 이름은 프로젝트 런타임 `config`와 도메인 동작 `settings`를 구분합니다.
 - 새 동작은 먼저 서비스 또는 포트 경계에 배치하고, 라우트는 호출과 응답 조립만 담당하게 합니다.
+- JPA-style repository method 이름(`*_by_title_type`, `exists_*`)은 실제 `where(...)` 조건과 맞춥니다.
+- 동적 query 조합과 OR query fragment는 `WikiTitleSpec`, `BacklinkRedirectSpec`처럼 이름 있는 spec 객체로 드러내고, repository method 본문에는 SQL tautology나 직접 `or_`를 두지 않습니다.
 
 ## 피해야 할 작업
 
 - 라우트에서 `opennamu_forge.presentation.shared.func`의 예전 helper 묶음을 다시 가져오는 작업
 - SQLModel row를 infrastructure 밖으로 반환하는 작업
+- optional filter를 `or_(literal(not flag), condition)` 형태로 query에 섞는 작업
+- repository method 본문에서 직접 `or_(...)`로 query fragment를 조립하는 작업
 - 라우트에서 직접 `subprocess`, thread, network I/O, DB session을 시작하는 작업
 - `runtime_app.py`에 route 등록, scheduler, process loop를 직접 추가하는 작업
 - legacy self-update HTTP route나 소스 트리 변경 로직을 되살리는 작업
